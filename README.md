@@ -39,6 +39,8 @@ generator, dashboard, or infrastructure-as-code module) has not been decided yet
 ├── .github/
 │   └── ISSUE_TEMPLATE/
 │       └── feature_request.md   GitHub issue template
+├── .qlty/
+│   └── qlty.toml                qlty code quality configuration
 ├── .gitignore                   Python ignore rules
 ├── CHANGELOG.md                 Completed work
 ├── README.md                    This file

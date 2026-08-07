@@ -94,8 +94,8 @@ working CI signal.
 - **Priority:** P1
 - **Description:** `.github/` contains only an issue template. There is no
   `.github/workflows/` directory, so the repository defines no CI of its own. The only
-  check currently running on pull requests is an installed GitGuardian app, which verifies
-  nothing about correctness.
+  checks running on pull requests are third-party apps — GitGuardian and qlty — and
+  neither builds the project or runs its tests.
 - **Dependencies:** T-001
 - **Recommended Action:** Add a CI workflow triggered on pull request and on push to
   `main` that installs dependencies, runs the linter (T-013), and runs the test suite
@@ -141,16 +141,18 @@ infrastructure inventory. Security controls should land before the first collect
 ### T-008 — Verify secret scanning and push protection are enabled
 
 - **Priority:** P1
-- **Description:** A GitGuardian Security Checks app runs on pull requests, so some secret
-  scanning coverage already exists. What has not been confirmed is whether GitHub's native
-  secret scanning and — more importantly — **push protection** are enabled. GitGuardian
-  reports after a push has landed; push protection blocks the push. A multi-cloud
-  assessment tool is a high-risk place to accidentally commit a credential.
+- **Description:** Two secret scanners now run on pull requests: a GitGuardian Security
+  Checks app, and TruffleHog via qlty (see T-006). What has not been confirmed is whether
+  GitHub's native secret scanning and — more importantly — **push protection** are enabled.
+  Both current scanners report after a push has landed; only push protection blocks the
+  push. A multi-cloud assessment tool is a high-risk place to accidentally commit a
+  credential.
 - **Dependencies:** None
 - **Recommended Action:** Confirm in repository settings whether native secret scanning and
-  push protection are enabled, and record the result. Decide whether GitGuardian and native
-  scanning both stay on or one is retired. If push protection is unavailable on the current
-  plan, add a pre-push secret-detection hook in T-015.
+  push protection are enabled, and record the result. Decide whether all three scanners are
+  wanted or whether the overlap between GitGuardian and TruffleHog should be resolved (see
+  T-010). If push protection is unavailable on the current plan, add a pre-push
+  secret-detection hook in T-015.
 - **Status:** Not started
 - **Notes for Future Engineers:** Confirm this before T-011 introduces any credential
   handling code or example configuration.
@@ -170,14 +172,19 @@ infrastructure inventory. Security controls should land before the first collect
 ### T-010 — Add dependency review and static analysis to CI
 
 - **Priority:** P2
-- **Description:** No automated security analysis runs on changes.
+- **Description:** No dependency review or static analysis runs on changes. qlty is
+  initialized but auto-detection enabled only the TruffleHog secret scanner, because there
+  is no source code yet for it to detect linters from.
 - **Dependencies:** T-005, T-009
-- **Recommended Action:** Add dependency review on pull requests and a static analysis job
-  (CodeQL, or the equivalent for the stack chosen in T-001). Add a secret-scanning step
-  here if T-008 found native scanning unavailable.
+- **Recommended Action:** Re-run `qlty init` or edit `.qlty/qlty.toml` once T-001 lands, so
+  the linters for the chosen stack are enabled. Add dependency review on pull requests and
+  a static analysis job (CodeQL, or the equivalent for the stack chosen in T-001). Resolve
+  the scanner overlap identified in T-008 at the same time.
 - **Status:** Blocked
 - **Notes for Future Engineers:** Start these jobs as non-blocking, triage the initial
   findings into this file, then make them required in T-006 once the baseline is clean.
+  Note that `qlty check` fails the build outright when `.qlty/qlty.toml` is absent, so do
+  not delete that file to silence findings — configure the plugins instead.
 
 ### T-011 — Define the multi-cloud credential handling standard
 
