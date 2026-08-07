@@ -1,0 +1,44 @@
+# Changelog
+
+All notable completed changes to this repository are recorded here. This file contains
+completed work only — planned work lives in [TODO.md](TODO.md) and blocked decisions live
+in [REVIEW.md](REVIEW.md).
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+
+## [Unreleased]
+
+### Added
+
+- Documentation governance model for the repository. Four root markdown files are now the
+  only sanctioned in-repository documents: `README.md` (repository purpose), `CHANGELOG.md`
+  (completed work), `REVIEW.md` (human-resolvable blockers), and `TODO.md` (engineering
+  work queue). All other documentation is directed to the GitHub Wiki.
+- `CHANGELOG.md` recording completed work.
+- `REVIEW.md` recording blockers that require a human decision, each with problem
+  statement, blocking rationale, required owner, required action, impact, references, and
+  a recommended next step.
+- `TODO.md` establishing the authoritative engineering backlog, organized into six
+  implementation phases in dependency order, with per-item priority, description,
+  dependencies, recommended action, status, and handoff notes.
+
+### Changed
+
+- Rewrote `README.md`. The title now uses the project name rather than the
+  `owner-repository` slug, and the file was expanded to cover project status, benchmark
+  scope, repository layout, quick start, installation and configuration state,
+  documentation navigation, and repository conventions. The pre-implementation status of
+  the repository is now stated explicitly so the absence of build and run instructions is
+  not mistaken for missing documentation.
+
+## 2026-06-05 — Repository initialization
+
+No version has been released and no git tag exists yet, so this entry is grouped by date
+rather than by version number.
+
+### Added
+
+- Initial repository with project description covering the multi-cloud,
+  container-focused Well-Architected Review scope across AWS, GCP, and OCI.
+- Python `.gitignore` based on the GitHub Python template.
+- Feature request issue template at `.github/ISSUE_TEMPLATE/feature_request.md`.
