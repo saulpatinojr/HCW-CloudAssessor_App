@@ -6,7 +6,7 @@ requires a decision, an approval, an access grant, or external input from a name
 Bugs, refactoring, technical debt, tests, and documentation work do not belong here — they
 belong in [TODO.md](TODO.md).
 
-**Open blockers: 7**
+**Open blockers: 8**
 
 | ID | Blocker | Required owner | Blocks |
 |----|---------|----------------|--------|
@@ -17,6 +17,7 @@ belong in [TODO.md](TODO.md).
 | R-005 | Benchmark framework content usage rights unconfirmed | Legal | Publishing assessment criteria |
 | R-006 | Assessment output data classification undecided | Security / Compliance | Storing and sharing results |
 | R-007 | GitHub Wiki not writable by automation | Repository admin | Wiki documentation migration |
+| R-008 | `qlty check` errors Cloud-side and the log is not readable | Repository admin / qlty account owner | A permanently red check on every pull request |
 
 ---
 
@@ -268,3 +269,66 @@ destination for everything the four files exclude.
 **Recommended next step**
 Create the wiki `Home` page through the web UI, then decide whether automation needs push
 access for ongoing maintenance.
+
+---
+
+## R-008 — `qlty check` errors Cloud-side and the build log is not readable
+
+**Problem**
+The qlty GitHub App posts a `qlty check` commit status that reports
+`Build errored. Check the log for more information.` on every commit. The linked build log
+lives behind a qlty.sh login, so it cannot be read from the repository or from CI.
+
+One genuine cause was found and fixed: the repository had no `.qlty/qlty.toml`, so the CLI
+aborted with `Qlty must be set up in this repository. Try: qlty init`. Committing the
+generated configuration did **not** clear the status — the build errored again on the
+commit that added it.
+
+With the configuration in place, every invocation the service plausibly runs now passes
+locally against the branch head:
+
+| Command | Result |
+|---------|--------|
+| `qlty check --all` | `✔ No issues`, exit 0 |
+| `qlty check --upstream main` | `✔ No issues` |
+
+The second case matters because it rules out the most likely remaining repository-side
+explanation — that the analysis fails while comparing against a base branch that has no
+qlty configuration. It does not.
+
+**Why it blocks progress**
+The remaining fault is in the qlty Cloud project, not in repository contents, and
+diagnosing it requires reading a log that only an authenticated qlty account holder can
+see. Nothing further can be established from inside the repository. Meanwhile the status
+is red on every pull request, which trains reviewers to ignore a failing check — and makes
+the required-status-check configuration in T-006 impossible to enable honestly.
+
+**Required owner**
+Repository administrator, or whoever owns the qlty.sh account the project is registered
+under.
+
+**Required action**
+Open the build log in the qlty dashboard and either apply the fix it indicates or raise it
+with qlty support. Two candidates worth checking first: whether the project's initial
+default-branch analysis errored when the project was added (the default branch had no
+`.qlty/qlty.toml` at that time, and the documented setup flow analyzes the default branch
+immediately on project creation), and whether the account's plan or trial is active for a
+private repository. The qlty troubleshooting guide also documents transient `U10` and `U11`
+errors that are resolved by retrying the analysis.
+
+If qlty is not actually wanted on this repository, uninstalling the GitHub App is a valid
+resolution and should be recorded as such.
+
+**Impact if unresolved**
+A permanently failing status on every pull request. Branch protection with required checks
+(T-006) cannot be turned on without either excluding this check or blocking all merges.
+
+**References**
+- `qlty check` status on PR #4, commits `92c097d` and `3dca07e`
+- `.qlty/qlty.toml`
+- `TODO.md` — T-006, T-010
+- https://docs.qlty.sh/cloud/troubleshooting
+
+**Recommended next step**
+Read the build log at the URL in the commit status and report what it says. Until then this
+check should not be added to branch protection.

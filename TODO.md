@@ -111,13 +111,15 @@ working CI signal.
 - **Priority:** P1
 - **Description:** `main` is the default branch and has no protection configured, so it can
   be pushed to directly and merged into without review or a passing build.
-- **Dependencies:** T-005
+- **Dependencies:** T-005, R-008 (`qlty check` errors Cloud-side)
 - **Recommended Action:** Require a pull request before merging, require the CI checks from
   T-005 to pass, require branches to be up to date, and block force pushes and deletion.
 - **Status:** Blocked
 - **Notes for Future Engineers:** This is a repository settings change, not a file change,
   so it will not appear in any diff. Record that it was done in `CHANGELOG.md` so the next
-  engineer does not have to check the settings page to find out.
+  engineer does not have to check the settings page to find out. Do not add `qlty check` to
+  the required set until R-008 is resolved — it currently errors on every commit and would
+  block all merges.
 
 ---
 
