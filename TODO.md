@@ -93,7 +93,9 @@ working CI signal.
 
 - **Priority:** P1
 - **Description:** `.github/` contains only an issue template. There is no
-  `.github/workflows/` directory, so nothing is verified on push or pull request.
+  `.github/workflows/` directory, so the repository defines no CI of its own. The only
+  check currently running on pull requests is an installed GitGuardian app, which verifies
+  nothing about correctness.
 - **Dependencies:** T-001
 - **Recommended Action:** Add a CI workflow triggered on pull request and on push to
   `main` that installs dependencies, runs the linter (T-013), and runs the test suite
@@ -139,13 +141,16 @@ infrastructure inventory. Security controls should land before the first collect
 ### T-008 — Verify secret scanning and push protection are enabled
 
 - **Priority:** P1
-- **Description:** The repository is private and the state of secret scanning and push
-  protection has not been confirmed. A multi-cloud assessment tool is a high-risk place to
-  accidentally commit a credential.
+- **Description:** A GitGuardian Security Checks app runs on pull requests, so some secret
+  scanning coverage already exists. What has not been confirmed is whether GitHub's native
+  secret scanning and — more importantly — **push protection** are enabled. GitGuardian
+  reports after a push has landed; push protection blocks the push. A multi-cloud
+  assessment tool is a high-risk place to accidentally commit a credential.
 - **Dependencies:** None
-- **Recommended Action:** Confirm secret scanning and push protection are enabled in
-  repository settings and record the result. If unavailable on the current plan, add a
-  scanning step to CI in T-010 instead.
+- **Recommended Action:** Confirm in repository settings whether native secret scanning and
+  push protection are enabled, and record the result. Decide whether GitGuardian and native
+  scanning both stay on or one is retired. If push protection is unavailable on the current
+  plan, add a pre-push secret-detection hook in T-015.
 - **Status:** Not started
 - **Notes for Future Engineers:** Confirm this before T-011 introduces any credential
   handling code or example configuration.
