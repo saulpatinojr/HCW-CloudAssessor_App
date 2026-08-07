@@ -10,8 +10,8 @@ belong in [TODO.md](TODO.md).
 
 | ID | Blocker | Required owner | Blocks |
 |----|---------|----------------|--------|
-| R-001 | Assessment scope and deliverable format undefined | Product owner | All implementation |
-| R-002 | Read-only access to assessment target clouds not provisioned | Cloud platform owners | Collector development and testing |
+| R-001 | Assessment deliverable format undefined | Product owner | All implementation |
+| R-002 | Read-only access to the Azure assessment target not provisioned | Azure platform owner | Collector development and testing |
 | R-003 | No license selected for the repository | Repository owner / Legal | Contribution, reuse, distribution |
 | R-004 | Third-party integration adoption not approved | Repository owner / Legal | Issues #1, #2, #3 |
 | R-005 | Benchmark framework content usage rights unconfirmed | Legal | Publishing assessment criteria |
@@ -21,14 +21,17 @@ belong in [TODO.md](TODO.md).
 
 ---
 
-## R-001 — Assessment scope and deliverable format are undefined
+## R-001 — Assessment deliverable format is undefined
 
 **Problem**
 The repository states what the assessment measures (FinOps Foundation Framework, Azure
-Well-Architected Cost Optimization pillar, Zero Trust principles) and where (AWS, GCP,
-OCI), but not what the assessment *is*. It could be a CLI, a scheduled data collector, a
-report generator, a dashboard, a set of infrastructure-as-code policy modules, or a
-consulting questionnaire with supporting tooling.
+Well-Architected Cost Optimization pillar, Zero Trust principles) and where (Azure), but
+not what the assessment *is*. It could be a CLI, a scheduled data collector, a report
+generator, a dashboard, a set of infrastructure-as-code policy modules, or a consulting
+questionnaire with supporting tooling.
+
+The target-platform half of this blocker is **resolved**: the assessment targets Azure
+exclusively. AWS, GCP, and OCI are out of scope and are not planned.
 
 **Why it blocks progress**
 Language, runtime, dependency manager, packaging, distribution, testing strategy, and CI
@@ -41,10 +44,8 @@ Product owner for the assessment offering.
 
 **Required action**
 Decide and record: (a) the primary deliverable format, (b) who consumes the output
-(internal engineers, client executives, or auditors), (c) whether the assessment runs
-continuously or as a point-in-time engagement, and (d) whether Azure is an assessment
-target in addition to being a benchmark source — the description names Azure only as the
-source of the Cost Optimization pillar while listing AWS, GCP, and OCI as targets.
+(internal engineers, client executives, or auditors), and (c) whether the assessment runs
+continuously or as a point-in-time engagement.
 
 **Impact if unresolved**
 No implementation work can start. All of Phase 1 and everything downstream in `TODO.md`
@@ -61,25 +62,27 @@ A single scoping session producing a one-page decision, published as a wiki page
 
 ---
 
-## R-002 — Read-only access to assessment target clouds is not provisioned
+## R-002 — Read-only access to the Azure assessment target is not provisioned
 
 **Problem**
-No AWS account, GCP project, or OCI tenancy has been designated for development or
-testing, and no read-only credentials or workload identity federation has been set up.
+No Azure subscription or management group has been designated for development or testing,
+and no read-only credentials or workload identity federation have been set up.
 
 **Why it blocks progress**
 Collectors cannot be written or verified against real API responses. Mocked fixtures alone
-cannot confirm required permissions, API quotas, or resource-shape assumptions across
-three providers.
+cannot confirm required permissions, API throttling behavior, or resource-shape
+assumptions.
 
 **Required owner**
-Cloud platform owners for each target provider (AWS, GCP, OCI), plus whoever administers
-identity federation.
+Azure platform owner for the target tenant, plus whoever administers Entra ID app
+registrations and federated credentials.
 
 **Required action**
-Provision a non-production sandbox per provider with read-only roles scoped to the
-resource types the assessment reads, and confirm the preferred authentication mechanism
-(OIDC workload identity federation is preferred over long-lived keys).
+Provision a non-production subscription with the `Reader` role — and `Cost Management
+Reader` for cost data, which `Reader` alone does not grant — scoped to the resource types
+the assessment reads. Confirm the preferred authentication mechanism (workload identity
+federation is preferred over client secrets). Confirm the assessment scope: single
+subscription, management group, or whole tenant.
 
 **Impact if unresolved**
 Collector work in Phase 5 cannot be validated. Any implementation would be speculative and
@@ -90,8 +93,8 @@ would need rework once real access arrives.
 - `TODO.md` — T-011, T-025, T-026, T-027
 
 **Recommended next step**
-Request one sandbox per provider and record the account, project, and tenancy identifiers
-plus the federation configuration in the wiki.
+Request the sandbox subscription and record the tenant, subscription, and management group
+identifiers plus the federation configuration in the wiki.
 
 ---
 
@@ -140,12 +143,18 @@ checks — and no license compatibility review has been done.
 | #2 | Zero Trust Assessment | `microsoft/zerotrustassessment`, `prowler-cloud/prowler` |
 | #3 | Governance Visualizer | `Azure/Azure-Governance-Visualizer-Accelerator` |
 
+The Azure-only scope decision raises the stakes here. All three proposals are Azure or
+Microsoft tools, so they are now squarely on target rather than partial fits — the
+question is no longer whether they cover the right platform but how much of the assessment
+they already implement.
+
 **Why it blocks progress**
 Integration mode determines the architecture. Invoking a tool as a subprocess, consuming
 it as a library, and reimplementing its rules produce entirely different designs, runtime
 dependencies, and licensing obligations. Prowler in particular is Apache-2.0 with a
 commercial edition; its terms need review before its output or code is embedded in a
-client deliverable.
+client deliverable. With the scope narrowed to Azure, only Prowler's Azure provider is
+relevant, which weakens the case for taking on a large multi-cloud dependency.
 
 **Required owner**
 Repository owner for the architectural decision; legal for license compatibility.

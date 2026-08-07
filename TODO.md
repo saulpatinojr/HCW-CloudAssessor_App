@@ -83,8 +83,8 @@ working CI signal.
   files beyond `.env`.
 - **Dependencies:** T-001
 - **Recommended Action:** Extend `.gitignore` for the stack chosen in T-001, and add
-  explicit patterns for cloud credential files (`*.pem`, `credentials.json`,
-  `~/.oci/config` copies, AWS/GCP/OCI CLI caches) and for generated assessment output.
+  explicit patterns for Azure credential material (`*.pem`, `*.pfx`, service principal
+  JSON, copies of the `~/.azure/` CLI token cache) and for generated assessment output.
 - **Status:** Blocked
 - **Notes for Future Engineers:** `.gitignore` is not a security control. Pair this with
   T-008 (push protection) rather than relying on ignore rules to keep secrets out.
@@ -147,8 +147,8 @@ infrastructure inventory. Security controls should land before the first collect
   Checks app, and TruffleHog via qlty (see T-006). What has not been confirmed is whether
   GitHub's native secret scanning and — more importantly — **push protection** are enabled.
   Both current scanners report after a push has landed; only push protection blocks the
-  push. A multi-cloud assessment tool is a high-risk place to accidentally commit a
-  credential.
+  push. A tool that holds read credentials for a customer's Azure tenant is a high-risk
+  place to accidentally commit one.
 - **Dependencies:** None
 - **Recommended Action:** Confirm in repository settings whether native secret scanning and
   push protection are enabled, and record the result. Decide whether all three scanners are
@@ -168,8 +168,9 @@ infrastructure inventory. Security controls should land before the first collect
 - **Recommended Action:** Add `.github/dependabot.yml` covering the package ecosystem
   chosen in T-001 and the `github-actions` ecosystem. Group patch updates to limit noise.
 - **Status:** Blocked
-- **Notes for Future Engineers:** Cloud provider SDKs release frequently. Grouping AWS,
-  GCP, and OCI SDK updates into a single weekly pull request keeps the queue manageable.
+- **Notes for Future Engineers:** The Azure SDK ships as many separately versioned
+  per-service packages that release frequently. Group them into a single weekly pull
+  request or the queue becomes unmanageable.
 
 ### T-010 — Add dependency review and static analysis to CI
 
@@ -188,28 +189,29 @@ infrastructure inventory. Security controls should land before the first collect
   Note that `qlty check` fails the build outright when `.qlty/qlty.toml` is absent, so do
   not delete that file to silence findings — configure the plugins instead.
 
-### T-011 — Define the multi-cloud credential handling standard
+### T-011 — Define the Azure credential handling standard
 
 - **Priority:** P0
-- **Description:** The assessment must authenticate to AWS, GCP, and OCI. There is no
-  decision recorded on how credentials are supplied, scoped, rotated, or kept out of logs
-  and assessment output.
-- **Dependencies:** R-002 (target cloud access not provisioned)
-- **Recommended Action:** Standardize on short-lived credentials via OIDC workload identity
-  federation for CI, and on the provider default credential chain for local runs. Prohibit
+- **Description:** The assessment must authenticate to Azure. There is no decision recorded
+  on how credentials are supplied, scoped, rotated, or kept out of logs and assessment
+  output.
+- **Dependencies:** R-002 (Azure access not provisioned)
+- **Recommended Action:** Standardize on workload identity federation for CI and on
+  `DefaultAzureCredential` for local runs, so no client secret is ever stored. Prohibit
   credential values in configuration files, forbid logging of credential material, and
-  document the required read-only permission set per provider in the wiki.
+  document the required read-only role assignments in the wiki.
 - **Status:** Blocked
-- **Notes for Future Engineers:** OCI's identity model differs meaningfully from AWS and
-  GCP — it uses API signing keys with a tenancy, user, and fingerprint rather than
-  role assumption. Design the credential abstraction to accommodate that rather than
-  assuming a uniform role-assumption model across all three providers.
+- **Notes for Future Engineers:** Azure splits the reads this assessment needs across two
+  planes with separate permissions: ARM resource reads under `Reader`, and cost data under
+  `Cost Management Reader`, which `Reader` does not include. Entra ID directory reads are a
+  third, separately granted surface via Microsoft Graph. Design the credential layer around
+  those boundaries rather than assuming one role covers everything.
 
 ### T-012 — Add output redaction and a data-handling guard
 
 - **Priority:** P1
-- **Description:** Assessment output will contain resource identifiers, account and tenancy
-  identifiers, network configuration, and cost data. Nothing currently prevents that
+- **Description:** Assessment output will contain resource identifiers, subscription and
+  tenant identifiers, network configuration, and cost data. Nothing currently prevents that
   material from being written into the repository, into CI logs, or into a shared report.
 - **Dependencies:** R-006 (output data classification undecided), T-001
 - **Recommended Action:** Implement a redaction layer applied to all output paths, honoring
@@ -249,7 +251,7 @@ infrastructure inventory. Security controls should land before the first collect
 - **Status:** Blocked
 - **Notes for Future Engineers:** The fixture strategy depends on R-006 — until the data
   classification decision lands, do not commit fixtures captured from a real environment.
-  Use synthetic fixtures, and scrub account, project, and tenancy identifiers.
+  Use synthetic fixtures, and scrub subscription, tenant, and resource group identifiers.
 
 ### T-015 — Add pre-commit hooks
 
@@ -288,12 +290,12 @@ infrastructure inventory. Security controls should land before the first collect
   no way to route reporters elsewhere.
 - **Dependencies:** None
 - **Recommended Action:** Add `bug_report.md` and `config.yml`. The bug template should
-  request the target cloud provider, the assessment scope in use, and redacted output —
-  the fields that determine whether a report is actionable for this project.
+  request the assessment scope in use (subscription, management group, or tenant) and
+  redacted output — the fields that determine whether a report is actionable here.
 - **Status:** Not started
 - **Notes for Future Engineers:** Remind reporters in the template to redact account,
-  project, and tenancy identifiers before pasting output. This is a private repository, but
-  the habit should hold regardless.
+  subscription, and tenant identifiers before pasting output. This is a private repository,
+  but the habit should hold regardless.
 
 ### T-018 — Add a pull request template
 
@@ -336,13 +338,14 @@ first — their outcome shapes the collector design.
 - **Description:** Issue #1 proposes integrating `saulpatinojr/Azure-AzQR` for quick review
   capability. The integration mode is unspecified.
 - **Dependencies:** R-004 (third-party integration adoption not approved)
-- **Recommended Action:** Timebox a spike assessing what AzQR covers, whether it can be
-  invoked as a subprocess or consumed as a library, its output schema, and whether it
-  extends beyond Azure. Record findings in the wiki and post the recommendation on issue #1.
+- **Recommended Action:** Timebox a spike assessing which Azure resource types AzQR covers,
+  whether it can be invoked as a subprocess or consumed as a library, and its output
+  schema. Record findings in the wiki and post the recommendation on issue #1.
 - **Status:** Blocked
-- **Notes for Future Engineers:** AzQR is Azure-focused while the stated assessment targets
-  are AWS, GCP, and OCI. Establish early whether Azure is an assessment target at all —
-  this is the open question in R-001.
+- **Notes for Future Engineers:** With the scope narrowed to Azure, AzQR is the closest
+  existing tool to what this project sets out to do. Run this spike before T-024 — if AzQR
+  already produces most of the resource-level review, the data model should be shaped
+  around extending its output rather than replacing it.
 
 ### T-021 — Evaluation spike: Zero Trust Assessment and Prowler integration
 
@@ -350,14 +353,16 @@ first — their outcome shapes the collector design.
 - **Description:** Issue #2 proposes integrating `microsoft/zerotrustassessment` and
   `prowler-cloud/prowler` for Zero Trust coverage.
 - **Dependencies:** R-004
-- **Recommended Action:** Timebox a spike comparing the two. Prowler covers AWS, GCP, and
-  Azure natively, which overlaps directly with the target platforms; assess its OCI
-  coverage specifically, since that is the likeliest gap. Record findings in the wiki and
-  post the recommendation on issue #2.
+- **Recommended Action:** Timebox a spike comparing the two against the Azure scope.
+  `zerotrustassessment` targets Entra ID and Microsoft 365 rather than Azure resources, so
+  establish first whether identity-plane assessment is in scope at all. Assess Prowler's
+  Azure provider specifically. Record findings in the wiki and post the recommendation on
+  issue #2.
 - **Status:** Blocked
 - **Notes for Future Engineers:** Prowler has a commercial edition alongside its open
   source distribution. Confirm the licensing conclusion from R-004 before writing any code
-  against it.
+  against it. Note also that only Prowler's Azure provider is now relevant — taking on a
+  multi-cloud dependency for one provider's checks needs justifying.
 
 ### T-022 — Evaluation spike: Governance Visualizer integration
 
@@ -366,8 +371,8 @@ first — their outcome shapes the collector design.
   `Azure/Azure-Governance-Visualizer-Accelerator`.
 - **Dependencies:** R-004
 - **Recommended Action:** Timebox a spike assessing whether the accelerator's visualization
-  output is reusable for multi-cloud reporting, or whether only its reporting approach is
-  worth borrowing. Record findings in the wiki and post the recommendation on issue #3.
+  output is reusable directly, or whether only its reporting approach is worth borrowing.
+  Record findings in the wiki and post the recommendation on issue #3.
 - **Status:** Blocked
 - **Notes for Future Engineers:** This is a visualization and reporting concern, not a
   collection concern. It can be deferred behind T-028 without blocking anything.
@@ -380,8 +385,8 @@ first — their outcome shapes the collector design.
   machine-readable catalog of criteria exists.
 - **Dependencies:** R-005 (framework content usage rights unconfirmed), T-001
 - **Recommended Action:** Define a criteria schema (identifier, source framework, pillar,
-  severity, applicable platforms, evaluation logic reference, remediation guidance) and
-  populate it. Keep the catalog declarative and separate from collector code.
+  severity, applicable Azure resource types, evaluation logic reference, remediation
+  guidance) and populate it. Keep the catalog declarative and separate from collector code.
 - **Status:** Blocked
 - **Notes for Future Engineers:** R-005 governs whether criteria text can be reproduced
   verbatim. Design the schema so criteria text is a single replaceable field — that way a
@@ -391,52 +396,63 @@ first — their outcome shapes the collector design.
 
 - **Priority:** P0
 - **Description:** No common representation exists for collected resources, evaluated
-  findings, or scores across three heterogeneous providers.
-- **Dependencies:** T-023
-- **Recommended Action:** Define a provider-neutral resource and finding model with a
-  documented version field, so provider-specific collectors normalize into one shape and
-  the report layer reads only the normalized form.
+  findings, or scores across the ARM, cost, and identity planes.
+- **Dependencies:** T-023, T-020
+- **Recommended Action:** Define a resource and finding model with a documented version
+  field, so the collectors in T-025 through T-027 normalize into one shape and the report
+  layer reads only the normalized form.
 - **Status:** Blocked
 - **Notes for Future Engineers:** Version the model from the first commit. Assessment
   results are compared over time, and an unversioned model makes historical comparison
-  unreliable the first time the shape changes.
+  unreliable the first time the shape changes. Scope the model to Azure — do not build a
+  provider-neutral abstraction for a single target platform, since that indirection costs
+  clarity and buys nothing that is actually planned.
 
-### T-025 — Implement the AWS collector
-
-- **Priority:** P1
-- **Description:** No collection capability exists for AWS.
-- **Dependencies:** T-011, T-024
-- **Recommended Action:** Implement read-only collection for the container, cost, and
-  identity resources required by the T-023 catalog. Handle pagination, throttling with
-  backoff, and multi-region and multi-account enumeration.
-- **Status:** Blocked
-- **Notes for Future Engineers:** Regional enumeration dominates runtime. Make the region
-  set configurable and parallelize per region from the start rather than retrofitting it.
-
-### T-026 — Implement the GCP collector
+### T-025 — Implement the Azure resource collector
 
 - **Priority:** P1
-- **Description:** No collection capability exists for GCP.
+- **Description:** No collection capability exists for Azure Resource Manager. This is the
+  container and workload inventory the majority of the T-023 catalog evaluates against —
+  AKS clusters, node pools, container apps, registries, and their networking.
 - **Dependencies:** T-011, T-024
-- **Recommended Action:** Implement read-only collection for GKE, billing, and IAM
-  resources required by the T-023 catalog, with project and folder enumeration.
+- **Recommended Action:** Implement read-only ARM collection for the resource types the
+  T-023 catalog requires. Use Azure Resource Graph for inventory rather than per-resource
+  ARM list calls, and handle paging and throttling.
 - **Status:** Blocked
-- **Notes for Future Engineers:** GCP billing data lives in BigQuery export rather than in
-  a resource API. That is a separate access grant and should be raised in R-002 if it was
-  not included in the original sandbox request.
+- **Notes for Future Engineers:** Resource Graph answers inventory questions in one query
+  that would otherwise take hundreds of ARM calls, and it is far less likely to hit
+  throttling. Reach for the per-resource ARM APIs only for detail Resource Graph does not
+  project.
 
-### T-027 — Implement the OCI collector
+### T-026 — Implement the Azure cost collector
 
 - **Priority:** P1
-- **Description:** No collection capability exists for OCI.
+- **Description:** No collection capability exists for cost data, which the FinOps
+  Foundation Framework and Cost Optimization pillar criteria depend on entirely.
 - **Dependencies:** T-011, T-024
-- **Recommended Action:** Implement read-only collection for OKE, cost, and identity
-  resources required by the T-023 catalog, with compartment traversal.
+- **Recommended Action:** Implement read-only collection via the Cost Management APIs for
+  the aggregations the T-023 catalog requires, including tag-based and resource-group-based
+  allocation.
 - **Status:** Blocked
-- **Notes for Future Engineers:** OCI's compartment hierarchy has no direct equivalent in
-  AWS or GCP, and third-party tooling coverage for OCI is thinner than for the other two.
-  Budget more time here than for T-025 and T-026, and expect less to be reusable from the
-  spikes in T-020 through T-022.
+- **Notes for Future Engineers:** Cost Management is a separate permission plane —
+  `Cost Management Reader`, which `Reader` does not grant (see T-011 and R-002). Its APIs
+  are also aggressively throttled and its data lags by up to a day, so treat cost as an
+  asynchronous input rather than something fetched inline with resource collection.
+
+### T-027 — Implement Azure scope enumeration and the identity collector
+
+- **Priority:** P1
+- **Description:** No capability exists to enumerate what to assess, or to read the
+  identity posture the Zero Trust criteria evaluate.
+- **Dependencies:** T-011, T-024
+- **Recommended Action:** Implement management-group and subscription traversal so an
+  assessment can be scoped to a subscription, a management group, or a whole tenant.
+  Implement the RBAC and Entra ID reads the T-023 Zero Trust criteria require.
+- **Status:** Blocked
+- **Notes for Future Engineers:** Directory reads go through Microsoft Graph, not ARM, with
+  their own consent model and permission grants. Confirm during R-002 that Graph
+  permissions were included — they are easy to omit from an access request that only
+  mentions `Reader`, and their absence will not surface until this item starts.
 
 ### T-028 — Implement scoring and report generation
 
@@ -477,10 +493,10 @@ first — their outcome shapes the collector design.
   | Wiki page | Content | Fed by |
   |-----------|---------|--------|
   | `Home` | Landing page and navigation | T-029 |
-  | `Assessment-Scope` | Deliverable format, consumers, cadence, target platforms | R-001 |
+  | `Assessment-Scope` | Deliverable format, consumers, cadence | R-001 |
   | `Architecture-Overview` | Component design, collector and scoring boundaries | T-024 |
   | `Benchmark-Criteria` | Framework mapping, criteria schema, attribution notices | T-023, R-005 |
-  | `Cloud-Access-Requirements` | Per-provider read-only permission sets and federation setup | T-011, R-002 |
+  | `Azure-Access-Requirements` | Read-only role assignments, Graph permissions, federation setup | T-011, R-002 |
   | `Integration-Evaluations` | Spike findings for AzQR, ZTA, Prowler, Governance Visualizer | T-020, T-021, T-022 |
   | `Development-Guide` | Local setup, running tests, fixture conventions | T-013, T-014 |
   | `Data-Handling` | Output classification, retention, redaction rules | R-006, T-012 |

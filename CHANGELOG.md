@@ -30,6 +30,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Narrowed the assessment scope to Azure only.** AWS, GCP, and OCI were removed as target
+  platforms across all documentation; support for them is not planned. Azure remains the
+  source of the Well-Architected Cost Optimization pillar and is now also the sole
+  assessment target. This resolves the platform half of blocker R-001, which had flagged
+  the contradiction between a description listing AWS, GCP, and OCI as targets and open
+  issues proposing exclusively Azure integrations.
+
+  Consequences recorded across the backlog: the three per-cloud collectors became an Azure
+  decomposition along the planes Azure actually separates — ARM resources (T-025), Cost
+  Management (T-026), and scope enumeration with Entra ID identity (T-027); the credential
+  standard in T-011 is now Azure-specific and accounts for `Reader`, `Cost Management
+  Reader`, and Microsoft Graph being three distinct permission grants; the access request
+  in R-002 is now a single Azure subscription; and the data model in T-024 is explicitly
+  scoped to Azure rather than provider-neutral.
+
 - Rewrote `README.md`. The title now uses the project name rather than the
   `owner-repository` slug, and the file was expanded to cover project status, benchmark
   scope, repository layout, quick start, installation and configuration state,

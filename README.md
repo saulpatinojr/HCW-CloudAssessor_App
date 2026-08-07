@@ -1,8 +1,8 @@
 # Work-Complete Cloud Assessment
 
-A multi-cloud, container-focused Well-Architected Review assessment benchmarking
-infrastructure against the FinOps Foundation Framework, the Azure Cost Optimization
-pillar, and Zero Trust security principles across AWS, GCP, and OCI.
+A container-focused Well-Architected Review assessment benchmarking Azure infrastructure
+against the FinOps Foundation Framework, the Azure Well-Architected Framework Cost
+Optimization pillar, and Zero Trust security principles.
 
 ## Project status
 
@@ -19,7 +19,7 @@ a human before implementation can proceed are tracked in [REVIEW.md](REVIEW.md).
 
 ## Overview
 
-The assessment is intended to evaluate container-hosting cloud infrastructure against
+The assessment is intended to evaluate container-hosting Azure infrastructure against
 three benchmark sources:
 
 | Benchmark source | Focus |
@@ -28,8 +28,9 @@ three benchmark sources:
 | Azure Well-Architected Framework — Cost Optimization pillar | Cost-focused architectural review criteria |
 | Zero Trust security principles | Identity, device, network, and workload security posture |
 
-Target platforms are AWS, GCP, and OCI. The concrete deliverable format (CLI, report
-generator, dashboard, or infrastructure-as-code module) has not been decided yet — see
+**Azure is the only target platform.** The assessment does not cover AWS, GCP, or OCI, and
+support for them is not planned. The concrete deliverable format (CLI, report generator,
+dashboard, or infrastructure-as-code module) has not been decided yet — see
 [REVIEW.md](REVIEW.md).
 
 ## Repository layout
