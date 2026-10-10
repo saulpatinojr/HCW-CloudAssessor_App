@@ -21,6 +21,7 @@ jobs:
     permissions:
       contents: read
       security-events: write
+      actions: read # codeql-action/analyze reads the workflow run's status; required on a private repository
     strategy:
       matrix:
         language: [python, javascript-typescript]
