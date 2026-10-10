@@ -58,7 +58,7 @@ def test_throttled_five_times_raises_collector_error():
     slept: list[float] = []
     client = FakeResourceGraphClient(throttle=ATTEMPTS)
     collector = ResourceGraphCollector(client, ScopeAllowlist.parse(SCOPE), sleep=slept.append)
-    with pytest.raises(CollectorError, match="throttled"):
+    with pytest.raises(CollectorError, match=f"throttled by the service after {ATTEMPTS} attempts"):
         collector.collect()
     assert len(client.calls) == ATTEMPTS and len(slept) == ATTEMPTS - 1 and all(s <= 60 for s in slept)
 
@@ -91,6 +91,19 @@ def test_empty_scope_and_truncated_result_and_adapter_errors():
     with pytest.raises(CollectorError) as exc:
         ResourceGraphCollector(Broken(), ScopeAllowlist.parse(SCOPE)).collect()
     assert "00000000-0000" not in str(exc.value) and "<redacted>" in str(exc.value)
+
+
+def test_http_status_names_the_class_when_there_is_no_status():
+    from cloud_assessor_appliance.collectors.resource_graph import http_status
+
+    class WithStatus(Exception):
+        status_code = 403
+
+    class NoStatus(Exception):
+        status_code = None
+
+    assert http_status(WithStatus()) == "403" and http_status(NoStatus()) == "NoStatus"
+    assert http_status(RuntimeError()) == "RuntimeError"
 
 
 def test_page_size_is_clamped_to_the_service_maximum():

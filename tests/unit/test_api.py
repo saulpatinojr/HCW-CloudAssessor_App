@@ -1,5 +1,6 @@
 import io
 import json
+import threading
 import zipfile
 
 from fastapi.testclient import TestClient
@@ -9,7 +10,15 @@ from cloud_assessor_appliance.api import api_routes, create_app
 from cloud_assessor_appliance.config import TURNSTILE_ACTION
 from cloud_assessor_appliance.security.headers import VERIFICATION_ORIGIN
 
-from ..conftest import NO_AZURE_ENV, FakeCostCollector, HangingCollector, make_app, make_settings, run_refresh
+from ..conftest import (
+    NO_AZURE_ENV,
+    FakeCostCollector,
+    FakeResourceGraphClient,
+    HangingCollector,
+    make_app,
+    make_settings,
+    run_refresh,
+)
 
 RESULTS_ROUTES = (
     "/api/assessments/current",
@@ -25,7 +34,8 @@ def test_health_is_flat_complete_and_fast_with_a_hanging_collector(client):
     body = r.json()
     assert body["ok"] is True and body["id"] == "cloud-assessment" and body["version"] == __version__
     assert body["edition"] == "appliance" and body["azureConnectivity"] == "managed-identity"
-    assert body["scope"] == {"count": 1} and body["lastRun"] is None and body["publicResults"] is False
+    assert body["scope"] == {"count": 1, "configured": 1, "observed": 0} and body["publicResults"] is False
+    assert body["lastRun"] is None and body["lastError"] is None and body["snapshotAgeSeconds"] is None
     assert body["turnstile"] == {"required": False, "siteKey": None, "action": TURNSTILE_ACTION}
     assert body["siteOrigins"] == ["https://hybridcloudworks.com"] and body["asOf"].endswith("Z")
     assert body["catalog"] == {"version": "1.1.0", "count": 25}
@@ -50,6 +60,20 @@ def test_health_is_flat_complete_and_fast_with_a_hanging_collector(client):
         assert time.monotonic() - started < 1.0
         r = c.get("/api/assessments/current")
         assert r.status_code == 503 and r.json()["error"]["code"] == "no_snapshot"
+
+
+def test_health_reports_a_timeout_and_keeps_the_previous_snapshot():
+    app = make_app(make_settings(public_results=True, collect_timeout_seconds=1))
+    with TestClient(app) as c:
+        run_refresh(c)
+        first = c.get("/api/health").json()["lastRun"]
+        app.state.refresher._resources = HangingCollector()
+        app.state.refresher._timeout = 0.05
+        run_refresh(c)
+        health = c.get("/api/health").json()
+        assert health["lastError"] == "timeout" and health["lastRun"] == first
+        assert not app.state.refresher.running, "the single-flight lock is released after a timeout"
+        assert c.get("/api/assessments/current").status_code == 200
 
 
 def test_post_assessments_is_edition_readonly(client):
@@ -92,10 +116,13 @@ def test_results_200_with_the_gate_open_and_a_snapshot(public_client):
     c = public_client
     health = c.get("/api/health").json()
     assert health["publicResults"] is True and health["lastRun"].endswith("Z")
+    assert health["scope"] == {"count": 1, "configured": 1, "observed": 1} and health["lastError"] is None
+    assert isinstance(health["snapshotAgeSeconds"], int) and 0 <= health["snapshotAgeSeconds"] < 3600
     r = c.get("/api/assessments/current")
     assert r.status_code == 200
     body = r.json()
-    assert set(body) == {"assessment", "files", "asOf", "scope"} and body["scope"] == {"count": 1}
+    assert set(body) == {"assessment", "files", "asOf", "scope"}
+    assert body["scope"] == {"count": 1, "configured": 1, "observed": 1}
     assert sorted(body["files"]) == ["NOT-AN-AUDIT.md", "bundle.zip", "findings.csv", "report.json", "report.md"]
     a = body["assessment"]
     assert a["edition"] == "appliance" and a["source_format"] == "arg-live" and a["model_version"] == 1
@@ -135,41 +162,64 @@ def test_cost_disabled_leaves_cost_criteria_unknown():
     assert app.state.refresher._cost is None
 
 
-def test_refresh_queues_then_single_flight_then_per_client_bucket():
-    import threading
+class BlockingClient(FakeResourceGraphClient):
+    """Holds the single-flight lock until `gate` is set, so the running state is deterministic in tests."""
 
-    from ..conftest import FakeResourceGraphClient
+    def __init__(self, **kw):
+        super().__init__(**kw)
+        self.gate = threading.Event()
 
-    class Blocking(FakeResourceGraphClient):
-        gate = threading.Event()
+    def query(self, **kw):
+        self.gate.wait(5)
+        return super().query(**kw)
 
-        def query(self, **kw):
-            self.gate.wait(5)
-            return super().query(**kw)
 
-    app = make_app(make_settings(rate_limit_posts=2), client=Blocking())
+def _wait(predicate, tries=500):
+    for _ in range(tries):
+        if predicate():
+            return True
+        threading.Event().wait(0.01)
+    return predicate()
+
+
+def test_refresh_inside_the_cooldown_answers_429_even_while_that_run_is_in_progress():
+    client = BlockingClient()
+    app = make_app(make_settings(refresh_cooldown_minutes=10, rate_limit_posts=100), client=client)
     with TestClient(app) as c:
         r = c.post("/api/refresh")
         assert r.status_code == 202 and r.json() == {"queued": True, "lastRun": None}
-        for _ in range(200):
-            if app.state.refresher.running:
-                break
-            threading.Event().wait(0.01)
-        assert app.state.refresher.running
+        assert _wait(lambda: app.state.refresher.running)
+        r = c.post("/api/refresh")  # the run is in progress, and we are inside its cooldown: globally bounded first
+        assert r.status_code == 429 and r.json()["error"]["code"] == "rate_limited"
+        assert 0 < int(r.headers["retry-after"]) <= 600 and r.json()["error"]["details"]["retryAfter"] <= 600
+        client.gate.set()
+        assert _wait(lambda: not app.state.refresher.running and app.state.refresher.snapshot.ready)
+        r = c.post("/api/refresh")  # still inside the cooldown after the run completed
+        assert r.status_code == 429 and app.state.refresher._task is None
+
+
+def test_refresh_during_a_timer_started_run_answers_202_running_and_consumes_no_token():
+    client = BlockingClient()
+    app = make_app(make_settings(rate_limit_posts=1), client=client)
+    with TestClient(app) as c:
+        c.portal.start_task_soon(app.state.refresher.run)  # a run the timer would have started: no cooldown
+        assert _wait(lambda: app.state.refresher.running)
         r = c.post("/api/refresh")
-        assert r.status_code == 202 and r.json()["running"] is True and r.json()["queued"] is False
-        Blocking.gate.set()
-        for _ in range(500):
-            if not app.state.refresher.running:
-                break
-            threading.Event().wait(0.01)
-        assert app.state.refresher.snapshot.ready
-        # the single-flight answer consumed no bucket token: one token is left, then the bucket is empty
+        assert r.status_code == 202 and r.json() == {"queued": False, "running": True, "lastRun": None}
+        client.gate.set()
+        assert _wait(lambda: not app.state.refresher.running and app.state.refresher.snapshot.ready)
+        assert c.post("/api/refresh").status_code == 202, "the single-flight answer consumed no bucket token"
+
+
+def test_refresh_per_client_bucket():
+    client = BlockingClient()
+    client.gate.set()
+    app = make_app(make_settings(rate_limit_posts=2), client=client)
+    with TestClient(app) as c:
         assert c.post("/api/refresh").status_code == 202
-        for _ in range(500):
-            if app.state.refresher.runs == 2 and not app.state.refresher.running:
-                break
-            threading.Event().wait(0.01)
+        assert _wait(lambda: app.state.refresher.runs == 1 and not app.state.refresher.running)
+        assert c.post("/api/refresh").status_code == 202
+        assert _wait(lambda: app.state.refresher.runs == 2 and not app.state.refresher.running)
         r = c.post("/api/refresh")
         assert r.status_code == 429 and r.json()["error"]["code"] == "rate_limited"
         assert int(r.headers["retry-after"]) >= 1
@@ -187,8 +237,7 @@ def test_global_cooldown_is_shared_across_client_addresses():
         assert r.status_code == 429 and r.json()["error"]["code"] == "rate_limited"
         assert 0 < int(r.headers["retry-after"]) <= 600 and r.json()["error"]["details"]["retryAfter"] <= 600
         now[0] += 601
-        while app.state.refresher.running:
-            pass
+        assert _wait(lambda: not app.state.refresher.running)
         assert c.post("/api/refresh", headers={"x-forwarded-for": "203.0.113.3"}).status_code == 202
 
 

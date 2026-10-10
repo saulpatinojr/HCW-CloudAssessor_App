@@ -70,6 +70,7 @@ class Settings:
     refresh_cooldown_minutes: int = 10
     page_size: int = 1000
     max_rows: int = 50_000
+    collect_timeout_seconds: int = 900
 
     @property
     def turnstile_required(self) -> bool:
@@ -103,4 +104,5 @@ class Settings:
             refresh_cooldown_minutes=_int(env, "CA_REFRESH_COOLDOWN_MINUTES", 10, minimum=0),
             page_size=_int(env, "CA_PAGE_SIZE", 1000, minimum=1),
             max_rows=_int(env, "CA_MAX_ROWS", 50_000, minimum=1),
+            collect_timeout_seconds=_int(env, "CA_COLLECT_TIMEOUT_SECONDS", 900, minimum=1),
         )

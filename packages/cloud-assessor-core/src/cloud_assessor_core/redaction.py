@@ -66,6 +66,7 @@ ALLOWED_WORDS: frozenset[str] = frozenset(
         "busy",
         "collector_error",
         "throttled",
+        "timeout",
         "forbidden",
         "warning",
         "true",

@@ -101,6 +101,7 @@ def create_app(
         resource_collector=resource_collector,
         cost_collector=cost_collector,
         cooldown_seconds=settings.refresh_cooldown_minutes * 60,
+        timeout_seconds=float(settings.collect_timeout_seconds),
     )
 
     @asynccontextmanager
@@ -219,7 +220,7 @@ def create_app(
             "assessment": snapshot.assessment.model_dump(mode="json", by_alias=True),
             "files": sorted(snapshot.files),
             "asOf": snapshot.as_of_iso,
-            "scope": {"count": len(allowlist.subscriptions())},
+            "scope": scope_counts(app),
         }
         return Response(json.dumps(body), media_type="application/json")
 
@@ -250,9 +251,8 @@ def create_app(
 
     @app.post("/api/refresh", status_code=202)
     async def refresh(request: Request) -> Response:
-        if refresher.running:
-            logs.log_event("refresh_running")
-            return JSONResponse({"queued": False, "running": True, "lastRun": refresher.snapshot.as_of_iso}, 202)
+        # Globally bounded first: the cooldown (set by the last refresh this route queued) answers 429 whether or not
+        # that run is still in progress; only a run the timer started can answer 202 running.
         remaining = refresher.cooldown_remaining()
         if remaining > 0:
             logs.log_event("refresh_cooldown", retryAfter=remaining)
@@ -263,6 +263,9 @@ def create_app(
                 {"retryAfter": remaining},
                 headers={"Retry-After": str(remaining)},
             )
+        if refresher.running:
+            logs.log_event("refresh_running")
+            return JSONResponse({"queued": False, "running": True, "lastRun": refresher.snapshot.as_of_iso}, 202)
         allowed, retry_after = app.state.limiter.acquire(client_address(request, settings.trust_proxy))
         if not allowed:
             logs.log_event("rate_limited", retryAfter=retry_after)
@@ -273,7 +276,8 @@ def create_app(
                 headers={"Retry-After": str(retry_after)},
             )
         if settings.turnstile_required:
-            verdict = verify(
+            verdict = await asyncio.to_thread(
+                verify,
                 settings.turnstile_secret or "",
                 request.headers.get("x-turnstile-token"),
                 client_address(request, settings.trust_proxy),
@@ -341,10 +345,23 @@ def health_body(app: FastAPI) -> dict:
             "action": TURNSTILE_ACTION,
         },
         "azureConnectivity": AZURE_CONNECTIVITY,
-        "scope": {"count": len(app.state.allowlist.subscriptions())},
+        "scope": scope_counts(app),
         "catalog": {"version": app.state.catalog.version, "count": len(app.state.catalog.criteria)},
         "lastRun": refresher.snapshot.as_of_iso,
+        "lastError": refresher.snapshot.last_error,
+        "snapshotAgeSeconds": refresher.snapshot.age_seconds(datetime.now(UTC)),
         "publicResults": settings.public_results,
+    }
+
+
+def scope_counts(app: FastAPI) -> dict:
+    """`count` (the configured subscriptions, the pane's field), `configured` (the same) and `observed` (distinct
+    subscription ids in the current snapshot; 0 before the first run)."""
+    configured = len(app.state.allowlist.subscriptions())
+    return {
+        "count": configured,
+        "configured": configured,
+        "observed": app.state.refresher.snapshot.subscriptions_observed,
     }
 
 

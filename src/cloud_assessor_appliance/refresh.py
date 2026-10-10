@@ -31,6 +31,10 @@ class Snapshot:
     as_of: datetime | None = None
     resources: int = 0
     last_error: str | None = None  # an error code, never a message
+    subscriptions_observed: int = 0
+
+    def age_seconds(self, now: datetime) -> int | None:
+        return None if self.as_of is None else max(0, int((now - self.as_of).total_seconds()))
 
     @property
     def ready(self) -> bool:
@@ -56,6 +60,7 @@ class Refresher:
         resource_collector: ResourceGraphCollector,
         cost_collector=None,
         cooldown_seconds: int = 600,
+        timeout_seconds: float = 900.0,
         clock: Callable[[], float] = time.monotonic,
         now: Callable[[], datetime] = lambda: datetime.now(UTC),
     ) -> None:
@@ -65,10 +70,12 @@ class Refresher:
         self._resources = resource_collector
         self._cost = cost_collector
         self._cooldown = cooldown_seconds
+        self._timeout = timeout_seconds
         self._clock = clock
         self._now = now
         self._lock = asyncio.Lock()
         self._last_requested: float | None = None
+        self._task: asyncio.Task | None = None  # the queued run; kept so the task is never collected mid-flight
         self.snapshot = Snapshot()
         self.runs = 0
 
@@ -82,14 +89,21 @@ class Refresher:
         return max(0, int(self._cooldown - (self._clock() - self._last_requested) + 0.999))
 
     def request(self) -> str:
-        """'running' (single-flight, nothing started), 'cooldown' (inside the global window) or 'queued'."""
-        if self.running:
-            return "running"
+        """'cooldown' (inside the global window, running or not), 'running' (single-flight, nothing started), 'queued'."""
         if self.cooldown_remaining() > 0:
             return "cooldown"
+        if self.running:
+            return "running"
         self._last_requested = self._clock()
-        asyncio.get_running_loop().create_task(self.run())
+        self._task = asyncio.get_running_loop().create_task(self.run())
+        self._task.add_done_callback(self._task_done)
         return "queued"
+
+    def _task_done(self, task: asyncio.Task) -> None:
+        if self._task is task:
+            self._task = None
+        if not task.cancelled() and task.exception() is not None:  # pragma: no cover - run() catches everything
+            log_exception("refresh_failed", task.exception(), code="internal_error")
 
     async def run(self) -> bool:
         """One collection and evaluation. False when another run held the lock (nothing was started)."""
@@ -99,10 +113,7 @@ class Refresher:
             started = time.monotonic()
             log_event("refresh_started", scopes=len(self._allowlist.scopes))
             try:
-                collected = await asyncio.to_thread(self._resources.collect)
-                evidence = await self._cost.collect() if self._cost is not None else None
-                if self._cost is None:
-                    log_event("cost_skipped")
+                collected, evidence = await asyncio.wait_for(self._collect(), self._timeout)
                 assessment = await asyncio.to_thread(
                     assess,
                     collected.resources,
@@ -117,15 +128,22 @@ class Refresher:
                 )
                 files = make_bundle(assessment, self._catalog)
                 files["bundle.zip"] = zip_bytes(files)
+            except TimeoutError as exc:
+                # The worker thread cannot be interrupted; it finishes on its own and its result is dropped. The lock
+                # is released here so the next run is not blocked behind it.
+                self.snapshot.last_error = "timeout"
+                log_exception("refresh_failed", exc, code="timeout", kept=self.snapshot.ready)
+                return True
             except (CollectorError, ScopeError) as exc:
                 self.snapshot.last_error = "collector_error"
-                log_exception("refresh_failed", exc, code="collector_error", kept=self.snapshot.ready)
+                log_exception("refresh_failed", exc, message=True, code="collector_error", kept=self.snapshot.ready)
                 return True
             except Exception as exc:  # noqa: BLE001 - the timer must survive; the previous snapshot stays current
                 self.snapshot.last_error = "internal_error"
                 log_exception("refresh_failed", exc, code="internal_error", kept=self.snapshot.ready)
                 return True
-            self.snapshot = Snapshot(assessment, files, assessment.created_at, collected.rows, None)
+            observed = len({r.subscription_id for r in collected.resources if r.subscription_id})
+            self.snapshot = Snapshot(assessment, files, assessment.created_at, collected.rows, None, observed)
             self.runs += 1
             log_event(
                 "refresh_completed",
@@ -136,6 +154,14 @@ class Refresher:
                 durationMs=int((time.monotonic() - started) * 1000),
             )
             return True
+
+    async def _collect(self):
+        """Both collectors, as one awaitable the timeout wraps."""
+        collected = await asyncio.to_thread(self._resources.collect)
+        evidence = await self._cost.collect() if self._cost is not None else None
+        if self._cost is None:
+            log_event("cost_skipped")
+        return collected, evidence
 
     async def timer(self, interval_seconds: float) -> None:
         """Collect at startup, then every interval. Cancelled at shutdown."""
