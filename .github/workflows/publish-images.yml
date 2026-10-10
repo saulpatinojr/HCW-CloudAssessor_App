@@ -4,7 +4,7 @@
 # only. Both Dockerfile targets are built; the `lab` boundary-proof target is RUN as a check and never pushed. Order:
 # build -> boundary checks -> Trivy -> push with provenance + SBOM -> attest -> digest. A failing check publishes nothing.
 # Until the owner creates the OIDC connection and sets DOCKERHUB_ENABLED=true / DOCKERHUB_CONNECTION=<uuid>, the push
-# is skipped.
+# is skipped. A workflow_dispatch from a branch builds, proves and scans but never pushes: only a v* tag ref can.
 name: publish-images
 on:
   push:
@@ -54,16 +54,17 @@ jobs:
         env: { ENABLED: "${{ vars.DOCKERHUB_ENABLED }}", CONNECTION: "${{ vars.DOCKERHUB_CONNECTION }}" }
         run: |
           set -euo pipefail
+          if [[ "${GITHUB_REF}" != refs/tags/v* ]]; then echo "push=false" >> "$GITHUB_OUTPUT"; echo "::notice::not a v* tag (${GITHUB_REF}); built, proved and scanned, never pushed from a branch"; exit 0; fi
           if [ "$ENABLED" != "true" ]; then echo "push=false" >> "$GITHUB_OUTPUT"; echo "::notice::DOCKERHUB_ENABLED is not 'true'; built, proved and scanned, not pushed"; exit 0; fi
           if ! [[ "$CONNECTION" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$ ]]; then echo "::error::DOCKERHUB_CONNECTION is not a UUID"; exit 1; fi
           echo "push=true" >> "$GITHUB_OUTPUT"
-      - if: steps.gate.outputs.push == 'true'
+      - if: steps.gate.outputs.push == 'true' && startsWith(github.ref, 'refs/tags/v')
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         env:
           DOCKERHUB_OIDC_CONNECTIONID: ${{ vars.DOCKERHUB_CONNECTION }}
           DOCKERHUB_OIDC_EXPIREIN: "900"
         with: { registry: docker.io, username: hybridcloudworks }
-      - if: steps.gate.outputs.push == 'true'
+      - if: steps.gate.outputs.push == 'true' && startsWith(github.ref, 'refs/tags/v')
         id: build
         name: Push the appliance target only, with provenance and SBOM
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
@@ -83,14 +84,14 @@ jobs:
             org.opencontainers.image.description=Hybrid Cloud Works Cloud Assessor, appliance edition (managed identity, read-only)
           provenance: true
           sbom: true
-      - if: steps.gate.outputs.push == 'true'
+      - if: steps.gate.outputs.push == 'true' && startsWith(github.ref, 'refs/tags/v')
         name: Attest build provenance (SLSA)
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ env.IMAGE }}
           subject-digest: ${{ steps.build.outputs.digest }}
           push-to-registry: true
-      - if: steps.gate.outputs.push == 'true'
+      - if: steps.gate.outputs.push == 'true' && startsWith(github.ref, 'refs/tags/v')
         name: Record the immutable digest for Terraform var.image_ref
         run: |
           {

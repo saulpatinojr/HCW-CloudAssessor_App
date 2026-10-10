@@ -232,5 +232,4 @@ assessment-output/
 *.tfstate.*
 *.tfvars
 !terraform.tfvars.example
-.terraform.lock.hcl
 node_modules/

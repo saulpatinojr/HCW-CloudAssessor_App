@@ -12,6 +12,10 @@
 #
 # Every FROM is the digest in infrastructure/docker/versions.env (scripts/check-versions.sh fails CI on drift).
 # Both final stages: apt upgrade, pip/ensurepip/setuptools removed, USER 10001:10001, /tmp the only writable path.
+# `apt-get upgrade` is house style (the AddOn's Dockerfile): it picks up Debian security fixes published after the
+# base digest, at the cost of bit-for-bit reproducibility between two builds of the same commit. The published image
+# is pinned by its own digest (publish-images.yml), so what deploys is still immutable; only "rebuild from source"
+# can differ in its apt layer.
 #
 # Build:  docker build -f infrastructure/docker/Dockerfile --target appliance -t hcw-cloud-assessor-appliance:dev .
 #         docker build -f infrastructure/docker/Dockerfile --target lab -t hcw-cloud-assessor-lab:dev .
@@ -81,5 +85,5 @@ WORKDIR /app
 USER 10001:10001
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD ["python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"]
+  CMD ["python", "-c", "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:%s/api/health' % os.environ.get('PORT', '8080'), timeout=3).status==200 else 1)"]
 CMD ["python", "-m", "cloud_assessor_appliance"]

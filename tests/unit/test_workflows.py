@@ -27,10 +27,12 @@ def test_every_uses_is_sha_pinned_with_a_version_comment():
         every = ANY_USES.findall(text)
         pinned = USES.findall(text)
         assert len(every) == len(pinned), f"{path.name}: an action lacks a version comment"
-        for ref, _version in pinned:
+        for ref, version in pinned:
             owner_repo, sha = ref.rsplit("@", 1)
             assert re.fullmatch(r"[0-9a-f]{40}", sha), f"{path.name}: {ref} is not SHA-pinned"
             assert "/" in owner_repo
+            if "codeql-action" in owner_repo:
+                assert re.fullmatch(r"v\d+\.\d+\.\d+", version), f"{path.name}: {ref} names {version}, not a release"
 
 
 def test_runners_permissions_and_no_long_lived_tokens():
@@ -54,6 +56,9 @@ def test_publish_images_pushes_only_the_appliance_target():
     assert "hcw-cloud-assessor-lab" in text and "hcw-addon-cloud-assessment" not in doc["env"]["IMAGE"]
     assert doc["env"]["IMAGE"] == "docker.io/hybridcloudworks/hcw-cloud-assessor-appliance"
     assert "vars.DOCKERHUB_ENABLED" in text and "DOCKERHUB_OIDC_CONNECTIONID" in text
+    assert pushes[0]["if"].count("startsWith(github.ref, 'refs/tags/v')") == 1, "a branch dispatch never pushes"
+    login = next(s for s in steps if "login-action" in s.get("uses", ""))
+    assert "startsWith(github.ref, 'refs/tags/v')" in login["if"]
 
 
 def test_ci_runs_every_section_20_check_that_can_run_in_ci():

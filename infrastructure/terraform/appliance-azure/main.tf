@@ -20,6 +20,8 @@ provider "azurerm" {
 locals {
   name = "${var.prefix}-${var.environment}-${var.location_short}"
   tags = merge({ application = "cloud-assessor", component = "appliance", environment = var.environment }, var.tags)
+  # Normalised once: role assignment scopes and CA_SCOPES compare case-insensitively, and toset() does not.
+  scope_ids = toset([for s in var.scope_ids : lower(s)])
 }
 
 resource "azurerm_resource_group" "app" {
@@ -37,7 +39,7 @@ resource "azurerm_user_assigned_identity" "app" {
 
 # Reader on each assessment scope: Resource Graph reads (T-011, T-025). [REVIEW REQUIRED]
 resource "azurerm_role_assignment" "reader" {
-  for_each             = toset(var.scope_ids)
+  for_each             = local.scope_ids
   scope                = each.value
   role_definition_name = "Reader"
   principal_id         = azurerm_user_assigned_identity.app.principal_id
@@ -46,7 +48,7 @@ resource "azurerm_role_assignment" "reader" {
 
 # Cost Management Reader on each scope: Reader does not include cost data (T-011, T-026). [REVIEW REQUIRED]
 resource "azurerm_role_assignment" "cost_reader" {
-  for_each             = toset(var.scope_ids)
+  for_each             = local.scope_ids
   scope                = each.value
   role_definition_name = "Cost Management Reader"
   principal_id         = azurerm_user_assigned_identity.app.principal_id
@@ -121,7 +123,7 @@ resource "azurerm_container_app" "api" {
 
       env {
         name  = "CA_SCOPES"
-        value = join(",", var.scope_ids)
+        value = join(",", sort(local.scope_ids))
       }
       env {
         name  = "AZURE_CLIENT_ID"
