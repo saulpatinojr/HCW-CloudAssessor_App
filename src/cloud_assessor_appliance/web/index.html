@@ -1,0 +1,115 @@
+<!doctype html>
+<!-- copied from HCW-CloudAssessor_AddOn (main, d552c6c) on 2026-10-10; unchanged except the edition switch (app.js selects the
+     upload flow for the lab and the current-assessment flow for the appliance from /api/health.edition). -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Cloud assessment</title>
+  <link rel="stylesheet" href="/theme.css">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<main>
+  <header class="bar">
+    <div>
+      <h1>Cloud assessment</h1>
+      <span class="badge" id="edition-badge">Lab edition · no cloud connectivity by design</span>
+      <span class="badge" id="not-production">Not production</span>
+    </div>
+    <div>
+      <span class="badge status" id="status" aria-live="polite">Checking…</span>
+    </div>
+  </header>
+
+  <p class="notice" id="notice">
+    This tool analyses an export of your resource inventory only. It never asks for credentials and never connects to your cloud.
+    Everything is held in memory, is returned only to this browser session, and expires after two hours or when you delete it.
+  </p>
+
+  <section class="step" id="step-current" hidden aria-labelledby="h-current">
+    <h2 id="h-current">1. Current assessment</h2>
+    <p class="small" id="current-summary"></p>
+    <div class="row">
+      <button type="button" id="refresh">Refresh</button>
+      <span class="small" id="refresh-note"></span>
+    </div>
+  </section>
+
+  <section class="step" id="step-upload" aria-labelledby="h-upload">
+    <h2 id="h-upload">1. Upload a Resource Graph export</h2>
+    <p class="small">Accepted: the JSON from <code>az graph query</code> (array or envelope) or the Resource Graph Explorer CSV. A portal "All resources" CSV is accepted too, with most criteria reported as unknown. Up to 5 MB and 5,000 rows. Format is detected automatically.</p>
+    <label class="dropzone" id="dropzone" tabindex="0" for="file">
+      Drop a .json or .csv file here, or choose a file
+      <input type="file" id="file" accept=".json,.csv,application/json,text/csv">
+    </label>
+    <div class="row">
+      <button type="button" class="secondary" id="use-sample">Use the sample export</button>
+      <a class="button secondary" href="/api/sample.json" download>Download sample JSON</a>
+      <a class="button secondary" href="/api/sample.csv" download>Download sample CSV</a>
+    </div>
+    <div id="preview-wrap" hidden>
+      <p class="small" id="preview-summary"></p>
+      <div class="scroll"><table id="preview"><thead></thead><tbody></tbody></table></div>
+      <ul class="warnings" id="preview-warnings"></ul>
+    </div>
+    <div class="row">
+      <div id="verification" aria-label="Human verification"></div>
+      <button type="button" id="run" disabled>Run assessment</button>
+      <span class="small" id="run-note"></span>
+    </div>
+  </section>
+
+  <section class="step" id="step-scorecard" hidden aria-labelledby="h-scorecard">
+    <h2 id="h-scorecard">2. Scorecard</h2>
+    <p class="small" id="scorecard-summary"></p>
+    <div class="cards" id="cards"></div>
+    <ul class="warnings" id="ingestion-warnings"></ul>
+  </section>
+
+  <section class="step" id="step-findings" hidden aria-labelledby="h-findings">
+    <h2 id="h-findings">3. Findings</h2>
+    <div class="filters">
+      <label>Framework <select id="f-framework"><option value="">All</option></select></label>
+      <label>Severity <select id="f-severity"><option value="">All</option><option>critical</option><option>high</option><option>medium</option><option>low</option></select></label>
+      <label>State <select id="f-state"><option value="">All</option><option value="fail">fail</option><option value="pass">pass</option><option value="unknown">unknown</option><option value="not-applicable">not applicable</option></select></label>
+      <label>Search <input type="search" id="f-search" placeholder="resource or criterion"></label>
+      <span class="small" id="findings-count"></span>
+    </div>
+    <div class="scroll">
+      <table id="findings">
+        <thead><tr><th>Criterion</th><th>Severity</th><th>Resource</th><th>Type</th><th>State</th><th>Reason</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="detail" id="detail" hidden>
+      <h2>Detail</h2>
+      <dl id="detail-list"></dl>
+    </div>
+  </section>
+
+  <section class="step" id="step-unknown" hidden aria-labelledby="h-unknown">
+    <h2 id="h-unknown">Unknown by design</h2>
+    <p class="small">An export shows configuration, not everything. These topics cannot be assessed from it, so the related criteria report "unknown" and lower coverage, never the score.</p>
+    <ul id="unknown-list"></ul>
+  </section>
+
+  <section class="step" id="step-actions" hidden aria-labelledby="h-actions">
+    <h2 id="h-actions">4. Actions</h2>
+    <div class="row">
+      <button type="button" id="download-bundle">Download bundle</button>
+      <button type="button" class="secondary" id="copy-report">Copy report</button>
+      <button type="button" class="danger" id="delete">Delete my data now</button>
+      <span class="small" id="expiry"></span>
+    </div>
+    <p class="small" id="copy-note"></p>
+    <pre class="report" id="report" tabindex="0" aria-label="Report in Markdown"></pre>
+  </section>
+
+  <p class="small" id="unavailable" hidden>This tool isn't available right now.</p>
+  <footer class="small">Criteria are paraphrased from public frameworks with attribution; this project is not affiliated with their authors. Not an audit.</footer>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>
