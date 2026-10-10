@@ -15,10 +15,12 @@ def main() -> int:
         settings = Settings.from_env()
         app = create_app(settings)
     except Exception as exc:  # noqa: BLE001 - startup refusal is the point; the reason is printed once, scrubbed
+        import json
+
         from cloud_assessor_core.redaction import scrub
 
-        reason = scrub(f"{type(exc).__name__}: {exc}").replace('"', "'")
-        sys.stderr.write(f'{{"event":"startup_refused","reason":"{reason}"}}\n')
+        reason = scrub(f"{type(exc).__name__}: {exc}")
+        sys.stderr.write(json.dumps({"event": "startup_refused", "reason": reason}) + "\n")
         return 3
     import uvicorn
 

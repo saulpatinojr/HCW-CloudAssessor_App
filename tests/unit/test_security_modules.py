@@ -60,6 +60,21 @@ def test_csp_and_headers_follow_settings():
     assert cache_control_for("/app.js") == b"public, max-age=300"
 
 
+def test_client_address_takes_the_last_forwarded_entry_only_when_trusted():
+    from cloud_assessor_appliance.security.limits import client_address
+
+    class Req:
+        def __init__(self, xff):
+            self.headers = {"x-forwarded-for": xff} if xff is not None else {}
+            self.client = type("C", (), {"host": "10.0.0.9"})()
+
+    assert client_address(Req("203.0.113.1, 10.0.0.1"), False) == "10.0.0.9"
+    assert client_address(Req("203.0.113.1, 10.0.0.1"), True) == "10.0.0.1", "the proxy appends; the last entry is its"
+    assert client_address(Req("203.0.113.7"), True) == "203.0.113.7"
+    assert client_address(Req(""), True) == "10.0.0.9" and client_address(Req(None), True) == "10.0.0.9"
+    assert len(client_address(Req("x" * 200), True)) == 64
+
+
 def test_token_bucket_refills_and_prunes():
     now = [0.0]
     limiter = TokenBucketLimiter(2, 10.0, clock=lambda: now[0])
@@ -101,7 +116,15 @@ def test_logging_writer_is_guarded(monkeypatch):
         logs.log_event("startup", name="hcw-sample-aks")
     logs.log_exception("refresh_failed", RuntimeError("sub /subscriptions/00000000-0000-0000-0000-000000000001/x"))
     out = buf.getvalue()
-    assert '"event":"refresh_completed"' in out and "00000000-0000" not in out and "<redacted>" in out
+    assert '"event":"refresh_completed"' in out and "00000000-0000" not in out
+    assert '"exception":"RuntimeError"' in out and "scrubbed" not in out, "class name only by default"
+    logs.log_exception(
+        "refresh_failed", RuntimeError("sub /subscriptions/00000000-0000-0000-0000-000000000001/x"), message=True
+    )
+    out = buf.getvalue()
+    assert "<redacted>" in out and "00000000-0000" not in out
+    with pytest.raises(VisitorDataError):
+        logs._write({"event": "startup", "exception": "not an identifier"})
     logs.configure(silent=True)
     logs.log_event("startup")
     assert out == buf.getvalue()
