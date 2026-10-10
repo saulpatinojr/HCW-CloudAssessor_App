@@ -8,6 +8,8 @@ permissions:
   contents: read
 jobs:
   dependency-review:
+    # Needs the Dependency graph enabled on the repository (Settings > Code security; T-010 note): until the owner
+    # enables it the action fails with "Dependency review is not supported on this repository".
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-26.04
     steps:
@@ -30,6 +32,9 @@ jobs:
         with: { category: "/language:${{ matrix.language }}" }
   secret-scan:
     runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lists the pull request's commits; without this it fails with "Resource not accessible by integration"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { fetch-depth: 0 }

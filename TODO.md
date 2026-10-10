@@ -198,7 +198,7 @@ infrastructure inventory. Security controls should land before the first collect
   findings into this file, then make them required in T-006 once the baseline is clean.
   Note that `qlty check` fails the build outright when `.qlty/qlty.toml` is absent, so do
   not delete that file to silence findings — configure the plugins instead.
-- **Done (2026-10-10):** `.github/workflows/security.yml` (dependency-review, CodeQL python and javascript-typescript, gitleaks, `pip-audit` on both locks); `.qlty/qlty.toml` enables `ruff` and `bandit` beside `trufflehog`. Scanner overlap (T-008) is left to the owner.
+- **Done (2026-10-10):** `.github/workflows/security.yml` (dependency-review, CodeQL python and javascript-typescript, gitleaks, `pip-audit` on both locks); `.qlty/qlty.toml` enables `ruff` and `bandit` beside `trufflehog`. Scanner overlap (T-008) is left to the owner. **Owner step:** enable the Dependency graph at https://github.com/saulpatinojr/HCW-CloudAssessor_App/settings/security_analysis, otherwise the `dependency-review` job fails with "Dependency review is not supported on this repository" (seen on PR #6).
 
 ### T-011 — Define the Azure credential handling standard
 
