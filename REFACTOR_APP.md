@@ -287,7 +287,7 @@ def create_app(settings: Settings) -> FastAPI:
     @app.api_route("/api/assessments", methods=["POST"])       -> 405 {"error": {"code": "edition_readonly", "message": "This edition reads its own scope; nothing is uploaded."}}
 ```
 
-  Headers on every response: `X-Addon-Id: cloud-assessment`, `X-Addon-Version`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` on `/api/*`; CSP with `frame-ancestors` from `CA_FRAME_ANCESTORS` (default `'none'`, `X-Frame-Options: DENY` only then). `POST /api/refresh` is bounded globally before it is bounded per client: a single-flight lock (a refresh requested while a collection runs answers `202 {"queued": false, "running": true}` and starts nothing) and a global cooldown `CA_REFRESH_COOLDOWN_MINUTES` (default `10`) shared by every client address (inside the cooldown the route answers `429 rate_limited` with `Retry-After`), so callers spread across many addresses can trigger at most one live Resource Graph and cost collection per cooldown. On top of that, the per-client token bucket allows one request per ten minutes per client address (socket peer, or first `X-Forwarded-For` when `CA_TRUST_PROXY=1`), and Turnstile is verified when `TURNSTILE_SECRET` is set. `__main__.py` runs uvicorn on `0.0.0.0:$PORT`, `proxy_headers=False`, no access log, SIGTERM graceful. Logging goes through the core's `assert_no_visitor_data` writer only.
+  Headers on every response: `X-Addon-Id: cloud-assessment`, `X-Addon-Version`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` on `/api/*`; CSP with `frame-ancestors` from `CA_FRAME_ANCESTORS` (default `'none'`, `X-Frame-Options: DENY` only then). `POST /api/refresh` is bounded globally before it is bounded per client: a global cooldown `CA_REFRESH_COOLDOWN_MINUTES` (default `10`) shared by every client address, checked first (inside the cooldown, which starts when this route queues a run, the route answers `429 rate_limited` with `Retry-After`, whether or not that run is still in progress) and a single-flight lock (a refresh requested while a timer-started collection runs answers `202 {"queued": false, "running": true}` and starts nothing), so callers spread across many addresses can trigger at most one live Resource Graph and cost collection per cooldown. On top of that, the per-client token bucket allows one request per ten minutes per client address (socket peer, or the last `X-Forwarded-For` entry, the one the trusted proxy appended, when `CA_TRUST_PROXY=1`), and Turnstile is verified when `TURNSTILE_SECRET` is set. `__main__.py` runs uvicorn on `0.0.0.0:$PORT`, `proxy_headers=False`, no access log, SIGTERM graceful. Logging goes through the core's `assert_no_visitor_data` writer only.
 - **Tests:** `tests/unit/test_api.py` (`httpx` TestClient, collectors faked): health shape and headers, `405 edition_readonly`, `403 results_not_public` on all four results routes with `CA_PUBLIC_RESULTS` unset and `publicResults:false` in health, `200` on them with `CA_PUBLIC_RESULTS=true` once a snapshot exists, `503 no_snapshot` before the first run (regardless of `CA_PUBLIC_RESULTS`), bundle content types, per-client rate limit, global cooldown held across two different client addresses, single-flight `202 running` while a collection is in progress, Turnstile path with a mocked siteverify.
 - **Acceptance criteria:** every route in section 8 answers as tabled; `/api/health` under one second with collectors stubbed to hang.
 - **Priority:** P1. **Dependencies:** 7.3 to 7.7. **Rollback:** module deletion.
@@ -356,12 +356,12 @@ The appliance HTTP surface. Error envelope `{ error: { code, message, details? }
 
 | Method and path | Auth | Success | Errors |
 |---|---|---|---|
-| `GET /api/health` | none | 200 flat envelope: `ok, id:"cloud-assessment", version, edition:"appliance", capabilities[], asOf, siteOrigins[], turnstile:{required, siteKey|null}, azureConnectivity:"managed-identity", scope:{count}, catalog:{version,count}, lastRun, publicResults` | 503 `ok:false` when the catalog failed to load |
-| `GET /api/assessments/current` | none; gated by `CA_PUBLIC_RESULTS` | 200 `{assessment, files[], asOf, scope:{count}}` | 403 `results_not_public` while the gate is closed; 503 `no_snapshot` before the first successful run |
+| `GET /api/health` | none | 200 flat envelope: `ok, id:"cloud-assessment", version, edition:"appliance", capabilities[], asOf, siteOrigins[], turnstile:{required, siteKey|null}, azureConnectivity:"managed-identity", scope:{count, configured, observed}, catalog:{version,count}, lastRun, lastError, snapshotAgeSeconds, publicResults` | 503 `ok:false` when the catalog failed to load |
+| `GET /api/assessments/current` | none; gated by `CA_PUBLIC_RESULTS` | 200 `{assessment, files[], asOf, scope:{count, configured, observed}}` | 403 `results_not_public` while the gate is closed; 503 `no_snapshot` before the first successful run |
 | `GET /api/assessments/current/report.md` | none; gated by `CA_PUBLIC_RESULTS` | 200 `text/markdown`, attachment | 403 `results_not_public`; 503 `no_snapshot` |
 | `GET /api/assessments/current/report.json` | none; gated by `CA_PUBLIC_RESULTS` | 200 `application/json` | 403 `results_not_public`; 503 `no_snapshot` |
 | `GET /api/assessments/current/bundle.zip` | none; gated by `CA_PUBLIC_RESULTS` | 200 `application/zip`, attachment | 403 `results_not_public`; 503 `no_snapshot` |
-| `POST /api/refresh` | Turnstile when `TURNSTILE_SECRET` set | 202 `{queued:true, lastRun}` | 403 `turnstile_failed`, 429 `rate_limited` (+ `Retry-After`), 503 `busy` when a run is in progress |
+| `POST /api/refresh` | Turnstile when `TURNSTILE_SECRET` set | 202 `{queued:true, lastRun}`; 202 `{queued:false, running:true, lastRun}` when a timer-started run is in progress (nothing started) | 403 `turnstile_failed`, 429 `rate_limited` (+ `Retry-After`) inside the global cooldown, which starts when this route queues a run and so covers that run while it is in progress, and from the per-client bucket |
 | `POST /api/assessments` | n/a | absent | 405 `edition_readonly` |
 | `GET /api/catalog` | none | 200 `{version, retrievedOn, count, criteria[]}` (same as the lab) | |
 | `OPTIONS *` | none | 204 for an allowed origin | 403 |
@@ -398,7 +398,8 @@ All values are environment variables; none is a secret except `TURNSTILE_SECRET`
 | `CA_FRAME_ANCESTORS` | both | `'none'` | CSP `frame-ancestors`; `X-Frame-Options: DENY` only when `'none'` |
 | `CA_SITE_ORIGINS` | both | empty | Space-separated origins the pane posts `hcw-addon` messages to; published in `/api/health.siteOrigins` |
 | `CA_ALLOWED_ORIGINS` | both | empty | Exact-origin CORS list |
-| `CA_TRUST_PROXY` | both | `0` | `1` reads the first `X-Forwarded-For` value as the client address; never `CF-Connecting-IP` |
+| `CA_TRUST_PROXY` | both | `0` | `1` reads the last `X-Forwarded-For` value (the one the trusted proxy appended) as the client address; never `CF-Connecting-IP` |
+| `CA_COLLECT_TIMEOUT_SECONDS` | appliance | `900` | Wall-clock bound on one collection (both collectors); a run past it is abandoned, the previous snapshot stays current, `/api/health` reports `lastError: "timeout"` |
 | `CA_TURNSTILE_SITE_KEY` | both | empty | Public widget key, published by health |
 | `TURNSTILE_SECRET` | both | empty | Lab: required unless `CA_ALLOW_NO_TURNSTILE=1`; appliance: enables verification on `POST /api/refresh` |
 | `CA_RATE_LIMIT_POSTS`, `CA_RATE_LIMIT_WINDOW_MINUTES` | both | `1` / `10` (appliance), `10` / `10` (lab) | Token bucket on anonymous mutating routes |
@@ -611,7 +612,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false; t
 Terraform plan against the owner's own current subscription, never apply from a session (PowerShell; the subscription id is computed, not typed):
 
 ```powershell
-$sub = (az account show -o json | ConvertFrom-Json).id; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var 'image_ref=docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+$sub = (az account show -o json | ConvertFrom-Json).id; $start = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var "budget_start_date=$start" -var 'image_ref=docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000'
 ```
 
 The all-zero digest above is a syntactically valid placeholder for `plan` only; a real `apply` uses the digest printed by `publish-images.yml`.

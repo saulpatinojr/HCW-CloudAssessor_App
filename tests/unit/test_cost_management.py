@@ -114,3 +114,18 @@ def test_sdk_adapters_build_without_network():
             raise RuntimeError("no network in tests")
 
     assert SdkCostClient(Cred())._client is not None and SdkResourceGraphClient(Cred())._client is not None
+    from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
+
+    client = SdkCostClient(Cred())
+
+    def raise_auth():
+        raise ClientAuthenticationError("no token")
+
+    with pytest.raises(CostAccessError):
+        client._guard(raise_auth)
+
+    def raise_500():
+        raise HttpResponseError(message="boom")
+
+    with pytest.raises(CollectorError, match="HTTP HttpResponseError"):
+        client._guard(raise_500)

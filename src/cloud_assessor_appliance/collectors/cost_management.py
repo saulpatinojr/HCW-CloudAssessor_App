@@ -16,7 +16,14 @@ from typing import Any, Protocol
 from cloud_assessor_core.model import BudgetEvidence, CostEvidence
 from cloud_assessor_core.redaction import scrub
 
-from cloud_assessor_appliance.collectors.resource_graph import CollectorError, ThrottledError
+from cloud_assessor_appliance.collectors.resource_graph import (
+    CONNECTION_TIMEOUT_SECONDS,
+    READ_TIMEOUT_SECONDS,
+    RETRY_TOTAL,
+    CollectorError,
+    ThrottledError,
+    http_status,
+)
 from cloud_assessor_appliance.collectors.scope import ScopeAllowlist
 from cloud_assessor_appliance.security.logging import log_event
 
@@ -169,19 +176,26 @@ class SdkCostClient:
     def __init__(self, credential: Any) -> None:
         from azure.mgmt.costmanagement import CostManagementClient as _Client
 
-        self._client = _Client(credential)
+        self._client = _Client(
+            credential,
+            connection_timeout=CONNECTION_TIMEOUT_SECONDS,
+            read_timeout=READ_TIMEOUT_SECONDS,
+            retry_total=RETRY_TOTAL,
+        )
 
     def _guard(self, call: Callable[[], Any]) -> Any:
-        from azure.core.exceptions import HttpResponseError
+        from azure.core.exceptions import ClientAuthenticationError, HttpResponseError
 
         try:
             return call()
+        except ClientAuthenticationError:
+            raise CostAccessError() from None
         except HttpResponseError as exc:
             if exc.status_code == 429:
                 raise ThrottledError(_retry_after(exc.response)) from None
             if exc.status_code in (401, 403):
                 raise CostAccessError() from None
-            raise CollectorError(f"cost management call failed: HTTP {exc.status_code}") from None
+            raise CollectorError(f"cost management call failed: HTTP {http_status(exc)}") from None
 
     def actual_cost(self, scope: str, *, group_by: tuple[str, str]) -> tuple[list[str], list[list[Any]]]:
         from azure.mgmt.costmanagement import models as cm

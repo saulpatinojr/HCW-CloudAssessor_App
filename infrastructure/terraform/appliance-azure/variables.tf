@@ -48,8 +48,11 @@ variable "monthly_budget" {
 }
 variable "budget_start_date" {
   type        = string
-  description = "First day of the month the budget starts, RFC 3339. Azure requires the first of a month."
-  default     = "2026-11-01T00:00:00Z"
+  description = "First day of the month the budget starts, RFC 3339 (e.g. the current month's first day). Azure requires the first of a month, not more than twelve months ahead; no default, because any fixed date expires."
+  validation {
+    condition     = can(regex("^[0-9]{4}-(0[1-9]|1[0-2])-01T00:00:00Z$", var.budget_start_date))
+    error_message = "budget_start_date must be the first day of a month in RFC 3339 UTC, e.g. 2026-11-01T00:00:00Z."
+  }
 }
 variable "alert_emails" {
   type        = list(string)

@@ -86,6 +86,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- Security review of PR #6 (2026-10-10): the refresh route checks the global cooldown before the single-flight lock
+  (deterministic `429`); both collectors run under `asyncio.wait_for` with `CA_COLLECT_TIMEOUT_SECONDS`, and the SDK
+  clients get connection (10 s) and read (60 s) timeouts and `retry_total = 3`; `/api/health` gains `lastError`,
+  `snapshotAgeSeconds` and `scope.{configured,observed}` beside `scope.count`; internal and unhandled errors log the
+  exception class name only (collector errors keep their scrubbed, application-composed message); `CA_TRUST_PROXY=1`
+  reads the last `X-Forwarded-For` entry (the one the trusted proxy appended), not the first; the queued refresh task is
+  kept on the refresher with a done callback; human verification runs in a worker thread; `publish-images.yml` pushes
+  only from a `v*` tag ref; `budget_start_date` is required and validated (no expiring default); scope ids are
+  lower-cased before `toset`; the Dockerfile `HEALTHCHECK` honours `PORT`; `__main__` writes its refusal with
+  `json.dumps`; `ATTEMPTS` is used in the throttling message and a status-less `ClientAuthenticationError` is named
+  instead of `HTTP None`; the CodeQL pins name `v4.37.8`. T-034 records the provider lock file as an owner step.
 - `README.md` rewritten for the implemented state: editions, layout, the section 20 commands as the quick start, the
   five-file documentation table, engine-change conventions.
 - `.gitignore` extended (T-004); `.qlty/qlty.toml` plugins (T-010).
@@ -96,8 +107,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   can install here; both satisfy `requires-python >=3.14.6,<3.15`.
 - Cost Management field names, the `InsightAlert` reading of anomaly alerts, the managed-certificate custom-domain
   flow and the base-image digest are `[VERIFY]` until the first live validation (R-002) and image build.
-- `REFACTOR_APP.md` section 8 tables `503 busy` for a refresh requested during a run; section 7.8 (later revision)
-  specifies `202 {queued:false, running:true}`, which is what is implemented and tested.
+- `POST /api/refresh` is bounded globally first: inside the cooldown (which starts when the route queues a run, so it
+  covers that run while it is in progress) the answer is `429 rate_limited` with `Retry-After`; only a timer-started
+  run in progress answers `202 {queued:false, running:true}`. `REFACTOR_APP.md` sections 7.8 and 8 were updated to say
+  so (section 8 had tabled `503 busy`).
+- A collection that runs past `CA_COLLECT_TIMEOUT_SECONDS` (default 900) is abandoned: the single-flight lock is
+  released, the previous snapshot stays current and `/api/health` reports `lastError: "timeout"`. The worker thread
+  cannot be interrupted and finishes on its own; its result is dropped.
 
 ### Added (documentation governance, before the plan)
 

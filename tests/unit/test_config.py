@@ -10,6 +10,8 @@ def test_defaults_and_env_parsing():
     assert s.port == 8080 and s.refresh_minutes == 60 and s.cost_enabled and not s.public_results
     assert s.rate_limit_posts == 1 and s.rate_limit_window_minutes == 10 and s.refresh_cooldown_minutes == 10
     assert s.page_size == 1000 and s.max_rows == 50_000 and s.frame_ancestors == "'none'" and not s.turnstile_required
+    assert s.collect_timeout_seconds == 900
+    assert Settings.from_env({"CA_SCOPES": SCOPE, "CA_COLLECT_TIMEOUT_SECONDS": "30"}).collect_timeout_seconds == 30
     s = Settings.from_env(
         {
             "CA_SCOPES": SCOPE,
@@ -43,6 +45,7 @@ def test_defaults_and_env_parsing():
         {"PORT": "abc"},
         {"CA_REFRESH_MINUTES": str(MAX_SETTING + 1)},
         {"CA_MAX_ROWS": "12345678901"},
+        {"CA_COLLECT_TIMEOUT_SECONDS": "0"},
         {"CA_FRAME_ANCESTORS": "'none'; script-src *"},
         {"CA_SITE_ORIGINS": "hybridcloudworks.com"},
     ],

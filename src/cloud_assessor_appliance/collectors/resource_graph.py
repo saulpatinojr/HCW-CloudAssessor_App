@@ -25,6 +25,17 @@ KQL = "resources | where {filter} | project {projection} | order by id asc"
 ATTEMPTS = 5
 BASE_DELAY_SECONDS = 2.0
 MAX_DELAY_SECONDS = 60.0
+# azure-core pipeline bounds for every SDK call: connect, read, and the transport-level retry count (the collector's
+# own 429 backoff above sits on top of it).
+CONNECTION_TIMEOUT_SECONDS = 10
+READ_TIMEOUT_SECONDS = 60
+RETRY_TOTAL = 3
+
+
+def http_status(exc: Any) -> str:
+    """`status_code` when the service answered, else the exception class (ClientAuthenticationError has none)."""
+    code = getattr(exc, "status_code", None)
+    return str(code) if code is not None else type(exc).__name__
 
 
 class CollectorError(RuntimeError):
@@ -123,7 +134,7 @@ class ResourceGraphCollector:
                 )
             except ThrottledError as exc:
                 if attempt == ATTEMPTS - 1:
-                    raise CollectorError("throttled by the service after five attempts") from None
+                    raise CollectorError(f"throttled by the service after {ATTEMPTS} attempts") from None
                 self._sleep(self._delay(attempt, exc.retry_after))
             except CollectorError:
                 raise
@@ -154,7 +165,12 @@ class SdkResourceGraphClient:
     def __init__(self, credential: Any) -> None:
         from azure.mgmt.resourcegraph import ResourceGraphClient as _Client
 
-        self._client = _Client(credential)
+        self._client = _Client(
+            credential,
+            connection_timeout=CONNECTION_TIMEOUT_SECONDS,
+            read_timeout=READ_TIMEOUT_SECONDS,
+            retry_total=RETRY_TOTAL,
+        )
 
     def query(self, *, subscriptions: list[str], query: str, top: int, skip_token: str | None) -> Page:
         from azure.core.exceptions import HttpResponseError
@@ -170,7 +186,7 @@ class SdkResourceGraphClient:
         except HttpResponseError as exc:
             if exc.status_code == 429:
                 raise ThrottledError(_retry_after(exc.response)) from None
-            raise CollectorError(f"resource graph query failed: HTTP {exc.status_code}") from None
+            raise CollectorError(f"resource graph query failed: HTTP {http_status(exc)}") from None
         data = response.data if isinstance(response.data, list) else []
         truncated = str(getattr(response, "result_truncated", "false")).lower() == "true"
         return Page(
