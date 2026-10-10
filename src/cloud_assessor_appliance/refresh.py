@@ -89,7 +89,8 @@ class Refresher:
         return max(0, int(self._cooldown - (self._clock() - self._last_requested) + 0.999))
 
     def request(self) -> str:
-        """'cooldown' (inside the global window, running or not), 'running' (single-flight, nothing started), 'queued'."""
+        """'cooldown' (inside the global window, running or not), 'running' (single-flight, nothing started) or
+        'queued' (a run was created and is held on self._task)."""
         if self.cooldown_remaining() > 0:
             return "cooldown"
         if self.running:
