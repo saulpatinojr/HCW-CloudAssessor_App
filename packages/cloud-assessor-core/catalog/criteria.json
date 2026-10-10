@@ -1,0 +1,715 @@
+{
+  "version": "1.0.0",
+  "retrievedOn": "2026-10-10",
+  "attribution": [
+    "Criteria are paraphrased from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure Well-Architected Framework (https://learn.microsoft.com/azure/well-architected/), with a learnUrl and retrieval date per criterion.",
+    "This project is not affiliated with or endorsed by the FinOps Foundation or Microsoft. Microsoft, Azure and Entra are trademarks of Microsoft Corporation.",
+    "Every learnUrl and retrievedOn is marked verify=true until the owner confirms it ([VERIFY]); attribution wording awaits owner review ([REVIEW REQUIRED], R-005)."
+  ],
+  "criteria": [
+    {
+      "id": "CA-FIN-001",
+      "framework": "finops",
+      "pillar": "Allocation",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters",
+        "microsoft.app/containerapps",
+        "microsoft.app/managedenvironments",
+        "microsoft.containerregistry/registries"
+      ],
+      "title": "Cost-allocation tags on container resources",
+      "text": "Container platform resources carry the tags that let their cost be allocated to a cost centre, an owner and an environment.",
+      "checks": [
+        {
+          "kind": "tag-present",
+          "keys": [
+            "costCenter|cost-center|costcenter",
+            "owner",
+            "environment"
+          ],
+          "mode": "all"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Apply the costCenter, owner and environment tags (or inherit them through Azure Policy) so cost can be allocated.",
+      "learnUrl": "https://www.finops.org/framework/capabilities/allocation/",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated."
+    },
+    {
+      "id": "CA-FIN-002",
+      "framework": "finops",
+      "pillar": "Allocation",
+      "severity": "medium",
+      "resourceTypes": [
+        "estate"
+      ],
+      "title": "Estate tag coverage at or above 80 percent",
+      "text": "At least 80 percent of exported resources carry a cost-centre tag, so allocation reports cover most of the spend.",
+      "checks": [
+        {
+          "kind": "count-threshold",
+          "scope": "estate",
+          "path": "tags.costCenter",
+          "metric": "percent-present",
+          "op": ">=",
+          "value": 80
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enforce a cost-centre tag with Azure Policy (inherit from resource group or subscription) and remediate existing resources.",
+      "learnUrl": "https://learn.microsoft.com/azure/azure-resource-manager/management/tag-resources",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated."
+    },
+    {
+      "id": "CA-FIN-003",
+      "framework": "finops",
+      "pillar": "Budgeting",
+      "severity": "high",
+      "resourceTypes": [
+        "estate"
+      ],
+      "title": "Budgets exist for the scope",
+      "text": "The scope has at least one budget so spend is compared with a plan and alerts fire before it is exceeded.",
+      "checks": [
+        {
+          "kind": "cross-resource",
+          "relation": "estate-has",
+          "type": "microsoft.consumption/budgets",
+          "absentIs": "unknown",
+          "unknownReason": "budgets are not in the Resource Graph resources table; export them separately to assess"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Create a budget at subscription or resource-group scope with alerts at 80 and 100 percent.",
+      "learnUrl": "https://learn.microsoft.com/azure/cost-management-billing/costs/tutorial-acm-create-budgets",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated."
+    },
+    {
+      "id": "CA-FIN-004",
+      "framework": "finops",
+      "pillar": "Workload optimization",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.app/containerapps"
+      ],
+      "title": "Non-production container apps scale to zero",
+      "text": "Container apps in non-production environments allow zero minimum replicas so idle time costs nothing.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.template.scale.minReplicas",
+          "equals": 0,
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Set the scale rule's minimum replicas to 0 for development and test apps.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-apps/scale-app",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated.",
+      "when": {
+        "path": "tags.environment",
+        "in": [
+          "dev",
+          "test",
+          "nonprod",
+          "non-prod",
+          "development",
+          "staging"
+        ]
+      }
+    },
+    {
+      "id": "CA-FIN-005",
+      "framework": "finops",
+      "pillar": "Rate optimization",
+      "severity": "low",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "Non-production AKS clusters use the Free tier",
+      "text": "AKS clusters tagged as non-production use the Free control-plane tier rather than paying for an uptime SLA they do not need.",
+      "checks": [
+        {
+          "kind": "sku-in",
+          "path": "sku.tier",
+          "allowed": [
+            "Free"
+          ],
+          "missingIs": "unknown"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Switch development and test clusters to the Free tier; keep Standard or Premium for production.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/free-standard-pricing-tiers",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated.",
+      "when": {
+        "path": "tags.environment",
+        "in": [
+          "dev",
+          "test",
+          "nonprod",
+          "non-prod",
+          "development",
+          "staging"
+        ]
+      }
+    },
+    {
+      "id": "CA-FIN-006",
+      "framework": "finops",
+      "pillar": "Rate optimization",
+      "severity": "low",
+      "resourceTypes": [
+        "microsoft.containerregistry/registries"
+      ],
+      "title": "Premium registry tier is justified",
+      "text": "A Premium container registry uses a Premium-only capability such as private link; otherwise the tier is reviewed.",
+      "checks": [
+        {
+          "kind": "property-exists",
+          "path": "properties.privateEndpointConnections",
+          "mustBe": "non-empty"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Premium without private link or geo-replication: review the tier, or add the private endpoint the tier was chosen for.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-registry/container-registry-skus",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated.",
+      "when": {
+        "path": "sku.name",
+        "equals": "Premium"
+      }
+    },
+    {
+      "id": "CA-FIN-007",
+      "framework": "finops",
+      "pillar": "Anomaly management",
+      "severity": "medium",
+      "resourceTypes": [
+        "estate"
+      ],
+      "title": "An alerting signal exists in the estate",
+      "text": "At least one metric alert rule exists, giving the estate a signal that can surface anomalies.",
+      "checks": [
+        {
+          "kind": "cross-resource",
+          "relation": "estate-has",
+          "type": "microsoft.insights/metricalerts",
+          "absentIs": "unknown",
+          "unknownReason": "no metric alert rules in the export; cost anomaly alerts live in Cost Management and are not exported"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Create metric alert rules for the key workloads and a cost anomaly alert in Cost Management.",
+      "learnUrl": "https://www.finops.org/framework/capabilities/anomaly-management/",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the FinOps Foundation Framework (finops.org); not affiliated."
+    },
+    {
+      "id": "CA-WAF-001",
+      "framework": "waf-cost",
+      "pillar": "Scaling",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS node pools use the cluster autoscaler",
+      "text": "Every agent pool on the cluster has autoscaling enabled so capacity follows demand.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.agentPoolProfiles[*].enableAutoScaling",
+          "equals": true,
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enable the cluster autoscaler on each node pool with a minimum and maximum count.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/cluster-autoscaler",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-WAF-002",
+      "framework": "waf-cost",
+      "pillar": "Scaling",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "Autoscaled AKS pools have a maximum count",
+      "text": "Each agent pool declares a maximum node count so scaling has a ceiling.",
+      "checks": [
+        {
+          "kind": "property-exists",
+          "path": "properties.agentPoolProfiles[*].maxCount",
+          "mustBe": "present"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Set maxCount on every autoscaled node pool.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/cluster-autoscaler",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-WAF-003",
+      "framework": "waf-cost",
+      "pillar": "Scaling",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.app/containerapps"
+      ],
+      "title": "Container apps are bounded by a maximum replica count",
+      "text": "Each container app declares maxReplicas so a traffic spike cannot scale without limit.",
+      "checks": [
+        {
+          "kind": "property-exists",
+          "path": "properties.template.scale.maxReplicas",
+          "mustBe": "present"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Set maxReplicas on the app's scale configuration.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-apps/scale-app",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-WAF-004",
+      "framework": "waf-cost",
+      "pillar": "Monitoring",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS monitoring add-on is enabled",
+      "text": "The cluster sends container insights to a workspace so cost and utilisation can be reviewed.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.addonProfiles.omsagent.enabled",
+          "equals": true,
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enable the monitoring add-on (container insights) for the cluster.",
+      "learnUrl": "https://learn.microsoft.com/azure/azure-monitor/containers/kubernetes-monitoring-enable",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-WAF-005",
+      "framework": "waf-cost",
+      "pillar": "Data",
+      "severity": "low",
+      "resourceTypes": [
+        "microsoft.operationalinsights/workspaces"
+      ],
+      "title": "Log retention is bounded for non-production workspaces",
+      "text": "Log Analytics workspaces tagged as non-production keep interactive retention at 90 days or fewer.",
+      "checks": [
+        {
+          "kind": "count-threshold",
+          "scope": "resource",
+          "path": "properties.retentionInDays",
+          "metric": "value",
+          "op": "<=",
+          "value": 90
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Lower the workspace's interactive retention for non-production data, or move long-term data to archive tiers.",
+      "learnUrl": "https://learn.microsoft.com/azure/azure-monitor/logs/data-retention-configure",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated.",
+      "when": {
+        "path": "tags.environment",
+        "in": [
+          "dev",
+          "test",
+          "nonprod",
+          "non-prod",
+          "development",
+          "staging"
+        ]
+      }
+    },
+    {
+      "id": "CA-WAF-006",
+      "framework": "waf-cost",
+      "pillar": "Waste",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.compute/disks"
+      ],
+      "title": "No unattached managed disks",
+      "text": "Managed disks are attached, reserved or in active use rather than orphaned and billed.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.diskState",
+          "anyOf": [
+            "Attached",
+            "Reserved",
+            "ActiveSAS",
+            "ActiveUpload",
+            "ReadyToUpload"
+          ],
+          "missingIs": "unknown"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Delete or snapshot unattached disks that are no longer needed.",
+      "learnUrl": "https://learn.microsoft.com/azure/virtual-machines/disks-find-unattached-portal",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-WAF-007",
+      "framework": "waf-cost",
+      "pillar": "Waste",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.network/publicipaddresses"
+      ],
+      "title": "No idle public IP addresses",
+      "text": "Each public IP address is associated with a network interface, load balancer or gateway.",
+      "checks": [
+        {
+          "kind": "property-exists",
+          "path": "properties.ipConfiguration",
+          "mustBe": "present"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Release public IP addresses that are not associated with anything.",
+      "learnUrl": "https://learn.microsoft.com/azure/virtual-network/ip-services/public-ip-addresses",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from the Microsoft Azure Well-Architected Framework and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-001",
+      "framework": "zero-trust",
+      "pillar": "Network",
+      "severity": "critical",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS API server is not reachable from the internet",
+      "text": "The cluster is private, or its API server restricts access to authorised IP ranges.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.apiServerAccessProfile.enablePrivateCluster",
+          "equals": true,
+          "missingIs": "fail"
+        },
+        {
+          "kind": "property-exists",
+          "path": "properties.apiServerAccessProfile.authorizedIPRanges",
+          "mustBe": "non-empty"
+        }
+      ],
+      "anyPass": true,
+      "remediation": "Create the cluster as a private cluster, or configure authorised IP ranges for the API server.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/private-clusters",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-002",
+      "framework": "zero-trust",
+      "pillar": "Identity",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS local accounts are disabled",
+      "text": "Local Kubernetes accounts are disabled so every access goes through the directory.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.disableLocalAccounts",
+          "equals": true,
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Disable local accounts once Entra integration is in place.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/manage-local-accounts-managed-azure-ad",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-003",
+      "framework": "zero-trust",
+      "pillar": "Identity",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS uses managed Entra integration with Azure RBAC",
+      "text": "The cluster uses the managed directory integration and Azure RBAC for Kubernetes authorisation.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.aadProfile.managed",
+          "equals": true,
+          "missingIs": "unknown",
+          "unknownReason": "aadProfile not present in the export"
+        },
+        {
+          "kind": "property-equals",
+          "path": "properties.aadProfile.enableAzureRBAC",
+          "equals": true,
+          "missingIs": "unknown",
+          "unknownReason": "aadProfile not present in the export"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enable the managed Entra integration and Azure RBAC for Kubernetes authorisation.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/enable-authentication-microsoft-entra-id",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-004",
+      "framework": "zero-trust",
+      "pillar": "Identity",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters",
+        "microsoft.app/containerapps"
+      ],
+      "title": "Workload resources use a managed identity",
+      "text": "Clusters and container apps carry a system-assigned or user-assigned managed identity instead of stored credentials.",
+      "checks": [
+        {
+          "kind": "sku-in",
+          "path": "identity.type",
+          "allowed": [
+            "SystemAssigned",
+            "UserAssigned",
+            "SystemAssigned, UserAssigned",
+            "SystemAssigned,UserAssigned"
+          ],
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Assign a managed identity to the resource and remove stored credentials.",
+      "learnUrl": "https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/overview",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-005",
+      "framework": "zero-trust",
+      "pillar": "Network",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerregistry/registries"
+      ],
+      "title": "Registry public network access is disabled",
+      "text": "The container registry refuses public network access and is reached through private endpoints.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.publicNetworkAccess",
+          "equals": "Disabled",
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Disable public network access and add a private endpoint.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-registry/container-registry-private-link",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-006",
+      "framework": "zero-trust",
+      "pillar": "Identity",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.containerregistry/registries"
+      ],
+      "title": "Registry admin user is disabled",
+      "text": "The registry's shared admin account is disabled so pulls and pushes are attributed to identities.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.adminUserEnabled",
+          "equals": false,
+          "missingIs": "unknown"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Disable the admin user and use managed identities or tokens with scope maps.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-registry/container-registry-authentication",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-007",
+      "framework": "zero-trust",
+      "pillar": "Network",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.app/managedenvironments"
+      ],
+      "title": "Container Apps environment is internal",
+      "text": "The environment's ingress is internal to its virtual network rather than public.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.vnetConfiguration.internal",
+          "equals": true,
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Create the environment with an internal virtual-network configuration.",
+      "learnUrl": "https://learn.microsoft.com/azure/container-apps/networking",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-008",
+      "framework": "zero-trust",
+      "pillar": "Network",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "AKS network policy is enabled",
+      "text": "The cluster enforces a Kubernetes network policy engine so pod traffic is segmented.",
+      "checks": [
+        {
+          "kind": "sku-in",
+          "path": "properties.networkProfile.networkPolicy",
+          "allowed": [
+            "azure",
+            "calico",
+            "cilium"
+          ],
+          "missingIs": "fail"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enable Azure, Calico or Cilium network policy on the cluster.",
+      "learnUrl": "https://learn.microsoft.com/azure/aks/use-network-policies",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-009",
+      "framework": "zero-trust",
+      "pillar": "Network",
+      "severity": "high",
+      "resourceTypes": [
+        "microsoft.keyvault/vaults",
+        "microsoft.storage/storageaccounts"
+      ],
+      "title": "Vaults and storage accounts close public network access",
+      "text": "Key vaults and storage accounts disable public network access and are reached privately.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.publicNetworkAccess",
+          "equals": "Disabled",
+          "missingIs": "unknown"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Disable public network access and add private endpoints; allow trusted services where required.",
+      "learnUrl": "https://learn.microsoft.com/azure/key-vault/general/network-security",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-010",
+      "framework": "zero-trust",
+      "pillar": "Visibility",
+      "severity": "medium",
+      "resourceTypes": [
+        "microsoft.containerservice/managedclusters"
+      ],
+      "title": "Defender for Containers is enabled on the cluster",
+      "text": "The cluster's security profile has Defender security monitoring enabled.",
+      "checks": [
+        {
+          "kind": "property-equals",
+          "path": "properties.securityProfile.defender.securityMonitoring.enabled",
+          "equals": true,
+          "missingIs": "unknown",
+          "unknownReason": "securityProfile.defender not present in the export; plan state is set at subscription level"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Enable Defender for Containers on the subscription and the cluster's security profile.",
+      "learnUrl": "https://learn.microsoft.com/azure/defender-for-cloud/defender-for-containers-introduction",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    },
+    {
+      "id": "CA-ZT-011",
+      "framework": "zero-trust",
+      "pillar": "Identity",
+      "severity": "high",
+      "resourceTypes": [
+        "estate"
+      ],
+      "title": "Role assignments are visible for least-privilege review",
+      "text": "Role assignments for the scope are present so least-privilege access can be reviewed.",
+      "checks": [
+        {
+          "kind": "cross-resource",
+          "relation": "estate-has",
+          "type": "microsoft.authorization/roleassignments",
+          "absentIs": "unknown",
+          "unknownReason": "role assignments live in the authorizationresources table, not resources; export them separately to assess"
+        }
+      ],
+      "anyPass": false,
+      "remediation": "Export authorizationresources and review assignments against least privilege.",
+      "learnUrl": "https://learn.microsoft.com/azure/role-based-access-control/best-practices",
+      "verify": true,
+      "retrievedOn": "2026-10-10",
+      "attribution": "Paraphrased from Microsoft Zero Trust guidance and Azure product documentation (learn.microsoft.com); not affiliated."
+    }
+  ]
+}

@@ -1,0 +1,435 @@
+{
+  "$defs": {
+    "Check": {
+      "additionalProperties": false,
+      "description": "One evaluator invocation. Only the fields its kind reads are meaningful; the schema keeps them explicit.",
+      "properties": {
+        "absentIs": {
+          "default": "unknown",
+          "enum": [
+            "unknown",
+            "fail"
+          ],
+          "title": "Absentis",
+          "type": "string"
+        },
+        "allowed": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Allowed"
+        },
+        "anyOf": {
+          "anyOf": [
+            {
+              "items": {},
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Anyof"
+        },
+        "disallowed": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Disallowed"
+        },
+        "equals": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equals"
+        },
+        "keys": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Keys"
+        },
+        "kind": {
+          "enum": [
+            "tag-present",
+            "property-equals",
+            "property-exists",
+            "sku-in",
+            "count-threshold",
+            "cross-resource"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "metric": {
+          "default": "count",
+          "enum": [
+            "count",
+            "percent-present",
+            "value"
+          ],
+          "title": "Metric",
+          "type": "string"
+        },
+        "missingIs": {
+          "default": "unknown",
+          "enum": [
+            "unknown",
+            "fail",
+            "pass"
+          ],
+          "title": "Missingis",
+          "type": "string"
+        },
+        "mode": {
+          "default": "all",
+          "enum": [
+            "any",
+            "all"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "mustBe": {
+          "default": "present",
+          "enum": [
+            "present",
+            "absent",
+            "non-empty"
+          ],
+          "title": "Mustbe",
+          "type": "string"
+        },
+        "op": {
+          "default": ">=",
+          "enum": [
+            ">=",
+            "<=",
+            ">",
+            "<",
+            "==",
+            "!="
+          ],
+          "title": "Op",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "relation": {
+          "anyOf": [
+            {
+              "enum": [
+                "has-child",
+                "estate-has",
+                "has-sibling"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Relation"
+        },
+        "scope": {
+          "default": "resource",
+          "enum": [
+            "resource",
+            "estate"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Type"
+        },
+        "unknownReason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unknownreason"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "where": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/When"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "Check",
+      "type": "object"
+    },
+    "Criterion": {
+      "additionalProperties": false,
+      "description": "A paraphrased, attributed criterion. `text` is the single replaceable field (R-005).",
+      "properties": {
+        "anyPass": {
+          "default": false,
+          "title": "Anypass",
+          "type": "boolean"
+        },
+        "attribution": {
+          "minLength": 1,
+          "title": "Attribution",
+          "type": "string"
+        },
+        "checks": {
+          "items": {
+            "$ref": "#/$defs/Check"
+          },
+          "minItems": 1,
+          "title": "Checks",
+          "type": "array"
+        },
+        "framework": {
+          "enum": [
+            "finops",
+            "waf-cost",
+            "zero-trust"
+          ],
+          "title": "Framework",
+          "type": "string"
+        },
+        "id": {
+          "pattern": "^CA-(FIN|WAF|ZT)-\\d{3}$",
+          "title": "Id",
+          "type": "string"
+        },
+        "learnUrl": {
+          "title": "Learnurl",
+          "type": "string"
+        },
+        "pillar": {
+          "minLength": 1,
+          "title": "Pillar",
+          "type": "string"
+        },
+        "remediation": {
+          "minLength": 1,
+          "title": "Remediation",
+          "type": "string"
+        },
+        "resourceTypes": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Resourcetypes",
+          "type": "array"
+        },
+        "retrievedOn": {
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+          "title": "Retrievedon",
+          "type": "string"
+        },
+        "severity": {
+          "enum": [
+            "critical",
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "text": {
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "verify": {
+          "default": true,
+          "title": "Verify",
+          "type": "boolean"
+        },
+        "when": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/When"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "framework",
+        "pillar",
+        "severity",
+        "resourceTypes",
+        "title",
+        "text",
+        "checks",
+        "remediation",
+        "learnUrl",
+        "retrievedOn",
+        "attribution"
+      ],
+      "title": "Criterion",
+      "type": "object"
+    },
+    "When": {
+      "additionalProperties": false,
+      "description": "Applicability clause: the criterion applies only when the path equals / is in the given values.",
+      "properties": {
+        "equals": {
+          "anyOf": [
+            {},
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Equals"
+        },
+        "in": {
+          "anyOf": [
+            {
+              "items": {},
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "In"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "title": "When",
+      "type": "object"
+    }
+  },
+  "$id": "https://hybridcloudworks.com/schemas/cloud-assessor/catalog-1.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attribution": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Attribution",
+      "type": "array"
+    },
+    "criteria": {
+      "items": {
+        "$ref": "#/$defs/Criterion"
+      },
+      "minItems": 1,
+      "title": "Criteria",
+      "type": "array"
+    },
+    "retrievedOn": {
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+      "title": "Retrievedon",
+      "type": "string"
+    },
+    "version": {
+      "pattern": "^\\d+\\.\\d+\\.\\d+$",
+      "title": "Version",
+      "type": "string"
+    }
+  },
+  "required": [
+    "version",
+    "retrievedOn",
+    "attribution",
+    "criteria"
+  ],
+  "title": "Catalog",
+  "type": "object"
+}

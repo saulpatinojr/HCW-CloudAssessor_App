@@ -1,0 +1,41 @@
+﻿NAME,TYPE,RESOURCE GROUP,LOCATION,SUBSCRIPTION
+hcw-sample-aks-prod-01,Kubernetes service,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-aks-prod-02,Kubernetes service,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-aks-dev-01,Kubernetes service,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-aks-test-01,Kubernetes service,rg-hcw-sample-test,East US 2,hcw-sample-subscription
+hcw-sample-ca-api-prod,Container App,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-ca-worker-dev,Container App,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-ca-web-test,Container App,rg-hcw-sample-test,East US 2,hcw-sample-subscription
+hcw-sample-ca-jobs-prod,Container App,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-cae-prod,Container Apps Environment,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-cae-dev,Container Apps Environment,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcwsampleacrprod,Container registry,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcwsampleacrdev,Container registry,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcwsampleacrshared,Container registry,rg-hcw-sample-shared,East US 2,hcw-sample-subscription
+hcw-sample-kv-prod-01,Key vault,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-kv-prod-02,Key vault,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-kv-dev-01,Key vault,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcwsamplestprod01,Storage account,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcwsamplestdev01,Storage account,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcwsamplestlogs,Storage account,rg-hcw-sample-shared,East US 2,hcw-sample-subscription
+hcw-sample-disk-os-01,Disk,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-disk-orphan-01,Disk,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-disk-reserved-01,Disk,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-pip-gw-01,Public IP address,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-pip-nat-01,Public IP address,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-pip-idle-01,Public IP address,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-law-prod,Log Analytics workspace,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-law-dev,Log Analytics workspace,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-law-test,Log Analytics workspace,rg-hcw-sample-test,East US 2,hcw-sample-subscription
+hcw-sample-alert-cpu,Metric alert rule,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-vnet-prod,Virtual network,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-vnet-dev,Virtual network,rg-hcw-sample-dev,East US 2,hcw-sample-subscription
+hcw-sample-nsg-prod,Network security group,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-nat-01,NAT gateway,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-agw-01,Application gateway,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-vm-app-01,Virtual machine,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-vm-app-02,Virtual machine,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-nic-app-01,Network interface,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-sql-prod-01,SQL server,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-asp-prod-01,App Service plan,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
+hcw-sample-web-prod-01,App Service,rg-hcw-sample-prod,East US 2,hcw-sample-subscription
