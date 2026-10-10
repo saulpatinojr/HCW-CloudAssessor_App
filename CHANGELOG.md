@@ -96,7 +96,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   only from a `v*` tag ref; `budget_start_date` is required and validated (no expiring default); scope ids are
   lower-cased before `toset`; the Dockerfile `HEALTHCHECK` honours `PORT`; `__main__` writes its refusal with
   `json.dumps`; `ATTEMPTS` is used in the throttling message and a status-less `ClientAuthenticationError` is named
-  instead of `HTTP None`; the CodeQL pins name `v4.37.8`. T-034 records the provider lock file as an owner step.
+  instead of `HTTP None`; the CodeQL pins name `v4.37.8`. T-034 (the provider lock file) is done: `infrastructure/terraform/appliance-azure/.terraform.lock.hcl` pins `hashicorp/azurerm` 4.81.0 with hashes for linux_amd64 and windows_amd64.
 - `README.md` rewritten for the implemented state: editions, layout, the section 20 commands as the quick start, the
   five-file documentation table, engine-change conventions.
 - `.gitignore` extended (T-004); `.qlty/qlty.toml` plugins (T-010).

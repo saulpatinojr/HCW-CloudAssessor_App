@@ -606,5 +606,5 @@ Proposed by `REFACTOR_APP.md` (sections 13 and 18) at execution on 2026-10-10.
   `infrastructure/terraform/appliance-azure/.terraform.lock.hcl` listing `hashicorp/azurerm` with `h1:` and `zh:` hashes
   for both platforms. Commit it; the `terraform` CI job then installs exactly that provider build, and Dependabot's
   terraform ecosystem proposes bumps.
-- **Status:** Not started
-- **Notes for Future Engineers:** `.gitignore` deliberately does not ignore `.terraform.lock.hcl` (only `.terraform/`).
+- **Status:** Done 2026-10-10: `.terraform.lock.hcl` committed (azurerm 4.81.0, `h1:` and `zh:` hashes for linux_amd64 and windows_amd64), generated with Terraform 1.9.8 downloaded and checksum-verified from releases.hashicorp.com; `terraform validate` and `fmt -check` pass on it.
+- **Notes for Future Engineers:** `.gitignore` deliberately does not ignore `.terraform.lock.hcl` (only `.terraform/`). Re-run the command above after any provider constraint change; Dependabot's terraform ecosystem proposes bumps against this file.
