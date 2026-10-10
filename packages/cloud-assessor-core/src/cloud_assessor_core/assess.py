@@ -10,7 +10,7 @@ from typing import Any
 from cloud_assessor_core import __version__
 from cloud_assessor_core.catalog.loader import Scoring
 from cloud_assessor_core.evaluate.engine import evaluate, unknown_by_design
-from cloud_assessor_core.model import Assessment, Catalog, Resource, Summary
+from cloud_assessor_core.model import Assessment, AssessmentScope, Catalog, CostEvidence, Resource, Summary
 from cloud_assessor_core.score import score
 
 
@@ -25,8 +25,11 @@ def assess(
     weights: dict[str, dict[str, Any]] | None = None,
     assessment_id: str | None = None,
     now: datetime | None = None,
+    evidence: CostEvidence | None = None,
+    edition: str | None = None,
+    scope: AssessmentScope | None = None,
 ) -> Assessment:
-    findings = evaluate(resources, catalog)
+    findings = evaluate(resources, catalog, evidence=evidence)
     cards = score(findings, scoring, weights)
     states = Counter(f.state for f in findings)
     results = Counter(f.result for f in findings if f.result)
@@ -52,4 +55,6 @@ def assess(
         findings=findings,
         unknown_by_design=unknown_by_design(catalog, findings),
         ingestion_warnings=list(ingestion_warnings or []),
+        edition=edition,
+        scope=scope,
     )

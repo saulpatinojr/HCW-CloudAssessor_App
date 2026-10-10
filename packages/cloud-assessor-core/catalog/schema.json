@@ -88,20 +88,33 @@
             "property-exists",
             "sku-in",
             "count-threshold",
-            "cross-resource"
+            "cross-resource",
+            "cost-evidence"
           ],
           "title": "Kind",
           "type": "string"
         },
         "metric": {
-          "default": "count",
-          "enum": [
-            "count",
-            "percent-present",
-            "value"
+          "anyOf": [
+            {
+              "enum": [
+                "count",
+                "percent-present",
+                "value"
+              ],
+              "type": "string"
+            },
+            {
+              "enum": [
+                "budgets-present",
+                "anomaly-alerts-present",
+                "untagged-share"
+              ],
+              "type": "string"
+            }
           ],
-          "title": "Metric",
-          "type": "string"
+          "default": "count",
+          "title": "Metric"
         },
         "missingIs": {
           "default": "unknown",

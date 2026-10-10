@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -13,7 +13,10 @@ Framework = Literal["finops", "waf-cost", "zero-trust"]
 Severity = Literal["critical", "high", "medium", "low"]
 State = Literal["observed", "unknown", "not-applicable"]
 Result = Literal["pass", "fail"]
-CheckKind = Literal["tag-present", "property-equals", "property-exists", "sku-in", "count-threshold", "cross-resource"]
+CheckKind = Literal[
+    "tag-present", "property-equals", "property-exists", "sku-in", "count-threshold", "cross-resource", "cost-evidence"
+]
+CostMetric = Literal["budgets-present", "anomaly-alerts-present", "untagged-share"]
 
 SEVERITY_WEIGHTS: dict[str, int] = {"critical": 4, "high": 3, "medium": 2, "low": 1}
 LEARN_URL_HOSTS: frozenset[str] = frozenset({"learn.microsoft.com", "www.finops.org"})
@@ -85,7 +88,8 @@ class Check(BaseModel):
     disallowed: list[str] | None = None
     # count-threshold
     scope: Literal["resource", "estate"] = "resource"
-    metric: Literal["count", "percent-present", "value"] = "count"
+    # count-threshold reads count | percent-present | value; cost-evidence reads a CostMetric
+    metric: Literal["count", "percent-present", "value"] | CostMetric = "count"
     op: Literal[">=", "<=", ">", "<", "==", "!="] = ">="
     value: float | None = None
     # cross-resource
@@ -194,6 +198,48 @@ class Scorecard(BaseModel):
     coverage: float | None  # observed / (observed + unknown); None when nothing could be evaluated
 
 
+class BudgetEvidence(BaseModel):
+    """One budget definition read from Cost Management (the client's own data; never logged)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    name: str
+    amount: float
+    time_grain: str
+    notifications: int = Field(ge=0)
+
+
+class CostEvidence(BaseModel):
+    """Evidence an appliance collects from Cost Management. Optional input to evaluate(); absent in the lab edition.
+
+    The engine evaluates `cost-evidence` checks only when evidence is present; without it those checks are skipped and
+    the criterion is judged from the export alone, so an edition that passes `evidence=None` behaves exactly as before.
+    """
+
+    model_config = ConfigDict(frozen=True)
+
+    scope: str
+    period_start: date
+    period_end: date
+    currency: str
+    total: float = Field(ge=0)
+    by_resource_group: dict[str, float] = Field(default_factory=dict)
+    by_cost_center_tag: dict[str, float] = Field(default_factory=dict)
+    untagged_share: float = Field(ge=0, le=100)  # percent of spend carrying no cost-centre tag
+    budgets: list[BudgetEvidence] = Field(default_factory=list)
+    anomaly_alerts: list[str] = Field(default_factory=list)  # alert ids only
+    as_of: datetime
+
+
+class AssessmentScope(BaseModel):
+    """The appliance's scope as published in report.json: a count and hashed subscription ids (T-012)."""
+
+    model_config = ConfigDict(frozen=True)
+
+    count: int = Field(ge=0)
+    subscriptions: list[str] = Field(default_factory=list)  # sha256 hex of each subscription id
+
+
 class UnknownByDesign(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -231,3 +277,5 @@ class Assessment(BaseModel):
     findings: list[Finding]
     unknown_by_design: list[UnknownByDesign]
     ingestion_warnings: list[str]
+    edition: str | None = None
+    scope: AssessmentScope | None = None

@@ -15,7 +15,7 @@ from cloud_assessor_core.evaluate.evaluators import (
 from cloud_assessor_core.model import Check, SourceRef, When
 
 
-def test_registry_has_six_kinds():
+def test_registry_has_seven_kinds():
     assert set(EVALUATORS) == {
         "tag-present",
         "property-equals",
@@ -23,6 +23,7 @@ def test_registry_has_six_kinds():
         "sku-in",
         "count-threshold",
         "cross-resource",
+        "cost-evidence",
     }
 
 

@@ -127,6 +127,8 @@ def _check_text(k) -> str:
         return f"`{k.path or 'sku.name'}` in {members} (missing: {k.missingIs})"
     if k.kind == "count-threshold":
         return f"{k.scope} {k.metric} of `{k.path}` {k.op} {k.value:g}"
+    if k.kind == "cost-evidence":
+        return f"cost evidence {k.metric} {k.op} {k.value:g} (unknown without evidence)"
     return f"{k.relation} `{k.type}` (absent: {k.absentIs})"
 
 

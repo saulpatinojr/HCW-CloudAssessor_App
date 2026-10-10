@@ -26,9 +26,22 @@ def test_committed_catalog_loads_with_25_criteria(catalog, scoring):
     assert {c.framework for c in catalog.criteria} == {"finops", "waf-cost", "zero-trust"}
     assert all(c.verify for c in catalog.criteria), "every learnUrl is still [VERIFY]"
     assert all(c.retrievedOn == "2026-10-10" for c in catalog.criteria)
+    assert catalog.version == "1.1.0"
+    cost_backed = {c.id for c in catalog.criteria if any(k.kind == "cost-evidence" for k in c.checks)}
+    assert cost_backed == {"CA-FIN-002", "CA-FIN-003", "CA-FIN-007"} and all(
+        c.anyPass for c in catalog.criteria if c.id in cost_backed
+    )
     assert scoring.severityWeights == {"critical": 4, "high": 3, "medium": 2, "low": 1}
     kinds = {k.kind for c in catalog.criteria for k in c.checks}
-    assert kinds == {"tag-present", "property-equals", "property-exists", "sku-in", "count-threshold", "cross-resource"}
+    assert kinds == {
+        "tag-present",
+        "property-equals",
+        "property-exists",
+        "sku-in",
+        "count-threshold",
+        "cross-resource",
+        "cost-evidence",
+    }
     assert next(c for c in catalog.criteria if c.id == "CA-ZT-001").anyPass
 
 

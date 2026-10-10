@@ -6,12 +6,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
-from cloud_assessor_core.model import Check, Evidence, Resource, When
+from cloud_assessor_core.model import Check, CostEvidence, Evidence, Resource, When
 from cloud_assessor_core.paths import get_path
 
 NO_PROPERTIES = "no properties column in the export"
 NO_TAGS = "no tags column in the export"
 NOT_IN_EXPORT = "property not present in the export"
+NO_COST_EVIDENCE = "cost evidence is not available: Cost Management is not read in this edition or by this run"
 
 
 @dataclass(frozen=True)
@@ -287,6 +288,29 @@ def eval_cross_resource(resource: Resource | None, estate: list[Resource], check
     return unknown("type", expected, reason)
 
 
+def eval_cost_evidence(
+    resource: Resource | None, estate: list[Resource], check: Check, evidence: CostEvidence | None = None
+) -> Outcome:
+    """Estate-level judgement from Cost Management evidence. Unknown without evidence (the lab passes none)."""
+    expected = f"{check.metric} {check.op} {check.value:g}" if check.value is not None else check.metric
+    if evidence is None:
+        return unknown(check.metric, expected, check.unknownReason or NO_COST_EVIDENCE)
+    if check.metric == "budgets-present":
+        actual = float(len(evidence.budgets))
+        op, value = (check.op, check.value) if check.value is not None else (">=", 1.0)
+        reason = f"{len(evidence.budgets)} budget(s) defined on the scope"
+    elif check.metric == "anomaly-alerts-present":
+        actual = float(len(evidence.anomaly_alerts))
+        op, value = (check.op, check.value) if check.value is not None else (">=", 1.0)
+        reason = f"{len(evidence.anomaly_alerts)} anomaly alert(s) on the scope"
+    else:
+        actual = float(evidence.untagged_share)
+        op, value = (check.op, check.value) if check.value is not None else ("<=", 20.0)
+        reason = f"{evidence.untagged_share:g} percent of spend carries no cost-centre tag"
+    ok = _compare(actual, op, value)
+    return observed(ok, check.metric, round(actual, 2), f"{check.metric} {op} {value:g}", reason)
+
+
 Evaluator = Callable[[Resource | None, list[Resource], Check], Outcome]
 
 EVALUATORS: dict[str, Evaluator] = {
@@ -296,6 +320,8 @@ EVALUATORS: dict[str, Evaluator] = {
     "sku-in": eval_sku_in,
     "count-threshold": eval_count_threshold,
     "cross-resource": eval_cross_resource,
+    # Registered for completeness (docs, kind lists); the engine passes the evidence through evaluate_with_evidence.
+    "cost-evidence": eval_cost_evidence,
 }
 
 ESTATE_TYPE = "estate"
@@ -303,6 +329,8 @@ ALL_TYPES = "*"
 
 
 def is_estate_check(check: Check) -> bool:
-    return (check.kind == "count-threshold" and check.scope == "estate") or (
-        check.kind == "cross-resource" and check.relation == "estate-has"
+    return (
+        (check.kind == "count-threshold" and check.scope == "estate")
+        or (check.kind == "cross-resource" and check.relation == "estate-has")
+        or check.kind == "cost-evidence"
     )

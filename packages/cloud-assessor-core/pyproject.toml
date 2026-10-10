@@ -1,6 +1,6 @@
 [project]
 name = "cloud-assessor-core"
-version = "0.1.0"
+version = "0.2.0"
 description = "Cloud Assessor engine: a declarative criteria catalog evaluated over a normalised Azure Resource Graph export. Pure functions, pydantic only, no cloud SDK."
 readme = "README.md"
 license = "MIT"

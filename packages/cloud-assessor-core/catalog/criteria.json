@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "retrievedOn": "2026-10-10",
   "attribution": [
     "Criteria are paraphrased from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure Well-Architected Framework (https://learn.microsoft.com/azure/well-architected/), with a learnUrl and retrieval date per criterion.",
@@ -47,7 +47,7 @@
         "estate"
       ],
       "title": "Estate tag coverage at or above 80 percent",
-      "text": "At least 80 percent of exported resources carry a cost-centre tag, so allocation reports cover most of the spend.",
+      "text": "At least 80 percent of exported resources carry a cost-centre tag, so allocation reports cover most of the spend; with cost evidence, at most 20 percent of month-to-date spend is untagged.",
       "checks": [
         {
           "kind": "count-threshold",
@@ -56,9 +56,16 @@
           "metric": "percent-present",
           "op": ">=",
           "value": 80
+        },
+        {
+          "kind": "cost-evidence",
+          "metric": "untagged-share",
+          "op": "<=",
+          "value": 20,
+          "unknownReason": "spend by tag lives in Cost Management and is not in a Resource Graph export"
         }
       ],
-      "anyPass": false,
+      "anyPass": true,
       "remediation": "Enforce a cost-centre tag with Azure Policy (inherit from resource group or subscription) and remediate existing resources.",
       "learnUrl": "https://learn.microsoft.com/azure/azure-resource-manager/management/tag-resources",
       "verify": true,
@@ -82,9 +89,16 @@
           "type": "microsoft.consumption/budgets",
           "absentIs": "unknown",
           "unknownReason": "budgets are not in the Resource Graph resources table; export them separately to assess"
+        },
+        {
+          "kind": "cost-evidence",
+          "metric": "budgets-present",
+          "op": ">=",
+          "value": 1,
+          "unknownReason": "budget definitions live in Cost Management and are not in a Resource Graph export"
         }
       ],
-      "anyPass": false,
+      "anyPass": true,
       "remediation": "Create a budget at subscription or resource-group scope with alerts at 80 and 100 percent.",
       "learnUrl": "https://learn.microsoft.com/azure/cost-management-billing/costs/tutorial-acm-create-budgets",
       "verify": true,
@@ -202,7 +216,7 @@
         "estate"
       ],
       "title": "An alerting signal exists in the estate",
-      "text": "At least one metric alert rule exists, giving the estate a signal that can surface anomalies.",
+      "text": "At least one metric alert rule exists, giving the estate a signal that can surface anomalies; with cost evidence, at least one cost anomaly alert exists on the scope.",
       "checks": [
         {
           "kind": "cross-resource",
@@ -210,9 +224,16 @@
           "type": "microsoft.insights/metricalerts",
           "absentIs": "unknown",
           "unknownReason": "no metric alert rules in the export; cost anomaly alerts live in Cost Management and are not exported"
+        },
+        {
+          "kind": "cost-evidence",
+          "metric": "anomaly-alerts-present",
+          "op": ">=",
+          "value": 1,
+          "unknownReason": "cost anomaly alerts live in Cost Management and are not in a Resource Graph export"
         }
       ],
-      "anyPass": false,
+      "anyPass": true,
       "remediation": "Create metric alert rules for the key workloads and a cost anomaly alert in Cost Management.",
       "learnUrl": "https://www.finops.org/framework/capabilities/anomaly-management/",
       "verify": true,

@@ -7,10 +7,11 @@ from cloud_assessor_core.evaluate.evaluators import (
     ESTATE_TYPE,
     EVALUATORS,
     Outcome,
+    eval_cost_evidence,
     is_estate_check,
     matches_when,
 )
-from cloud_assessor_core.model import Catalog, Criterion, Evidence, Finding, Resource, UnknownByDesign
+from cloud_assessor_core.model import Catalog, CostEvidence, Criterion, Evidence, Finding, Resource, UnknownByDesign
 
 UNKNOWN_BY_DESIGN: list[tuple[str, str]] = [
     ("Spend and forecasts", "Cost data is not in a Resource Graph export; it lives in Cost Management."),
@@ -82,17 +83,37 @@ def _not_applicable(criterion: Criterion, resource: Resource, reason: str) -> Fi
     )
 
 
-def _run_checks(criterion: Criterion, resource: Resource | None, estate: list[Resource]) -> Outcome:
-    outcomes = [EVALUATORS[check.kind](resource, estate, check) for check in criterion.checks]
+def _checks_for(criterion: Criterion, evidence: CostEvidence | None) -> list:
+    """Evidence gating: `cost-evidence` checks run only with evidence, and then supersede the export checks.
+
+    Without evidence the criterion is judged from the export exactly as before (the lab edition is unaffected). With
+    evidence, Cost Management is authoritative for its own topic, so the export-side proxies step aside; a criterion
+    made only of cost checks keeps them either way (it then reports unknown without evidence).
+    """
+    cost = [c for c in criterion.checks if c.kind == "cost-evidence"]
+    if not cost or len(cost) == len(criterion.checks):
+        return list(criterion.checks)
+    return cost if evidence is not None else [c for c in criterion.checks if c.kind != "cost-evidence"]
+
+
+def _run_checks(
+    criterion: Criterion, resource: Resource | None, estate: list[Resource], evidence: CostEvidence | None = None
+) -> Outcome:
+    outcomes = [
+        eval_cost_evidence(resource, estate, check, evidence)
+        if check.kind == "cost-evidence"
+        else EVALUATORS[check.kind](resource, estate, check)
+        for check in _checks_for(criterion, evidence)
+    ]
     return _combine(outcomes, criterion.anyPass)
 
 
-def evaluate(resources: list[Resource], catalog: Catalog) -> list[Finding]:
+def evaluate(resources: list[Resource], catalog: Catalog, *, evidence: CostEvidence | None = None) -> list[Finding]:
     findings: list[Finding] = []
     estate = list(resources)
     for criterion in catalog.criteria:
         if criterion.resourceTypes == [ESTATE_TYPE] or all(is_estate_check(c) for c in criterion.checks):
-            findings.append(_finding(criterion, None, _run_checks(criterion, None, estate)))
+            findings.append(_finding(criterion, None, _run_checks(criterion, None, estate, evidence)))
             continue
         wanted = set(criterion.resourceTypes)
         for resource in estate:
@@ -116,7 +137,7 @@ def evaluate(resources: list[Resource], catalog: Catalog) -> list[Finding]:
                     )
                 )
                 continue
-            findings.append(_finding(criterion, resource, _run_checks(criterion, resource, estate)))
+            findings.append(_finding(criterion, resource, _run_checks(criterion, resource, estate, evidence)))
     return findings
 
 

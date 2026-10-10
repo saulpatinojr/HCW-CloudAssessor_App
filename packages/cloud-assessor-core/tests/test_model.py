@@ -6,7 +6,7 @@ from pydantic import ValidationError
 
 def test_model_version_and_package_version():
     assert MODEL_VERSION == 1
-    assert __version__ == "0.1.0"
+    assert __version__ == "0.2.0"
 
 
 def test_resource_lowercases_type_and_is_frozen():
