@@ -1,0 +1,60 @@
+# Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
+# On every v* tag: build the cloud-assessor-core wheel and sdist, verify the wheel carries no cloud SDK and no Azure
+# endpoint, attach both to the GitHub Release (release.yml creates it), attest provenance. PyPI trusted publishing is
+# gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
+# exchanges the job's OIDC token with PyPI; no registry token exists anywhere (docs: REFACTOR_APP.md 7.13, 11).
+# The AddOn pins releases by git tag (git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@v0.1.0#subdirectory=packages/cloud-assessor-core)
+# whether or not PyPI publishing is enabled.
+name: publish-core
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build-verify-attach:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with: { python-version: "3.14" }
+      - run: python -m pip install "uv==0.11.32"
+      - run: uv build --package cloud-assessor-core --out-dir dist
+      - name: The wheel carries the catalog, no cloud SDK import and no Azure endpoint
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, zipfile, re, sys
+          wheel = glob.glob("dist/cloud_assessor_core-*.whl")[0]
+          z = zipfile.ZipFile(wheel)
+          names = z.namelist()
+          assert any(n.endswith("catalog_data/criteria.json") for n in names), "catalog missing from the wheel"
+          for n in names:
+              if n.endswith(".py"):
+                  text = z.read(n).decode()
+                  assert not re.search(r"^\s*(import|from)\s+(azure|msal|boto3)\b", text, re.M), f"{n} imports a cloud SDK"
+                  for ep in ("management.azure.com", "login.microsoftonline.com", "graph.microsoft.com"):
+                      assert ep not in text, f"{n} references {ep}"
+          print("wheel verified:", wheel, len(names), "files")
+          PY
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with: { subject-path: "dist/*" }
+      - name: Attach the wheel and sdist to the GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          for i in 1 2 3 4 5 6; do gh release view "$tag" >/dev/null 2>&1 && break; sleep 10; done
+          gh release upload "$tag" dist/* --clobber
+      - name: PyPI trusted publishing (repository variable PYPI_ENABLED) [REVIEW REQUIRED]
+        if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_ENABLED == 'true'
+        run: uv publish --trusted-publishing always dist/*
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with: { name: cloud-assessor-core-dist, path: dist, if-no-files-found: error }

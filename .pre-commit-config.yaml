@@ -1,0 +1,15 @@
+# T-015: the same checks as CI (ruff, ruff-format, gitleaks). Install with `uv run pre-commit install` after adding
+# pre-commit to the dev group, or run the three commands by hand. Revisions are tags of the hook repositories:
+# ruff-pre-commit mirrors the ruff release pinned in pyproject.toml; the gitleaks tag is [VERIFY] (not resolvable
+# from the authoring session) and must match a published gitleaks release.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.17.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.0  # [VERIFY]
+    hooks:
+      - id: gitleaks

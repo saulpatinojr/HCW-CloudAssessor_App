@@ -1,0 +1,21 @@
+version: 2
+updates:
+  - package-ecosystem: pip
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      # The Azure SDK ships as many per-service packages (T-009 note): one weekly PR for the `azure` extra.
+      azure-sdk: { patterns: ["azure-*", "msal*", "msrest*"] }
+      dev: { dependency-type: development }
+  - package-ecosystem: pip
+    directory: /packages/cloud-assessor-core
+    schedule: { interval: weekly }
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+  - package-ecosystem: docker
+    directory: /infrastructure/docker
+    schedule: { interval: weekly }
+  - package-ecosystem: terraform
+    directory: /infrastructure/terraform/appliance-azure
+    schedule: { interval: weekly }

@@ -63,3 +63,11 @@ default = true
 
 [[plugin]]
 name = "trufflehog"
+
+# T-010: linters for the Python stack beside the secret scanner. ruff reads ruff.toml; bandit runs on the application
+# and the engine. R-008 (the Cloud-side `qlty check` fault) is unaffected by this file and stays open.
+[[plugin]]
+name = "ruff"
+
+[[plugin]]
+name = "bandit"

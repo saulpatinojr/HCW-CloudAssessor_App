@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/saulpatinojr/HCW-CloudAssessor_App/security/advisories/new
+    about: Report a vulnerability privately; never in a public issue.
+  - name: Engineering backlog and blockers
+    url: https://github.com/saulpatinojr/HCW-CloudAssessor_App/blob/main/TODO.md
+    about: Accepted work is sequenced in TODO.md; human decisions live in REVIEW.md.
