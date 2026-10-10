@@ -1,0 +1,15 @@
+# Lint and format settings for both packages, the scripts and the tests.
+target-version = "py314"
+line-length = 120
+extend-exclude = [".venv", "src/cloud_assessor_appliance/web", "samples", "infrastructure", "*.md"]
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "W"]
+ignore = ["B008"]  # FastAPI dependency defaults in signatures
+
+[lint.per-file-ignores]
+"tests/**" = ["S101"]
+"packages/cloud-assessor-core/tests/**" = ["S101"]
+
+[format]
+quote-style = "double"

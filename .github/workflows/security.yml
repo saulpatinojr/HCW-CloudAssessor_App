@@ -1,0 +1,55 @@
+# Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
+name: security
+on:
+  pull_request:
+  push: { branches: [main] }
+  schedule: [{ cron: "23 6 * * 1" }]
+permissions:
+  contents: read
+jobs:
+  dependency-review:
+    # Needs the Dependency graph enabled on the repository (Settings > Code security; T-010 note): until the owner
+    # enables it the action fails with "Dependency review is not supported on this repository".
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with: { fail-on-severity: moderate }
+  codeql:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      security-events: write
+      actions: read # codeql-action/analyze reads the workflow run's status; required on a private repository
+    strategy:
+      matrix:
+        language: [python, javascript-typescript]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: github/codeql-action/init@4c0873ef8656cb3c50b3f42fb63bc1ade0cfa827 # v4
+        with: { languages: "${{ matrix.language }}" }
+      - uses: github/codeql-action/analyze@4c0873ef8656cb3c50b3f42fb63bc1ade0cfa827 # v4
+        with: { category: "/language:${{ matrix.language }}" }
+  secret-scan:
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: read # gitleaks-action lists the pull request's commits; without this it fails with "Resource not accessible by integration"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { fetch-depth: 0 }
+      - uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2.3.9
+        env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+  pip-audit:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with: { python-version: "3.14" }
+      - run: python -m pip install "uv==0.11.32"
+      - run: uv sync --frozen --all-packages
+      - name: Known vulnerabilities in both runtime locks (the only inputs the images install)
+        run: |
+          uv run pip-audit -r requirements.lock.txt --strict
+          uv run pip-audit -r requirements-azure.lock.txt --strict

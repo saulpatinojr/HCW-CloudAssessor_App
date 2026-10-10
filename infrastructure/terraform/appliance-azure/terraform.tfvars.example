@@ -1,0 +1,4 @@
+# Copy to terraform.tfvars (gitignored). The digest is the one printed by publish-images.yml; the all-zero value below is
+# a syntactically valid placeholder for `plan` only (REFACTOR_APP.md section 20).
+image_ref = "docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+scope_ids = ["/subscriptions/00000000-0000-0000-0000-000000000001"]

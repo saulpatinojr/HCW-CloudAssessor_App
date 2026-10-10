@@ -1,0 +1,1061 @@
+{
+  "count": 40,
+  "data": [
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.containerservice/managedclusters/hcw-sample-aks-prod-01",
+      "name": "hcw-sample-aks-prod-01",
+      "type": "microsoft.containerservice/managedclusters",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "agentPoolProfiles": [
+          {
+            "name": "system",
+            "enableAutoScaling": true,
+            "minCount": 1,
+            "maxCount": 3
+          },
+          {
+            "name": "user",
+            "enableAutoScaling": true,
+            "minCount": 1,
+            "maxCount": 10
+          }
+        ],
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": true
+          }
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": true
+        },
+        "disableLocalAccounts": true,
+        "aadProfile": {
+          "managed": true,
+          "enableAzureRBAC": true
+        },
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "networkPolicy": "azure"
+        },
+        "securityProfile": {
+          "defender": {
+            "securityMonitoring": {
+              "enabled": true
+            }
+          }
+        }
+      },
+      "sku": {
+        "name": "Base",
+        "tier": "Standard"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.containerservice/managedclusters/hcw-sample-aks-prod-02",
+      "name": "hcw-sample-aks-prod-02",
+      "type": "microsoft.containerservice/managedclusters",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "agentPoolProfiles": [
+          {
+            "name": "system",
+            "enableAutoScaling": true,
+            "minCount": 1,
+            "maxCount": 3
+          },
+          {
+            "name": "user",
+            "enableAutoScaling": true,
+            "minCount": 1,
+            "maxCount": 10
+          }
+        ],
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": true
+          }
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": true
+        },
+        "disableLocalAccounts": true,
+        "aadProfile": {
+          "managed": true,
+          "enableAzureRBAC": true
+        },
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "networkPolicy": "azure"
+        },
+        "securityProfile": {
+          "defender": {
+            "securityMonitoring": {
+              "enabled": true
+            }
+          }
+        }
+      },
+      "sku": {
+        "name": "Base",
+        "tier": "Standard"
+      },
+      "identity": {
+        "type": "UserAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.containerservice/managedclusters/hcw-sample-aks-dev-01",
+      "name": "hcw-sample-aks-dev-01",
+      "type": "microsoft.containerservice/managedclusters",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "environment": "dev",
+        "owner": "dev-team"
+      },
+      "properties": {
+        "agentPoolProfiles": [
+          {
+            "name": "system",
+            "enableAutoScaling": false
+          }
+        ],
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": false
+          }
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": false
+        },
+        "disableLocalAccounts": false,
+        "networkProfile": {
+          "networkPlugin": "kubenet"
+        }
+      },
+      "sku": {
+        "name": "Base",
+        "tier": "Free"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-test/providers/microsoft.containerservice/managedclusters/hcw-sample-aks-test-01",
+      "name": "hcw-sample-aks-test-01",
+      "type": "microsoft.containerservice/managedclusters",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-test",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-2002",
+        "owner": "qa-team",
+        "environment": "test"
+      },
+      "properties": {
+        "agentPoolProfiles": [
+          {
+            "name": "system",
+            "enableAutoScaling": true,
+            "minCount": 1
+          }
+        ],
+        "addonProfiles": {
+          "omsagent": {
+            "enabled": true
+          }
+        },
+        "apiServerAccessProfile": {
+          "enablePrivateCluster": false,
+          "authorizedIPRanges": [
+            "203.0.113.0/24"
+          ]
+        },
+        "disableLocalAccounts": true,
+        "aadProfile": {
+          "managed": true,
+          "enableAzureRBAC": false
+        },
+        "networkProfile": {
+          "networkPlugin": "azure",
+          "networkPolicy": "none"
+        }
+      },
+      "sku": {
+        "name": "Base",
+        "tier": "Standard"
+      },
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.app/containerapps/hcw-sample-ca-api-prod",
+      "name": "hcw-sample-ca-api-prod",
+      "type": "microsoft.app/containerapps",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "template": {
+          "scale": {
+            "minReplicas": 2,
+            "maxReplicas": 10
+          }
+        }
+      },
+      "sku": null,
+      "identity": {
+        "type": "UserAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.app/containerapps/hcw-sample-ca-worker-dev",
+      "name": "hcw-sample-ca-worker-dev",
+      "type": "microsoft.app/containerapps",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "dev-team",
+        "environment": "dev"
+      },
+      "properties": {
+        "template": {
+          "scale": {
+            "minReplicas": 0
+          }
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-test/providers/microsoft.app/containerapps/hcw-sample-ca-web-test",
+      "name": "hcw-sample-ca-web-test",
+      "type": "microsoft.app/containerapps",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-test",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-2002",
+        "environment": "test"
+      },
+      "properties": {
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 3
+          }
+        }
+      },
+      "sku": null,
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.app/containerapps/hcw-sample-ca-jobs-prod",
+      "name": "hcw-sample-ca-jobs-prod",
+      "type": "microsoft.app/containerapps",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "template": {
+          "scale": {
+            "minReplicas": 1,
+            "maxReplicas": 5
+          }
+        }
+      },
+      "sku": null,
+      "identity": {
+        "type": "SystemAssigned, UserAssigned"
+      },
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.app/managedenvironments/hcw-sample-cae-prod",
+      "name": "hcw-sample-cae-prod",
+      "type": "microsoft.app/managedenvironments",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "vnetConfiguration": {
+          "internal": true
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.app/managedenvironments/hcw-sample-cae-dev",
+      "name": "hcw-sample-cae-dev",
+      "type": "microsoft.app/managedenvironments",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "dev-team",
+        "environment": "dev"
+      },
+      "properties": {
+        "vnetConfiguration": {
+          "internal": false
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.containerregistry/registries/hcwsampleacrprod",
+      "name": "hcwsampleacrprod",
+      "type": "microsoft.containerregistry/registries",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "publicNetworkAccess": "Disabled",
+        "adminUserEnabled": false,
+        "privateEndpointConnections": [
+          {
+            "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.containerregistry/registries/hcwsampleacrprod/privateEndpointConnections/pe-1"
+          }
+        ]
+      },
+      "sku": {
+        "name": "Premium",
+        "tier": "Premium"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.containerregistry/registries/hcwsampleacrdev",
+      "name": "hcwsampleacrdev",
+      "type": "microsoft.containerregistry/registries",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "dev-team",
+        "environment": "dev"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled",
+        "adminUserEnabled": true
+      },
+      "sku": {
+        "name": "Basic",
+        "tier": "Basic"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-shared/providers/microsoft.containerregistry/registries/hcwsampleacrshared",
+      "name": "hcwsampleacrshared",
+      "type": "microsoft.containerregistry/registries",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-shared",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-3003",
+        "owner": "platform-team"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled",
+        "privateEndpointConnections": []
+      },
+      "sku": {
+        "name": "Premium",
+        "tier": "Premium"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.keyvault/vaults/hcw-sample-kv-prod-01",
+      "name": "hcw-sample-kv-prod-01",
+      "type": "microsoft.keyvault/vaults",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "publicNetworkAccess": "Disabled",
+        "sku": {
+          "name": "standard"
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.keyvault/vaults/hcw-sample-kv-prod-02",
+      "name": "hcw-sample-kv-prod-02",
+      "type": "microsoft.keyvault/vaults",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "publicNetworkAccess": "Disabled"
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.keyvault/vaults/hcw-sample-kv-dev-01",
+      "name": "hcw-sample-kv-dev-01",
+      "type": "microsoft.keyvault/vaults",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "environment": "dev"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.storage/storageaccounts/hcwsamplestprod01",
+      "name": "hcwsamplestprod01",
+      "type": "microsoft.storage/storageaccounts",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "publicNetworkAccess": "Disabled",
+        "supportsHttpsTrafficOnly": true
+      },
+      "sku": {
+        "name": "Standard_ZRS",
+        "tier": "Standard"
+      },
+      "identity": null,
+      "kind": "StorageV2",
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.storage/storageaccounts/hcwsamplestdev01",
+      "name": "hcwsamplestdev01",
+      "type": "microsoft.storage/storageaccounts",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "environment": "dev"
+      },
+      "properties": {
+        "publicNetworkAccess": "Enabled"
+      },
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "identity": null,
+      "kind": "StorageV2",
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-shared/providers/microsoft.storage/storageaccounts/hcwsamplestlogs",
+      "name": "hcwsamplestlogs",
+      "type": "microsoft.storage/storageaccounts",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-shared",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-3003",
+        "owner": "platform-team"
+      },
+      "properties": {
+        "supportsHttpsTrafficOnly": true
+      },
+      "sku": {
+        "name": "Standard_LRS",
+        "tier": "Standard"
+      },
+      "identity": null,
+      "kind": "StorageV2",
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.compute/disks/hcw-sample-disk-os-01",
+      "name": "hcw-sample-disk-os-01",
+      "type": "microsoft.compute/disks",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "diskState": "Attached",
+        "diskSizeGB": 128
+      },
+      "sku": {
+        "name": "Premium_LRS"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.compute/disks/hcw-sample-disk-orphan-01",
+      "name": "hcw-sample-disk-orphan-01",
+      "type": "microsoft.compute/disks",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "environment": "dev"
+      },
+      "properties": {
+        "diskState": "Unattached",
+        "diskSizeGB": 256
+      },
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.compute/disks/hcw-sample-disk-reserved-01",
+      "name": "hcw-sample-disk-reserved-01",
+      "type": "microsoft.compute/disks",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "diskState": "Reserved",
+        "diskSizeGB": 64
+      },
+      "sku": {
+        "name": "StandardSSD_LRS"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/publicipaddresses/hcw-sample-pip-gw-01",
+      "name": "hcw-sample-pip-gw-01",
+      "type": "microsoft.network/publicipaddresses",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "ipConfiguration": {
+          "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/applicationgateways/hcw-sample-agw-01/frontendIPConfigurations/fe"
+        },
+        "publicIPAllocationMethod": "Static"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/publicipaddresses/hcw-sample-pip-nat-01",
+      "name": "hcw-sample-pip-nat-01",
+      "type": "microsoft.network/publicipaddresses",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "ipConfiguration": {
+          "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/natgateways/hcw-sample-nat-01"
+        },
+        "publicIPAllocationMethod": "Static"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": [
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.network/publicipaddresses/hcw-sample-pip-idle-01",
+      "name": "hcw-sample-pip-idle-01",
+      "type": "microsoft.network/publicipaddresses",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "environment": "dev",
+        "costCenter": "cc-1001"
+      },
+      "properties": {
+        "publicIPAllocationMethod": "Static"
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.operationalinsights/workspaces/hcw-sample-law-prod",
+      "name": "hcw-sample-law-prod",
+      "type": "microsoft.operationalinsights/workspaces",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "retentionInDays": 365,
+        "sku": {
+          "name": "PerGB2018"
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.operationalinsights/workspaces/hcw-sample-law-dev",
+      "name": "hcw-sample-law-dev",
+      "type": "microsoft.operationalinsights/workspaces",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "dev-team",
+        "environment": "dev"
+      },
+      "properties": {
+        "retentionInDays": 30,
+        "sku": {
+          "name": "PerGB2018"
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-test/providers/microsoft.operationalinsights/workspaces/hcw-sample-law-test",
+      "name": "hcw-sample-law-test",
+      "type": "microsoft.operationalinsights/workspaces",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-test",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-2002",
+        "owner": "qa-team",
+        "environment": "test"
+      },
+      "properties": {
+        "retentionInDays": 180,
+        "sku": {
+          "name": "PerGB2018"
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.insights/metricalerts/hcw-sample-alert-cpu",
+      "name": "hcw-sample-alert-cpu",
+      "type": "microsoft.insights/metricalerts",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "severity": 2,
+        "enabled": true
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/virtualnetworks/hcw-sample-vnet-prod",
+      "name": "hcw-sample-vnet-prod",
+      "type": "microsoft.network/virtualnetworks",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.10.0.0/16"
+          ]
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-dev/providers/microsoft.network/virtualnetworks/hcw-sample-vnet-dev",
+      "name": "hcw-sample-vnet-dev",
+      "type": "microsoft.network/virtualnetworks",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-dev",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "dev-team",
+        "environment": "dev"
+      },
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "10.20.0.0/16"
+          ]
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/networksecuritygroups/hcw-sample-nsg-prod",
+      "name": "hcw-sample-nsg-prod",
+      "type": "microsoft.network/networksecuritygroups",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "securityRules": []
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/natgateways/hcw-sample-nat-01",
+      "name": "hcw-sample-nat-01",
+      "type": "microsoft.network/natgateways",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "idleTimeoutInMinutes": 4
+      },
+      "sku": {
+        "name": "Standard"
+      },
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/applicationgateways/hcw-sample-agw-01",
+      "name": "hcw-sample-agw-01",
+      "type": "microsoft.network/applicationgateways",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "sku": {
+          "name": "WAF_v2"
+        }
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.compute/virtualmachines/hcw-sample-vm-app-01",
+      "name": "hcw-sample-vm-app-01",
+      "type": "microsoft.compute/virtualmachines",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D4s_v5"
+        }
+      },
+      "sku": null,
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": null,
+      "zones": [
+        "1"
+      ]
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.compute/virtualmachines/hcw-sample-vm-app-02",
+      "name": "hcw-sample-vm-app-02",
+      "type": "microsoft.compute/virtualmachines",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "Standard_D4s_v5"
+        }
+      },
+      "sku": null,
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": null,
+      "zones": [
+        "2"
+      ]
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.network/networkinterfaces/hcw-sample-nic-app-01",
+      "name": "hcw-sample-nic-app-01",
+      "type": "microsoft.network/networkinterfaces",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1"
+          }
+        ]
+      },
+      "sku": null,
+      "identity": null,
+      "kind": null,
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.sql/servers/hcw-sample-sql-prod-01",
+      "name": "hcw-sample-sql-prod-01",
+      "type": "microsoft.sql/servers",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "publicNetworkAccess": "Disabled",
+        "version": "12.0"
+      },
+      "sku": null,
+      "identity": null,
+      "kind": "v12.0",
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.web/serverfarms/hcw-sample-asp-prod-01",
+      "name": "hcw-sample-asp-prod-01",
+      "type": "microsoft.web/serverfarms",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "reserved": true
+      },
+      "sku": {
+        "name": "P1v3",
+        "tier": "PremiumV3"
+      },
+      "identity": null,
+      "kind": "linux",
+      "zones": null
+    },
+    {
+      "id": "/subscriptions/00000000-0000-0000-0000-000000000001/resourceGroups/rg-hcw-sample-prod/providers/microsoft.web/sites/hcw-sample-web-prod-01",
+      "name": "hcw-sample-web-prod-01",
+      "type": "microsoft.web/sites",
+      "location": "eastus2",
+      "resourceGroup": "rg-hcw-sample-prod",
+      "subscriptionId": "00000000-0000-0000-0000-000000000001",
+      "tags": {
+        "costCenter": "cc-1001",
+        "owner": "platform-team",
+        "environment": "prod"
+      },
+      "properties": {
+        "httpsOnly": true
+      },
+      "sku": null,
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "kind": "app,linux",
+      "zones": null
+    }
+  ],
+  "skip_token": null,
+  "total_records": 40
+}

@@ -1,0 +1,38 @@
+{
+  "version": "1.0.0",
+  "severityWeights": {
+    "critical": 4,
+    "high": 3,
+    "medium": 2,
+    "low": 1
+  },
+  "frameworks": {
+    "finops": {
+      "label": "FinOps",
+      "pillars": {
+        "Allocation": 3,
+        "Budgeting": 2,
+        "Workload optimization": 2,
+        "Rate optimization": 1,
+        "Anomaly management": 1
+      }
+    },
+    "waf-cost": {
+      "label": "Well-Architected cost optimisation",
+      "pillars": {
+        "Scaling": 3,
+        "Monitoring": 2,
+        "Data": 1,
+        "Waste": 2
+      }
+    },
+    "zero-trust": {
+      "label": "Zero Trust",
+      "pillars": {
+        "Network": 3,
+        "Identity": 3,
+        "Visibility": 1
+      }
+    }
+  }
+}

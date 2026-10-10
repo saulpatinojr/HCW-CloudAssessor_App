@@ -1,0 +1,15 @@
+# gitleaks configuration (secret-scan job in security.yml and the pre-commit hook). Default rules stay in force.
+#
+# One documented false positive: the Sourcegraph access-token rule accepts any bare 40-hex string once the word
+# "sourcegraph" appears in the fragment, and "ResourceGraph" (the Azure service this edition queries) contains it.
+# Every SHA-pinned action reference (`uses: owner/repo@<40-hex> # vN`) then matches. Those pins are public commit
+# ids, never credentials, so they are allow-listed by shape; nothing else is.
+title = "HCW-CloudAssessor_App"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "SHA-pinned GitHub Actions references are commit ids, not tokens"
+regexTarget = "line"
+regexes = ['''uses:\s+[\w.\-]+/[\w.\-/]+@[0-9a-f]{40}\s*#\s*v\d''']

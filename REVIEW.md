@@ -6,11 +6,11 @@ requires a decision, an approval, an access grant, or external input from a name
 Bugs, refactoring, technical debt, tests, and documentation work do not belong here — they
 belong in [TODO.md](TODO.md).
 
-**Open blockers: 8**
+**Open blockers: 8** (R-001 resolved by owner decision on 2026-10-09; R-009 added on 2026-10-10)
 
 | ID | Blocker | Required owner | Blocks |
 |----|---------|----------------|--------|
-| R-001 | Assessment deliverable format undefined | Product owner | All implementation |
+| R-001 | Assessment deliverable format undefined — **resolved** | Product owner | Nothing (see entry) |
 | R-002 | Read-only access to the Azure assessment target not provisioned | Azure platform owner | Collector development and testing |
 | R-003 | No license selected for the repository | Repository owner / Legal | Contribution, reuse, distribution |
 | R-004 | Third-party integration adoption not approved | Repository owner / Legal | Issues #1, #2, #3 |
@@ -18,10 +18,18 @@ belong in [TODO.md](TODO.md).
 | R-006 | Assessment output data classification undecided | Security / Compliance | Storing and sharing results |
 | R-007 | GitHub Wiki not writable by automation | Repository admin | Wiki documentation migration |
 | R-008 | `qlty check` errors Cloud-side and the log is not readable | Repository admin / qlty account owner | A permanently red check on every pull request |
+| R-009 | Anonymous appliance results versus Entra token validation | Repository owner, Security | Flipping `CA_PUBLIC_RESULTS` to `true`; T-032 |
 
 ---
 
 ## R-001 — Assessment deliverable format is undefined
+
+**Resolved by owner decision (2026-10-09, recorded 2026-10-10).** (a) The deliverable is a web pane plus a markdown
+report, JSON, CSV and a zip bundle, produced by the `cloud-assessor-core` engine; (b) consumers are client engineers;
+(c) the appliance edition (this repository) runs continuously on a timer against the client's own Azure scope, and the
+lab edition (`HCW-CloudAssessor_AddOn`) is point-in-time from an uploaded export. The stack follows: Python 3.14, `uv`,
+FastAPI, pydantic, one Dockerfile with two targets, Terraform for Azure Container Apps (`REFACTOR_APP.md`, implemented).
+The text below is kept as the record of the question.
 
 **Problem**
 The repository states what the assessment measures (FinOps Foundation Framework, Azure
@@ -213,6 +221,15 @@ the wiki so it can be applied consistently.
 
 ## R-006 — Assessment output data classification is undecided
 
+**Proposed classification (2026-10-10, awaiting confirmation `[REVIEW REQUIRED]`):** "client confidential". Inputs
+(the live inventory and cost evidence) and outputs (`report.json`, `findings.csv`, the bundle) carry the client's
+resource ids and spend and are held in memory only, replaced on every refresh and lost on restart; no fixture is ever
+captured from a real environment (samples use subscription `00000000-0000-0000-0000-000000000001` and `hcw-sample-*`
+names, enforced by `tests/security/test_no_secrets.py`); logs carry counts and codes only (`redaction.py`); subscription
+ids appear hashed in `report.json` (`scope.subscriptions`) and unredacted only in the resource ids the report is about.
+Until the owner confirms, the appliance's results routes answer `403 results_not_public` (`CA_PUBLIC_RESULTS=false`,
+Terraform `var.public_results = false`).
+
 **Problem**
 Assessment runs will capture cloud resource inventory, configuration, identity posture,
 and cost data. There is no decision on how that output is classified, where it may be
@@ -341,3 +358,42 @@ A permanently failing status on every pull request. Branch protection with requi
 **Recommended next step**
 Read the build log at the URL in the commit status and report what it says. Until then this
 check should not be added to branch protection.
+
+---
+
+## R-009 — Anonymous appliance results versus Entra token validation
+
+**Problem**
+The owner's 2026-10-09 decision names "anonymous live results, no visitor credential" as the appliance's target
+state. The current assessment of a client's scope carries that client's resource ids, configuration and spend, so an
+anonymous results route on a public FQDN is an exposure decision, not a defaulting one. `REFACTOR_APP.md` (section 13)
+therefore ships the appliance with a release gate: `CA_PUBLIC_RESULTS` defaults to `false`, the four results routes
+answer `403 results_not_public`, `/api/health` reports `publicResults:false`, and Terraform defaults
+`var.public_results = false`. Collection still runs. The alternative is Entra token validation on the five mutating and
+results routes (proposed `TODO.md` T-032), which keeps results private to the client's tenant without a gate.
+
+**Why it blocks progress**
+Nobody can read a live result from a deployed appliance until the owner chooses: flip the gate (anonymous, as
+decided) or fund T-032 (authenticated). Either is a one-line Terraform change or a backlog item, but the choice is the
+owner's and depends on R-006.
+
+**Required owner**
+Repository owner, with the security and compliance owner of R-006.
+
+**Required action**
+Record one of: (a) anonymous results are acceptable for the deployment's audience and network position, and
+`var.public_results` may be set `true`; (b) results must be authenticated, so T-032 is scheduled before any client
+deployment and the gate stays closed until it lands; (c) results stay closed and are read only from the container's
+bundle by an operator.
+
+**Impact if unresolved**
+The appliance deploys and collects but serves nothing beyond `/api/health` and `/api/catalog`.
+
+**References**
+- `REFACTOR_APP.md` — sections 8, 10, 13, 22
+- `TODO.md` — T-032
+- `src/cloud_assessor_appliance/api.py` — `_current()`; `infrastructure/terraform/appliance-azure/variables.tf` — `public_results`
+
+**Recommended next step**
+Decide (a) or (b) together with R-006, in one sitting; record the answer here and flip `var.public_results` in the
+same pull request if (a).

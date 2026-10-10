@@ -216,3 +216,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Cloud Assessor App additions (REFACTOR_APP.md 7.14, T-004): credential material, cloud CLI caches, assessment
+# output, Terraform state and variable files. `.gitignore` is not a security control; push protection is (T-008).
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.publishsettings
+.azure/
+assessment-output/
+*.report.json
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!terraform.tfvars.example
+.terraform.lock.hcl
+node_modules/
