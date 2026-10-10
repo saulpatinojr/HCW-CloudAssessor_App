@@ -9,7 +9,7 @@
 | Downstream | `saulpatinojr/HCW-CloudAssessor_AddOn` (id `cloud-assessment`, origin `https://cloud-assessment.lab.hybridcloudworks.com`, site route `/tools/cloud-assessment`) |
 | Governing documents | `CONTRACT-DECISIONS.md` (binding), the HCW AddOn Integration Standard, `PLAN.md` Pair 2 |
 
-**Governance conflict and its resolution.** `README.md` ("Documentation") sanctions exactly four root markdown files (`README.md`, `CHANGELOG.md`, `REVIEW.md`, `TODO.md`) and directs everything else to the GitHub Wiki, which is enabled but empty and not writable by automation (`REVIEW.md` R-007). This file is a fifth root file by sanctioned exception: it is the implementation plan for the work `TODO.md` queues. Resolution: (a) now, `README.md`'s documentation table lists `REFACTOR_APP.md` as "the implementation plan, superseded section by section as work lands in `CHANGELOG.md`" and the T-019 governance check allow-lists it; (b) at the first release (`v0.1.0`), move the content to the wiki page `Implementation-Plan` and delete this file. No `docs/` directory is created in this repository; ADRs go to the wiki `Decision-Log` page, and the AddOn keeps copies of the ones that shape its edition.
+**Governance conflict and its resolution.** `README.md` ("Documentation") sanctions exactly four root markdown files (`README.md`, `CHANGELOG.md`, `REVIEW.md`, `TODO.md`) and directs everything else to the GitHub Wiki, which is enabled but empty and not writable by automation (`REVIEW.md` R-007). This file is a fifth root file by owner decision: it is the implementation plan for the work `TODO.md` queues. Today it is unlisted; `README.md` still names four files and the T-019 check does not exist. Resolution, as proposed edits scheduled in 7.14 (this program changes no other file here): (a) when the plan is executed, `README.md`'s documentation table gains a `REFACTOR_APP.md` row reading "the implementation plan, superseded section by section as work lands in `CHANGELOG.md`" and the T-019 governance check allow-lists the file by name; (b) at the first release (`v0.1.0`), move the content to the wiki page `Implementation-Plan` and delete this file. No `docs/` directory is created in this repository; ADRs go to the wiki `Decision-Log` page, and the AddOn keeps copies of the ones that shape its edition.
 
 **Owner's Azure target decision (2026-10-09, quoted from `PLAN.md`):** "*App* = Azure Container Apps + user-assigned managed identity (Reader; + Cost Management Reader for Cloud Assessor) on a client subscription/RG, clients clone the repo, anonymous live results, no visitor credential. *AddOn* = the **same Docker image** in a `lab` edition on the Hostinger VPS: visitors upload an **Azure Resource Graph export** (JSON/CSV, 5 MB / 5,000 rows, Turnstile-gated, in-memory, TTL), mirroring the Azure Migrate lab model; restart erases everything." Read "same Docker image" as one Dockerfile and one engine with two build targets (`lab`, `appliance`) and two published images, the lab a strict subset `[REVIEW REQUIRED]`.
 
@@ -53,7 +53,7 @@ HCW-CloudAssessor_App
 │   ├── __init__.py  __main__.py  api.py  identity.py  edition.py
 │   ├── collectors/{__init__,resource_graph,cost_management,scope}.py
 │   └── web/{index.html,app.js,styles.css,theme.css}   # pane UI copied from the AddOn at the same version
-├── infrastructure/docker/{Dockerfile,versions.env}      # targets: lab, appliance
+├── infrastructure/docker/{Dockerfile,versions.env}      # targets: appliance (published), lab (boundary-proof build only, never deployed)
 ├── infrastructure/terraform/appliance-azure/{main,variables,outputs}.tf  terraform.tfvars.example
 ├── samples/                                             # the AddOn's fictional fixtures, copied
 ├── scripts/{check-catalog.py,check-versions.sh,check-docs-governance.py}
@@ -62,7 +62,7 @@ HCW-CloudAssessor_App
     .github/workflows/{ci,security,publish-core,publish-images,release}.yml
 ```
 
-Published artefacts per `v*` tag: the `cloud-assessor-core` wheel (GitHub Release asset; PyPI later `[REVIEW REQUIRED]`), the appliance image `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance` by digest. The lab target is built in CI as the boundary proof; the lab image the website pins is the AddOn's `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` (CONTRACT-DECISIONS item 2).
+Published artefacts per `v*` tag: the `cloud-assessor-core` wheel (GitHub Release asset; PyPI later `[REVIEW REQUIRED]`), the appliance image `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance` by digest. The `lab` target in this repository is a boundary-proof build only: it installs the core without the `azure` extra and asserts the SDK is absent; it contains no lab application, is never pushed and is never deployed. The deployed lab image, `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` (CONTRACT-DECISIONS item 2), is built by `HCW-CloudAssessor_AddOn` from its own `src/cloud_assessment_lab` source on the published core, and that is the only lab image the website pins.
 
 ## 4 Constraints
 
@@ -72,7 +72,7 @@ Published artefacts per `v*` tag: the `cloud-assessor-core` wheel (GitHub Releas
 | Four-file documentation governance; no `docs/`, no non-root README, no documentation in dot-folders beyond platform templates | `README.md` "Repository conventions" |
 | The core is adopted verbatim at the AddOn tag; evaluator kinds are only added, never renamed; `MODEL_VERSION` and catalog `version` appear in every `report.json` | Target architecture 2.2 |
 | Managed identity only; no client secrets anywhere; no visitor credential path in either edition | Owner decision 2; T-011 |
-| The lab target must be technically unable to construct an Azure credential (no SDK installed, import-time refusal) | Standard section 19 |
+| The core must be installable with no Azure SDK, so the AddOn's lab image stays technically unable to construct an Azure credential; this repository's `lab` build target proves it on every CI run | Standard section 19 |
 | Python base image `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, recorded in `infrastructure/docker/versions.env` with a CI check | CONTRACT-DECISIONS item 20 |
 | Container hardening: read-only root, `tmpfs /tmp`, `cap_drop ALL`, `no-new-privileges`, uid 10001, HEALTHCHECK | CONTRACT-DECISIONS item 19 |
 | Appliance: one Consumption Container App, `min_replicas 1`, `max_replicas 1`, image by digest; scale-to-zero is a documented owner option | CONTRACT-DECISIONS item 21 |
@@ -101,7 +101,7 @@ There is no code to refactor; the work is adoption plus construction, in this or
 | B | Skeleton: `pyproject.toml` (uv workspace), `uv.lock`, `ruff.toml`, `.python-version`, `LICENSE`, `NOTICE`, `CODEOWNERS`, `SECURITY.md`, templates, Dependabot, `ci.yml`, `security.yml` | T-001..T-010, T-013..T-019 closed |
 | C | Appliance edition `src/cloud_assessor_appliance/` with collectors, scope allow-list, identity, API, copied pane | T-025, T-026, T-027 (scope half), T-028 (format) |
 | D | Core addition: `CostEvidence` model and a `cost-evidence` evaluator kind (additive) so the appliance flips CA-FIN-003/007 and allocation criteria to `observed`; released as core `0.2.0` | First upstream change; the lab passes `evidence=None` and is unaffected |
-| E | Dockerfile with `lab` and `appliance` targets, `versions.env`, `publish-images.yml`, `publish-core.yml`, `release.yml` | Two images, one wheel, per tag |
+| E | Dockerfile with the `appliance` target and a `lab` boundary-proof target, `versions.env`, `publish-images.yml`, `publish-core.yml`, `release.yml` | One published image and one wheel per tag; the lab proof built but never pushed |
 | F | Terraform `infrastructure/terraform/appliance-azure` | Client-deployable appliance |
 | G | `tests/security/test_appliance_boundary.py`, `tests/packaging/` | Boundary proved in both directions |
 | H | Governance reconciliation: README table, T-019 allow-list, CHANGELOG entries, TODO/REVIEW status updates | The four-file model survives |
@@ -122,14 +122,14 @@ Each subsection carries the same labelled fields. "Current behavior" is the tree
 ### 7.2 `pyproject.toml`, `uv.lock`, `.python-version`, `ruff.toml`, `Makefile`, `.env.example`
 
 - **Current behavior:** absent.
-- **Required behavior:** uv workspace with two members; appliance package `cloud-assessor-appliance` depending on `cloud-assessor-core` (workspace), `fastapi`, `uvicorn`, `pydantic`; optional extra `azure`; dev group `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit`. `.python-version` = `3.14.7`. `.env.example` lists every `CA_*` key with empty values.
+- **Required behavior:** uv workspace with two members; appliance package `cloud-assessor-appliance` depending on `cloud-assessor-core` (workspace), `fastapi`, `uvicorn`, `pydantic`; optional extra `azure`; dev group `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit`. Both `pyproject.toml` files declare `requires-python = ">=3.14.6,<3.15"`; `.python-version` = `3.14.7`. `.env.example` lists every `CA_*` key with empty values.
 - **Exact code-level change:**
 
 ```toml
 [project]
 name = "cloud-assessor-appliance"
 version = "0.1.0"
-requires-python = ">=3.14"
+requires-python = ">=3.14.6,<3.15"   # floor 3.14.6; the image pins 3.14.7; the core's pyproject carries the same range
 dependencies = ["cloud-assessor-core", "fastapi==<pin>", "uvicorn==<pin>", "pydantic==<pin>"]  # exact pins at uv add time [VERIFY]
 [project.optional-dependencies]
 azure = ["azure-identity==<pin>", "azure-mgmt-resourcegraph==<pin>", "azure-mgmt-costmanagement==<pin>"]  # [VERIFY] pins; never in the core
@@ -147,7 +147,7 @@ cloud-assessor-core = { workspace = true }
 ### 7.3 `src/cloud_assessor_appliance/edition.py`
 
 - **Current behavior:** absent.
-- **Required behavior:** declares the edition and its capabilities; refuses to start as `appliance` unless the Azure extra is importable and `CA_SCOPES` parses; refuses to start as `lab` under any identity endpoint (the AddOn's guard, re-used by the `lab` target).
+- **Required behavior:** declares the edition and its capabilities; refuses to start as `appliance` unless the Azure extra is importable and `CA_SCOPES` parses. The lab edition's guard (refusal under an identity endpoint) lives in the AddOn's `src/cloud_assessment_lab/edition.py`, not here; this repository ships no lab application.
 - **Exact code-level change:**
 
 ```python
@@ -155,7 +155,7 @@ EDITION = "appliance"
 CAPABILITIES = ["scorecard", "findings", "report-markdown", "report-json", "bundle-zip", "live-resource-graph", "live-cost"]
 def assert_appliance_ready(env: Mapping[str, str]) -> None:
     if importlib.util.find_spec("azure.identity") is None: raise EditionError("azure extra not installed")
-    ScopeAllowlist.parse(env.get("CA_SCOPES", ""))  # raises ScopeError on empty or malformed
+    ScopeAllowlist.from_env(env)  # reads env["CA_SCOPES"]; raises ScopeError on missing, empty or malformed
 ```
 
 - **Tests:** `tests/unit/test_edition.py`: raises without the extra (monkeypatched `find_spec`), raises on empty `CA_SCOPES`.
@@ -169,7 +169,9 @@ def assert_appliance_ready(env: Mapping[str, str]) -> None:
 - **Exact code-level change:**
 
 ```python
-FORBIDDEN_ENV = ("AZURE_CLIENT_SECRET", "AZURE_CLIENT_CERTIFICATE_PATH", "AZURE_USERNAME", "AZURE_PASSWORD")
+FORBIDDEN_ENV = ("AZURE_CLIENT_SECRET", "AZURE_CLIENT_CERTIFICATE_PATH", "AZURE_USERNAME", "AZURE_PASSWORD", "AZURE_TENANT_ID")
+# AZURE_TENANT_ID is refused on purpose: ManagedIdentityCredential needs only the client id, and a tenant id in the
+# environment is the signature of a service-principal login. Section 10 states the same rule.
 def build_credential(env: Mapping[str, str]) -> TokenCredential:
     present = [k for k in FORBIDDEN_ENV if env.get(k)]
     if present: raise IdentityError(f"client-secret style variables are refused: {','.join(present)}")
@@ -193,7 +195,10 @@ def build_credential(env: Mapping[str, str]) -> TokenCredential:
 class Scope: subscription_id: str; resource_group: str | None
 class ScopeAllowlist:
     @classmethod
-    def parse(cls, raw: str) -> "ScopeAllowlist": ...   # ScopeAllowlist.parse("CA_SCOPES") in api.py reads os.environ["CA_SCOPES"]
+    def parse(cls, value: str) -> "ScopeAllowlist": ...   # parses the raw value, e.g. "/subscriptions/<guid>,/subscriptions/<guid>/resourceGroups/rg-app"
+    @classmethod
+    def from_env(cls, env: Mapping[str, str]) -> "ScopeAllowlist":
+        return cls.parse(env.get("CA_SCOPES", ""))        # the only place the key name CA_SCOPES is spelled
     def subscriptions(self) -> list[str]
     def kql_filter(self) -> str   # "subscriptionId in ('...')" plus per-RG "resourceGroup =~ '...'" clauses
     def assert_contains(self, resource_id: str) -> None   # ScopeError otherwise
@@ -254,14 +259,17 @@ class CostManagementCollector:
 
 ```python
 def create_app(settings: Settings) -> FastAPI:
-    allowlist = ScopeAllowlist.parse(settings.ca_scopes)
+    allowlist = ScopeAllowlist.parse(settings.ca_scopes)   # Settings loaded CA_SCOPES from os.environ; equivalent to ScopeAllowlist.from_env(os.environ)
     state = Snapshot()   # assessment, files, as_of, errors; guarded by asyncio.Lock
     @app.get("/api/health")      -> {"ok": True, "id": "cloud-assessment", "version": VERSION, "edition": "appliance",
                                      "capabilities": CAPABILITIES, "asOf": now_iso(), "siteOrigins": settings.site_origins,
                                      "turnstile": {"required": settings.turnstile_required, "siteKey": settings.turnstile_site_key},
                                      "azureConnectivity": "managed-identity", "scope": {"count": len(allowlist.subscriptions())},
-                                     "catalog": {"version": catalog.version, "count": len(catalog.criteria)}, "lastRun": state.as_of}
-    @app.get("/api/assessments/current")                       -> 200 assessment document | 503 no_snapshot
+                                     "catalog": {"version": catalog.version, "count": len(catalog.criteria)}, "lastRun": state.as_of,
+                                     "publicResults": settings.public_results}
+    # Release gate: every results route runs require_public_results() first; while CA_PUBLIC_RESULTS is not "true"
+    # it answers 403 {"error": {"code": "results_not_public", "message": "Results are not published for this deployment."}}
+    @app.get("/api/assessments/current")                       -> 200 assessment document | 403 results_not_public | 503 no_snapshot
     @app.get("/api/assessments/current/report.md")             -> text/markdown, attachment
     @app.get("/api/assessments/current/report.json")           -> application/json
     @app.get("/api/assessments/current/bundle.zip")            -> application/zip, attachment
@@ -270,7 +278,7 @@ def create_app(settings: Settings) -> FastAPI:
 ```
 
   Headers on every response: `X-Addon-Id: cloud-assessment`, `X-Addon-Version`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, `Cache-Control: no-store` on `/api/*`; CSP with `frame-ancestors` from `CA_FRAME_ANCESTORS` (default `'none'`, `X-Frame-Options: DENY` only then). `POST /api/refresh`: token bucket one request per ten minutes per client address (socket peer, or first `X-Forwarded-For` when `CA_TRUST_PROXY=1`); Turnstile verified when `TURNSTILE_SECRET` is set, otherwise the route is rate-limited only. `__main__.py` runs uvicorn on `0.0.0.0:$PORT`, `proxy_headers=False`, no access log, SIGTERM graceful. Logging goes through the core's `assert_no_visitor_data` writer only.
-- **Tests:** `tests/unit/test_api.py` (`httpx` TestClient, collectors faked): health shape and headers, `405 edition_readonly`, `503 no_snapshot` before the first run, bundle content types, rate limit, Turnstile path with a mocked siteverify.
+- **Tests:** `tests/unit/test_api.py` (`httpx` TestClient, collectors faked): health shape and headers, `405 edition_readonly`, `403 results_not_public` on all four results routes with `CA_PUBLIC_RESULTS` unset and `publicResults:false` in health, `200` on them with `CA_PUBLIC_RESULTS=true`, `503 no_snapshot` before the first run, bundle content types, rate limit, Turnstile path with a mocked siteverify.
 - **Acceptance criteria:** every route in section 8 answers as tabled; `/api/health` under one second with collectors stubbed to hang.
 - **Priority:** P1. **Dependencies:** 7.3 to 7.7. **Rollback:** module deletion.
 
@@ -280,15 +288,15 @@ def create_app(settings: Settings) -> FastAPI:
 - **Required behavior:** the AddOn's `web/{index.html,app.js,styles.css,theme.css}` copied at the same version with a provenance comment (`copied from HCW-CloudAssessor_AddOn v0.1.0 on <date>`), unchanged except for an edition switch: when `/api/health` reports `edition: "appliance"`, the upload section and "Delete my data now" are hidden, the "current assessment" header shows `lastRun` and `scope.count`, and a "Refresh" button posts `/api/refresh`. The `hcw-addon` message bridge stays; the appliance is never framed by the site, but one pane means one test suite.
 - **Exact code-level change:** in `app.js`, `const mode = health.edition === "appliance" ? "current" : "upload";` selects which section renders; `fetch("/api/assessments/current")` replaces the upload flow in `current` mode. No vendor names in copy; "Not production" label stays on the lab target only.
 - **Tests:** `tests/unit/test_static.py` serves the files and checks no `<input type="password">`; Playwright is CI-only and optional for the appliance.
-- **Acceptance criteria:** the lab target renders the upload flow; the appliance target renders the current flow; both from one file set.
+- **Acceptance criteria:** the appliance renders the current flow from this copy; the AddOn's lab image renders the upload flow from the same file set at the same version; a `git diff --no-index` between the two `web/` directories shows only the edition switch.
 - **Priority:** P2. **Dependencies:** 7.8; AddOn `v0.1.0`. **Rollback:** re-copy from the AddOn tag.
 
 ### 7.10 `infrastructure/docker/Dockerfile` and `versions.env`
 
 - **Current behavior:** absent.
-- **Required behavior:** one Dockerfile, three stages: `deps` (`pip install --require-hashes --no-deps -r requirements.lock --prefix /install` plus the two local wheels), `lab` (no `azure` extra; the AddOn's edition guard), `appliance` (`requirements-azure.lock` added). Both final stages: base `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, `apt-get upgrade`, remove `pip`/`ensurepip`/`setuptools`, `USER 10001:10001`, `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080`, `HEALTHCHECK CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"`, `CMD ["python","-m","cloud_assessor_appliance"]` (appliance) or `["python","-m","cloud_assessment_lab"]` (lab). `versions.env` records `PYTHON_IMAGE=python:3.14.7-slim-trixie` and `PYTHON_IMAGE_DIGEST=sha256:51dafde8...`; `scripts/check-versions.sh` fails CI when the Dockerfile and `versions.env` disagree.
-- **Tests:** CI image job: build both targets; `docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"` must exit non-zero; `docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"` must exit zero; `pip` absent in both.
-- **Acceptance criteria:** both builds succeed in CI; the two import checks hold; Trivy HIGH/CRITICAL (fixed only) clean.
+- **Required behavior:** one Dockerfile, three stages. `deps` installs `pip install --require-hashes --no-deps -r requirements.lock --prefix /install` plus the two local wheels. `appliance` is the deployed image: adds `requirements-azure.lock`, copies `src/cloud_assessor_appliance` and its `web/`, `CMD ["python","-m","cloud_assessor_appliance"]`, `HEALTHCHECK CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"`. `lab` is a boundary-proof build only: it installs the core wheel without the `azure` extra, copies no application, has no HEALTHCHECK, is never pushed and never deployed, and its `CMD` is `["python","-c","import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None"]`, so running the image at all is the proof. The deployed lab image is `docker.io/hybridcloudworks/hcw-addon-cloud-assessment`, built by `HCW-CloudAssessor_AddOn` from its own `src/cloud_assessment_lab` on the published core; this repository contains no `cloud_assessment_lab` package. Both final stages: base `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, `apt-get upgrade`, remove `pip`/`ensurepip`/`setuptools`, `USER 10001:10001`, `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080`. `versions.env` records `PYTHON_IMAGE=python:3.14.7-slim-trixie` and `PYTHON_IMAGE_DIGEST=sha256:51dafde8...`; `scripts/check-versions.sh` fails CI when the Dockerfile and `versions.env` disagree.
+- **Tests:** CI image job: build both targets; `docker run --rm hcw-cloud-assessor-lab:dev` must exit zero (the `CMD` assertion passed: the core imports, the SDK is absent); `docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"` must exit non-zero; `docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"` must exit zero; `pip` absent in both; `publish-images.yml` pushes only the `appliance` target.
+- **Acceptance criteria:** both builds succeed in CI; the three import checks hold; only the appliance image reaches Docker Hub; Trivy HIGH/CRITICAL (fixed only) clean on the appliance image.
 - **Priority:** P1. **Dependencies:** 7.2. **Rollback:** previous digest.
 
 ### 7.11 `infrastructure/terraform/appliance-azure/`
@@ -338,11 +346,11 @@ The appliance HTTP surface. Error envelope `{ error: { code, message, details? }
 
 | Method and path | Auth | Success | Errors |
 |---|---|---|---|
-| `GET /api/health` | none | 200 flat envelope: `ok, id:"cloud-assessment", version, edition:"appliance", capabilities[], asOf, siteOrigins[], turnstile:{required, siteKey|null}, azureConnectivity:"managed-identity", scope:{count}, catalog:{version,count}, lastRun` | 503 `ok:false` when the catalog failed to load |
-| `GET /api/assessments/current` | none | 200 `{assessment, files[], asOf, scope:{count}}` | 503 `no_snapshot` before the first successful run |
-| `GET /api/assessments/current/report.md` | none | 200 `text/markdown`, attachment | 503 `no_snapshot` |
-| `GET /api/assessments/current/report.json` | none | 200 `application/json` | 503 `no_snapshot` |
-| `GET /api/assessments/current/bundle.zip` | none | 200 `application/zip`, attachment | 503 `no_snapshot` |
+| `GET /api/health` | none | 200 flat envelope: `ok, id:"cloud-assessment", version, edition:"appliance", capabilities[], asOf, siteOrigins[], turnstile:{required, siteKey|null}, azureConnectivity:"managed-identity", scope:{count}, catalog:{version,count}, lastRun, publicResults` | 503 `ok:false` when the catalog failed to load |
+| `GET /api/assessments/current` | none; gated by `CA_PUBLIC_RESULTS` | 200 `{assessment, files[], asOf, scope:{count}}` | 403 `results_not_public` while the gate is closed; 503 `no_snapshot` before the first successful run |
+| `GET /api/assessments/current/report.md` | none; gated by `CA_PUBLIC_RESULTS` | 200 `text/markdown`, attachment | 403 `results_not_public`; 503 `no_snapshot` |
+| `GET /api/assessments/current/report.json` | none; gated by `CA_PUBLIC_RESULTS` | 200 `application/json` | 403 `results_not_public`; 503 `no_snapshot` |
+| `GET /api/assessments/current/bundle.zip` | none; gated by `CA_PUBLIC_RESULTS` | 200 `application/zip`, attachment | 403 `results_not_public`; 503 `no_snapshot` |
 | `POST /api/refresh` | Turnstile when `TURNSTILE_SECRET` set | 202 `{queued:true, lastRun}` | 403 `turnstile_failed`, 429 `rate_limited` (+ `Retry-After`), 503 `busy` when a run is in progress |
 | `POST /api/assessments` | n/a | absent | 405 `edition_readonly` |
 | `GET /api/catalog` | none | 200 `{version, retrievedOn, count, criteria[]}` (same as the lab) | |
@@ -376,6 +384,7 @@ All values are environment variables; none is a secret except `TURNSTILE_SECRET`
 | `AZURE_CLIENT_ID` | appliance | none | Client id of the user-assigned managed identity; Terraform sets it |
 | `CA_REFRESH_MINUTES` | appliance | `60` | Timer interval for collection |
 | `CA_COST_ENABLED` | appliance | `1` | `0` disables the cost collector; cost criteria stay `unknown` |
+| `CA_PUBLIC_RESULTS` | appliance | `false` | Release gate. While not `true`, `/api/assessments/current` and its `report.md`, `report.json` and `bundle.zip` routes answer `403 results_not_public` and `/api/health` reports `publicResults:false`; collection still runs. The owner sets `true` (in the Container App env, through Terraform `var.public_results`) only after R-006 and an access decision are recorded in `REVIEW.md`; anonymous live results remain the target state once approved |
 | `CA_FRAME_ANCESTORS` | both | `'none'` | CSP `frame-ancestors`; `X-Frame-Options: DENY` only when `'none'` |
 | `CA_SITE_ORIGINS` | both | empty | Space-separated origins the pane posts `hcw-addon` messages to; published in `/api/health.siteOrigins` |
 | `CA_ALLOWED_ORIGINS` | both | empty | Exact-origin CORS list |
@@ -385,7 +394,7 @@ All values are environment variables; none is a secret except `TURNSTILE_SECRET`
 | `CA_RATE_LIMIT_POSTS`, `CA_RATE_LIMIT_WINDOW_MINUTES` | both | `1` / `10` (appliance), `10` / `10` (lab) | Token bucket on anonymous mutating routes |
 | `PORT` | both | `8080` | Listen port |
 
-`.env.example` lists every key with an empty value. No `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID` or certificate path is read; their presence is a startup error (7.4).
+`.env.example` lists every key with an empty value. No `AZURE_CLIENT_SECRET`, `AZURE_TENANT_ID`, `AZURE_USERNAME`, `AZURE_PASSWORD` or certificate path is read; each is in `FORBIDDEN_ENV` (7.4) and its presence is a startup error. The managed identity needs only `AZURE_CLIENT_ID`.
 
 ## 11 Dependency changes
 
@@ -412,15 +421,15 @@ Root `infrastructure/terraform/appliance-azure/`, copied from `/home/user/HCW-Az
 | `azurerm_role_assignment.cost_reader` | for_each `var.scope_ids` | `role_definition_name = "Cost Management Reader"` |
 | `azurerm_log_analytics_workspace.app` | `log-hcwca-prod-cus-01` | `sku = "PerGB2018"`, `retention_in_days = 30` |
 | `azurerm_container_app_environment.app` | `cae-hcwca-prod-cus-01` | Consumption (no `infrastructure_subnet_id`, no workload profile) |
-| `azurerm_container_app.api` | `ca-hcwca-prod-cus-01` | `revision_mode = "Single"`; `identity { type = "UserAssigned" }`; `ingress { external_enabled = true, target_port = 8080 }`; `template { min_replicas = 1, max_replicas = 1 }`; `container { image = var.image_ref, cpu = 0.5, memory = "1Gi" }`; env `CA_SCOPES = join(",", var.scope_ids)`, `AZURE_CLIENT_ID`, `CA_REFRESH_MINUTES`, `CA_FRAME_ANCESTORS = "'none'"`, `PORT = "8080"` |
+| `azurerm_container_app.api` | `ca-hcwca-prod-cus-01` | `revision_mode = "Single"`; `identity { type = "UserAssigned" }`; `ingress { external_enabled = true, target_port = 8080 }`; `template { min_replicas = 1, max_replicas = 1 }`; `container { image = var.image_ref, cpu = 0.5, memory = "1Gi" }`; env `CA_SCOPES = join(",", var.scope_ids)`, `AZURE_CLIENT_ID`, `CA_REFRESH_MINUTES`, `CA_PUBLIC_RESULTS = tostring(var.public_results)` (default `"false"`), `CA_FRAME_ANCESTORS = "'none'"`, `PORT = "8080"` |
 | `azurerm_consumption_budget_resource_group.app` | `budget-hcwca-prod-cus-01` | `amount = var.monthly_budget`, `time_grain = "Monthly"`, notifications at 80 and 100 percent `Actual`, `dynamic "notification"` only when `var.alert_emails` is non-empty |
 | `azurerm_container_app_custom_domain.app` | optional | created only when `var.custom_domain != ""`; managed certificate `[VERIFY]` provider support at authoring |
 
-Variables: `prefix`, `environment`, `location`, `location_short`, `image_ref` (digest form `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:...`, no default, so a plan never pulls a floating tag), `scope_ids` (list, no default), `refresh_minutes` (default `60`), `monthly_budget` (default `50`), `alert_emails` (list, default `[]`), `custom_domain` (default `""`), `tags`. Outputs: `app_fqdn`, `identity_client_id`, `identity_principal_id`, `resource_group_name`.
+Variables: `prefix`, `environment`, `location`, `location_short`, `image_ref` (digest form `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:...`, no default, so a plan never pulls a floating tag), `scope_ids` (list, no default), `refresh_minutes` (default `60`), `public_results` (bool, default `false`; the owner sets `true` only after R-006 and the access decision are recorded), `monthly_budget` (default `50`), `alert_emails` (list, default `[]`), `custom_domain` (default `""`), `tags`. Outputs: `app_fqdn`, `identity_client_id`, `identity_principal_id`, `resource_group_name`.
 
 Scale-to-zero note (owner option, not the default): setting `min_replicas = 0` saves the idle cost but drops the in-memory snapshot; the first visitor after idle waits for a cold collection (10 to 30 s, longer with cost) `[VERIFY cost]`.
 
-Image publishing: `publish-images.yml` pushes `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance:<version>` through the Docker OIDC connection (`conventions-publishing.md`): job permissions `contents: read, id-token: write, attestations: write`; gate `vars.DOCKERHUB_ENABLED == 'true'`; assert `vars.DOCKERHUB_CONNECTION` is a UUID; build, Trivy, push with provenance and SBOM, attest, print the digest in the step summary. Owner steps before the first publish: create the Docker Hub OIDC connection trusting this repository's tag refs, then set `DOCKERHUB_CONNECTION` and `DOCKERHUB_ENABLED` as repository variables. No `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets.
+Image publishing: this repository publishes one image. `publish-images.yml` builds both Dockerfile targets, runs the `lab` boundary-proof image as a check, and pushes only `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance:<version>` through the Docker OIDC connection (`conventions-publishing.md`): job permissions `contents: read, id-token: write, attestations: write`; gate `vars.DOCKERHUB_ENABLED == 'true'`; assert `vars.DOCKERHUB_CONNECTION` is a UUID; build, Trivy, push with provenance and SBOM, attest, print the digest in the step summary. Owner steps before the first publish: create the Docker Hub OIDC connection trusting this repository's tag refs, then set `DOCKERHUB_CONNECTION` and `DOCKERHUB_ENABLED` as repository variables. No `DOCKERHUB_USERNAME`/`DOCKERHUB_TOKEN` secrets.
 
 ## 13 Security changes
 
@@ -432,10 +441,10 @@ Image publishing: `publish-images.yml` pushes `docker.io/hybridcloudworks/hcw-cl
 | Scope enforcement | `ScopeAllowlist` applied before any query; `assert_contains` on every resource id returned | `test_scope.py`, `test_resource_graph.py` |
 | Redaction at the serialization boundary (T-012) | The core's `assert_no_visitor_data` is the only log writer; `scrub()` on every exception; no uvicorn access log; CI fails if a file matching `assessment-output/` or `*.report.json` is committed | `test_logging_content_free.py` |
 | No upload route | `POST /api/assessments` answers `405 edition_readonly`; no multipart or body parsing path exists in the appliance | `test_api.py`, boundary test |
-| Appliance boundary | `tests/security/test_appliance_boundary.py` (7.12); image-level `import azure` fails in the lab target and succeeds in the appliance | CI image job |
+| Appliance boundary | `tests/security/test_appliance_boundary.py` (7.12); image-level: the `lab` boundary-proof target runs its `CMD` assertion and `import azure` fails in it, while `import azure.identity` succeeds in the appliance | CI image job |
 | Container hardening | read-only root, `tmpfs /tmp`, `cap_drop ALL`, `no-new-privileges`, uid 10001, HEALTHCHECK, no volumes | Dockerfile; Container Apps runs the image as built |
-| Anonymous results | Public for the scope by owner decision; the report contains the client's own resource ids; the deployment is the client's; `CA_FRAME_ANCESTORS` default `'none'` so nobody else frames it | Documented in README |
-| Entra token validation | **Deferred.** The appliance has no authenticated route in v1; adding bearer validation on `/api/refresh` and the report routes is a follow-up recorded in `TODO.md` as a new item (T-032) and in `REVIEW.md` as an owner decision on whether results stay anonymous | This section |
+| Results exposure gate | Anonymous live results for the scope are the owner's target state, but the report carries the client's resource ids, so exposure is gated: `CA_PUBLIC_RESULTS` defaults to `false`, the four results routes answer `403 results_not_public` and health reports `publicResults:false` until the owner flips it after R-006 and an access decision are recorded; Terraform defaults `var.public_results = false`; `CA_FRAME_ANCESTORS` default `'none'` so nobody else frames the pane | `test_api.py` gate tests; `terraform plan` shows `CA_PUBLIC_RESULTS = "false"` |
+| Entra token validation | **Deferred.** The appliance has no authenticated route in v1; adding bearer validation on `/api/refresh` and the report routes is a follow-up this plan proposes as a new `TODO.md` item (T-032) and a new `REVIEW.md` entry (whether results stay anonymous). Neither exists yet; both are added to those files when the plan is executed (7.14) | This section |
 | Supply chain | SHA-pinned actions, hash-pinned installs, digest-pinned base image, Trivy before push, provenance attestation, dependency review | CI |
 
 Generated code under this plan requires security review before merge, in particular `identity.py`, `scope.py` and the two collectors.
@@ -451,7 +460,7 @@ Generated code under this plan requires security review before merge, in particu
 | Catalog | `scripts/check-catalog.py` | `uv run python scripts/check-catalog.py` |
 | Lint | `ruff.toml` | `uv run ruff check . ; uv run ruff format --check .` |
 | Terraform | `infrastructure/terraform/appliance-azure` | `terraform fmt -check -recursive infrastructure/terraform ; terraform -chdir=infrastructure/terraform/appliance-azure validate` |
-| Image (CI only) | Dockerfile targets | build both; `import azure` fails in `lab`, `import azure.identity` succeeds in `appliance`; `pip` absent; Trivy |
+| Image (CI only) | Dockerfile targets | build both; the `lab` boundary-proof image exits zero on its `CMD` and `import azure` fails in it; `import azure.identity` succeeds in `appliance`; `pip` absent; Trivy on the appliance; only the appliance pushed |
 | Live (owner, after R-002) | sandbox subscription with the two roles | `/api/health` shows `scope.count`; `/api/assessments/current` returns findings with `observed` cost criteria |
 
 Coverage gate 85 percent on `src` and `packages`. No test may use a real subscription, tenant or resource id; the fictional subscription `00000000-0000-0000-0000-000000000001` and `hcw-sample-*` names are the only identifiers allowed in fixtures.
@@ -465,7 +474,7 @@ Coverage gate 85 percent on `src` and `packages`. No test may use a real subscri
 | 3 | Skeleton, CI, security workflows, license, governance reconciliation (B, H) | `ci.yml` and `security.yml` green; README table lists this file |
 | 4 | Appliance edition (C): `edition.py`, `identity.py`, `scope.py`, collectors, `api.py`, copied pane | Unit and security tests green; `405 edition_readonly` proved |
 | 5 | Core change set D (`CostEvidence`, `cost-evidence` kind) as core `0.2.0` | `test_cost_evidence.py` green; catalog check clean |
-| 6 | Dockerfile and image workflows (E); boundary proved at image level | CI image job green |
+| 6 | Dockerfile and image workflows (E); boundary proved at image level by the `lab` boundary-proof target; only the appliance target is published | CI image job green |
 | 7 | Terraform root (F); `validate` and a reviewed `plan` against the owner's sandbox | Plan shows the resource table of section 12 |
 | 8 | Release `v0.1.0`: wheel attached, appliance image pushed by digest (after the Docker Hub owner steps) | Digest in the workflow summary |
 | 9 | AddOn `core-update.yml` adopts App `v0.1.0`: pins the git-tag dependency, runs tests and e2e, opens the bump PR | AddOn PR merged |
@@ -480,7 +489,7 @@ Steps 1 to 7 are engineering; 8 needs the Docker Hub variables; 11 needs R-002. 
 - **AddOn compatibility is by exact tag pin.** The AddOn never floats on `main`; `core-update.yml` tests each release before adopting it and labels the PR `compatible` or `needs-adaptation`. A core change that breaks the lab is caught in the AddOn's CI, not on the lab host.
 - **Model version field.** `MODEL_VERSION = 1` in every `Resource`, `Assessment` and `report.json`; the catalog `version` beside it. Evaluator kinds are only added (`cost-evidence` is the first addition); ids are never reused; a changed criterion bumps its own `version`.
 - **One pane, two editions.** The pane branches on `edition` from `/api/health`; no field the lab relies on is removed. The health envelope stays flat and carries the standard's fields; the appliance adds `scope` and `lastRun` as extras the website proxy would ignore if it ever read them (it does not; the appliance is never framed by the site).
-- **Python line.** `requires-python = ">=3.14"` in both packages; the AddOn shares the floor and the base image digest, so one `versions.env` bump lands in both repositories through their own PRs.
+- **Python line.** `requires-python = ">=3.14.6,<3.15"` in both packages (floor 3.14.6, image 3.14.7, no 3.15 until the floor test says so); the AddOn shares the range and the base image digest, so one `versions.env` bump lands in both repositories through their own PRs.
 - **Terraform pattern parity.** The root mirrors the AzMigrate appliance root's naming and provider constraints so an operator who knows one can read the other.
 
 ## 17 Rollback considerations
@@ -531,7 +540,7 @@ Disposition legend: **Instruction** (a section of this file), **Owner decision**
 | T-028 | Scoring and report | Instruction 7.1 (adopted); format decided by owner decision (pane plus markdown, JSON, CSV, zip) | P1 |
 | T-029 | Wiki bootstrap | Stays blocked on R-007 | P1 |
 | T-030 | Wiki page set | Stays blocked on R-007; `Implementation-Plan` added to the proposed page list | P2 |
-| T-031 | Mirror issue work | Instruction: standing practice; the next items are T-032 (Entra token validation) and T-033 (Graph reads) | P3 |
+| T-031 | Mirror issue work | Instruction: standing practice; this plan proposes two new items to add to `TODO.md` at execution, T-032 (Entra token validation on the appliance routes) and T-033 (Microsoft Graph reads for identity-posture criteria); neither is recorded there yet | P3 |
 | R-001 | Deliverable format | Owner decision: web pane plus markdown, JSON, CSV and zip bundle; continuous for the appliance, point-in-time for the lab; consumers are client engineers | Resolved |
 | R-002 | Azure access | Stays blocked; needed only for live validation (section 15 step 11), not for engineering | P1 |
 | R-003 | License | Stays blocked; MIT recommended to match the AddOn `[REVIEW REQUIRED]` | P0 |
@@ -550,11 +559,11 @@ Disposition legend: **Instruction** (a section of this file), **Owner decision**
 | 7.3 to 7.5 | Startup refuses without the extra, with empty `CA_SCOPES`, or with any forbidden credential variable; no query runs outside the allow-list |
 | 7.6 | Paged collection joins pages, honours `skip_token`, backs off on 429, and normalises to `Resource` with `MODEL_VERSION = 1` |
 | 7.7 | With `CostEvidence`, CA-FIN-003 and CA-FIN-007 report `observed`; without it, `unknown` |
-| 8 | `GET /api/health` answers the flat envelope with `edition:"appliance"`, `azureConnectivity:"managed-identity"`, `scope.count`; `POST /api/assessments` answers `405 edition_readonly` |
+| 8 | `GET /api/health` answers the flat envelope with `edition:"appliance"`, `azureConnectivity:"managed-identity"`, `scope.count`, `publicResults`; `POST /api/assessments` answers `405 edition_readonly`; with `CA_PUBLIC_RESULTS` unset every results route answers `403 results_not_public`, and with it `true` they answer 200 |
 | 10 | Every variable in the table is read from the environment and documented in `.env.example` with an empty value |
 | 11 | `pip-audit` and `dependency-review` report no fixable vulnerability |
 | 12 | `terraform validate` clean; the plan for one subscription shows two role assignments, one app with `min_replicas = 1`, `max_replicas = 1`, a budget with 80 and 100 percent notifications |
-| 13 | `uv run pytest tests/security -q` green; image-level `import azure` fails in `lab` and `import azure.identity` succeeds in `appliance` |
+| 13 | `uv run pytest tests/security -q` green; the `lab` boundary-proof image exits zero on its `CMD` and `import azure` fails in it; `import azure.identity` succeeds in `appliance`; `publish-images.yml` pushes only `hcw-cloud-assessor-appliance`; with `CA_PUBLIC_RESULTS` unset the report routes answer `403 results_not_public` |
 | 14 | `uv run pytest -q` green with coverage at or above 85 percent |
 | 15 | After step 10, the AddOn's `uv.lock` resolves `cloud-assessor-core` from `git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@v0.1.0` and its CI is green |
 | 16 | `scripts/check-docs-governance.py` passes with exactly five root markdown files |
@@ -590,7 +599,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false; t
 Terraform plan against the owner's own current subscription, never apply from a session (PowerShell; the subscription id is computed, not typed):
 
 ```powershell
-$sub = (az account show -o json | ConvertFrom-Json).id; terraform -chdir=infrastructure/terraform/appliance-azure plan -var "scope_ids=[\"/subscriptions/$sub\"]" -var "image_ref=docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+$sub = (az account show -o json | ConvertFrom-Json).id; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var 'image_ref=docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000'
 ```
 
 The all-zero digest above is a syntactically valid placeholder for `plan` only; a real `apply` uses the digest printed by `publish-images.yml`.
@@ -599,6 +608,7 @@ Image boundary, both targets (bash; needs a Docker daemon, so CI or the owner's 
 
 ```bash
 docker build -f infrastructure/docker/Dockerfile --target lab -t hcw-cloud-assessor-lab:dev . && docker build -f infrastructure/docker/Dockerfile --target appliance -t hcw-cloud-assessor-appliance:dev .
+docker run --rm hcw-cloud-assessor-lab:dev; echo "lab boundary-proof CMD exit code (expected 0): $?"
 docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"; echo "lab import exit code (expected non-zero): $?"
 docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"; echo "appliance import exit code (expected 0): $?"
 ```
@@ -606,9 +616,12 @@ docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identit
 The same checks in PowerShell:
 
 ```powershell
+docker run --rm hcw-cloud-assessor-lab:dev; "lab boundary-proof CMD exit code (expected 0): $LASTEXITCODE"
 docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"; "lab import exit code (expected non-zero): $LASTEXITCODE"
 docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"; "appliance import exit code (expected 0): $LASTEXITCODE"
 ```
+
+The `hcw-cloud-assessor-lab:dev` tag is a local CI artefact only; the deployed lab image is the AddOn's `docker.io/hybridcloudworks/hcw-addon-cloud-assessment`, checked by the AddOn's own workflow.
 
 Local appliance run against the owner's `az login` session (PowerShell; the scope is computed):
 
@@ -626,13 +639,13 @@ $id = az identity show -g rg-hcwca-prod-cus-01 -n id-hcwca-prod-cus-01 -o json |
 
 Expected: two rows per scope, `Reader` and `Cost Management Reader`, and nothing else.
 
-Program check that this file is the only change (bash):
+Program check that this file is the only change the program made to this repository. After the merge, the check that holds is a diff from the pre-program head excluding this file (bash):
 
 ```bash
-cd /home/user/HCW-CloudAssessor_App && git status --porcelain
+cd /home/user/HCW-CloudAssessor_App && git diff --stat 44bc95b..HEAD -- . ':!REFACTOR_APP.md'
 ```
 
-Expected output: exactly `?? REFACTOR_APP.md`.
+Expected output: nothing. The authoring-session form, valid only before the commit, is `git status --porcelain` printing exactly `?? REFACTOR_APP.md`.
 
 ## 21 Dependencies on AddOn work
 
@@ -641,7 +654,7 @@ Expected output: exactly `?? REFACTOR_APP.md`.
 | The seed tag | `HCW-CloudAssessor_AddOn` tag `v0.1.0` with `packages/cloud-assessor-core` at `0.1.0`, its unit tests, `catalog/*.json`, `scripts/check-catalog.py` and `samples/` | AddOn Phase 5 PR |
 | `core-update.yml` | The AddOn's workflow that compares the latest App release with its `cloud-assessor-core` git-tag pin, runs `uv lock --upgrade-package cloud-assessor-core`, tests, e2e, and opens a `compatible` or `needs-adaptation` PR; inert until App `v0.1.0` exists | AddOn `.github/workflows/core-update.yml` |
 | The shared pane UI | `web/{index.html,app.js,styles.css,theme.css}` with the `hcw-addon` bridge, HCW theme tokens copied with provenance, "Copy report" fallback and no vendor names; copied here at the same version (7.9) | AddOn `web/` |
-| The lab edition guard | `edition.py` semantics (`find_spec("azure"|"msal")`, `IDENTITY_ENDPOINT`/`MSI_ENDPOINT`/`AZURE_CLIENT_SECRET`/`AZURE_FEDERATED_TOKEN_FILE` refusal) re-used by the `lab` Dockerfile target | AddOn `src/cloud_assessment_lab/edition.py` |
+| The lab edition itself | `src/cloud_assessment_lab` (edition guard with `find_spec("azure"|"msal")` and `IDENTITY_ENDPOINT`/`MSI_ENDPOINT`/`AZURE_CLIENT_SECRET`/`AZURE_FEDERATED_TOKEN_FILE` refusal, store, security, routes) and the Dockerfile that builds `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` on the published core; this repository ships no lab application, only the `lab` boundary-proof build target | AddOn `src/cloud_assessment_lab/`, `infrastructure/docker/Dockerfile` |
 | ADR copies | AddOn ADR-0001 (lab edition upload-only, engine seeded and handed upstream), ADR-0003 (lab on the VPS, appliance on Container Apps), ADR-0004 (upstream/downstream) are the written record this repository cannot hold under its governance until the wiki `Decision-Log` exists | AddOn `docs/adr/` |
 | Base image pin | `python:3.14.7-slim-trixie@sha256:51dafde8...` shared through each repository's `versions.env` | Website `lab-image/Dockerfile`, AddOn `infrastructure/docker/versions.env` |
 
@@ -655,12 +668,12 @@ Items needing a named human before the step that depends on them:
 |---|---|---|---|
 | License: MIT to match the AddOn, or proprietary and private | `[REVIEW REQUIRED]` (R-003) | Repository owner, Legal | T-002, any public release |
 | Framework content usage rights: paraphrased, attributed criteria in code and reports | `[REVIEW REQUIRED]` (R-005) | Legal | Public release of the catalog |
-| Data classification of inputs and outputs ("client confidential" proposed) | `[REVIEW REQUIRED]` (R-006) | Security and compliance | Fixture policy, artifact retention |
-| Microsoft Graph permissions for identity-posture criteria | `[REVIEW REQUIRED]` | Azure platform owner | T-027 identity half, T-033 |
+| Data classification of inputs and outputs ("client confidential" proposed) | `[REVIEW REQUIRED]` (R-006) | Security and compliance | Fixture policy, artifact retention, and flipping `CA_PUBLIC_RESULTS` to `true` |
+| Microsoft Graph permissions for identity-posture criteria | `[REVIEW REQUIRED]` | Azure platform owner | T-027 identity half, proposed T-033 |
 | PyPI package name `cloud-assessor-core` and trusted publishing bootstrap | `[REVIEW REQUIRED]` | Repository owner | `publish-core.yml` PyPI step; git-tag pins work without it |
 | Container Apps region (`centralus` assumed) and the `hcwca` prefix | `[REVIEW REQUIRED]` | Owner | Section 12 names |
 | Docker Hub OIDC connection and repository variables for this repository | Owner step | Owner | Section 15 step 8 |
-| Anonymous appliance results versus Entra token validation (T-032) | Owner decision | Owner | v1 ships anonymous per the 2026-10-09 decision |
+| Anonymous appliance results versus Entra token validation (proposed T-032) | Owner decision | Owner | The target state is anonymous live results per the 2026-10-09 decision; `CA_PUBLIC_RESULTS` stays `false` until R-006 and an access decision are recorded |
 | Exact dependency pins, action SHAs beyond the harvested set, Terraform provider versions, `learnUrl` and `retrievedOn` values, budget and anomaly API field names, custom-domain provider support | `[VERIFY]` | Implementing engineer | Each marked line |
 
 Assumptions:
