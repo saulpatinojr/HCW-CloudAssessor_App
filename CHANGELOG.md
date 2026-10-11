@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- README: badges (ci, security, release, Python, licence, lab edition) and a "new here?" opener in plain words that says what the product does and where the free lab edition will appear.
 - `publish-core.yml`: the header names the contract the AddOn actually uses, the release wheel pinned by URL and sha256 (its `core-update.yml` was changed on 2026-10-11 because a `git+https` pin cannot be verified by its image's `pip install --require-hashes`). Comment only.
 
 ### Added
