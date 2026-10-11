@@ -4,6 +4,20 @@
 edition that assesses a client's own Azure scope continuously, under a user-assigned managed identity, against
 paraphrased FinOps, Well-Architected cost and Zero Trust criteria.**
 
+[![ci](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/ci.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/ci.yml)
+[![security](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/security.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/security.yml)
+[![release](https://img.shields.io/github/v/release/saulpatinojr/HCW-CloudAssessor_App?label=release&include_prereleases)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases)
+[![python](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![license](https://img.shields.io/github/license/saulpatinojr/HCW-CloudAssessor_App)](LICENSE)
+[![lab edition](https://img.shields.io/badge/lab%20edition-HCW--CloudAssessor__AddOn-6f42c1?logo=github)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn)
+
+**New here?** Give it read-only access to an Azure subscription and it tells you where cost practice, resilience and
+Zero Trust fall short, criterion by criterion, with the evidence for each finding and an honest statement of what it
+could not see. A free version that needs no Azure access is the lab edition,
+[HCW-CloudAssessor_AddOn](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn): it takes a Resource Graph export
+instead, and will appear at [hybridcloudworks.com/tools/cloud-assessment](https://hybridcloudworks.com/tools/cloud-assessment)
+once its first image is published.
+
 A container-focused Well-Architected Review assessment benchmarking Azure infrastructure against the FinOps
 Foundation Framework, the Azure Well-Architected Framework Cost Optimization pillar, and Zero Trust security
 principles. **Azure is the only target platform.**
