@@ -3,8 +3,10 @@
 # endpoint, attach both to the GitHub Release (release.yml creates it), attest provenance. PyPI trusted publishing is
 # gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
 # exchanges the job's OIDC token with PyPI; no registry token exists anywhere (docs: REFACTOR_APP.md 7.13, 11).
-# The AddOn pins releases by git tag (git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@v0.1.0#subdirectory=packages/cloud-assessor-core)
-# whether or not PyPI publishing is enabled.
+# The AddOn pins the wheel this job attaches to the release, by URL and sha256
+# (https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.1.0/cloud_assessor_core-0.1.0-py3-none-any.whl,
+# `uv lock` records the hash; AddOn core-update.yml bumps the tag), whether or not PyPI publishing is enabled. A git+https pin
+# cannot be verified by the AddOn image's `pip install --require-hashes`, which is why the asset, not the tag, is the contract.
 name: publish-core
 on:
   push:
