@@ -413,7 +413,7 @@ All values are environment variables; none is a secret except `TURNSTILE_SECRET`
 
 | Package | Where | Version | Note |
 |---|---|---|---|
-| `pydantic` | core runtime | exact pin `[VERIFY]` | The core's only runtime dependency |
+| `pydantic` | core runtime | `>=2.14,<3` (2026-10-18, #15; was an exact pin through `v0.2.0`) | The core's only runtime dependency. A library's exact pin and the adopting app's exact pin can only move in lockstep, so the engine declares a range and the appliance and the AddOn keep their exact pins and hash-locked `uv.lock` |
 | `fastapi`, `uvicorn` (no extras), `pydantic` | appliance runtime | exact pins `[VERIFY]` | Same set as the AddOn |
 | `azure-identity`, `azure-mgmt-resourcegraph`, `azure-mgmt-costmanagement` | appliance extra `azure` only | exact pins `[VERIFY]` | Never in the core; `azure-mgmt-consumption` added only if budget definitions need it `[VERIFY]` |
 | `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit` | dev | exact pins `[VERIFY]` | `httpx` for the test client only |

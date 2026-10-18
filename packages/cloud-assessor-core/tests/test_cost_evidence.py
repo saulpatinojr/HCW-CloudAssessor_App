@@ -114,7 +114,7 @@ def test_assess_carries_edition_scope_and_evidence(catalog, scoring):
     a = assess(
         resources, catalog, scoring, source_format="arg-live", evidence=_evidence(), edition="appliance", scope=scope
     )
-    assert a.edition == "appliance" and a.scope == scope and a.core_version == "0.2.0" and a.catalog_version == "1.1.0"
+    assert a.edition == "appliance" and a.scope == scope and a.core_version == "0.2.1" and a.catalog_version == "1.1.0"
     assert all(f.state == "observed" for f in a.findings if f.criterionId in COST_IDS)
     panel = {u.topic: u.criteria for u in a.unknown_by_design}
     assert panel["Budgets and cost alerts"] == []

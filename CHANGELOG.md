@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Core 0.2.1: pydantic is a range, not an exact pin (#15).** `packages/cloud-assessor-core/pyproject.toml` declares
+  `pydantic>=2.14,<3` instead of `pydantic==2.14.0`, the same range the AddOn's seed adopted in
+  `HCW-CloudAssessor_AddOn` #17. The engine is a library: an exact pin in the wheel and another in the app that
+  installs it can only move in lockstep, so a Dependabot bump of either could never resolve. The appliance keeps its
+  exact `pydantic==2.14.0` and its hash-locked `uv.lock`, so the resolved set is unchanged (`uv.lock` records only the
+  new specifier and the version; both `requirements*.lock.txt` exports are identical). `__version__` is `0.2.1`; the
+  release `v0.2.1` attaches `cloud_assessor_core-0.2.1-py3-none-any.whl` for the AddOn to adopt. The packaging and
+  boundary tests now assert the range (`Requires-Dist: pydantic<3,>=2.14`) and match any specifier operator in the
+  core manifest rather than `==` alone.
 - README: badges (ci, security, release, Python, licence, lab edition) and a "new here?" opener in plain words that says what the product does and where the free lab edition will appear.
 - `publish-core.yml`: the header names the contract the AddOn actually uses, the release wheel pinned by URL and sha256 (its `core-update.yml` was changed on 2026-10-11 because a `git+https` pin cannot be verified by its image's `pip install --require-hashes`). Comment only.
 

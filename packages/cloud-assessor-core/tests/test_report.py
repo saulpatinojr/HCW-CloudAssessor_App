@@ -60,7 +60,7 @@ def test_markdown_sections_and_coverage_sentence(assessment, catalog):
 
 def test_json_carries_versions(assessment):
     doc = json.loads(to_json(assessment))
-    assert doc["model_version"] == 1 and doc["catalog_version"] == "1.1.0" and doc["core_version"] == "0.2.0"
+    assert doc["model_version"] == 1 and doc["catalog_version"] == "1.1.0" and doc["core_version"] == "0.2.1"
     assert doc["summary"]["pass"] >= 1 and to_dict(assessment)["id"] == assessment.id
     assert doc["scorecards"][0]["pass"] >= 0
 

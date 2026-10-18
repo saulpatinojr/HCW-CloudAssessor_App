@@ -126,7 +126,7 @@ def test_results_200_with_the_gate_open_and_a_snapshot(public_client):
     assert sorted(body["files"]) == ["NOT-AN-AUDIT.md", "bundle.zip", "findings.csv", "report.json", "report.md"]
     a = body["assessment"]
     assert a["edition"] == "appliance" and a["source_format"] == "arg-live" and a["model_version"] == 1
-    assert a["catalog_version"] == "1.1.0" and a["core_version"] == "0.2.0" and a["summary"]["resourceCount"] == 40
+    assert a["catalog_version"] == "1.1.0" and a["core_version"] == "0.2.1" and a["summary"]["resourceCount"] == 40
     assert a["scope"]["count"] == 1 and len(a["scope"]["subscriptions"][0]) == 64
     cost = [f for f in a["findings"] if f["criterionId"] in ("CA-FIN-002", "CA-FIN-003", "CA-FIN-007")]
     assert cost and all(f["state"] == "observed" for f in cost)

@@ -31,7 +31,7 @@ def wheel(tmp_path_factory):
 
 
 def test_wheel_name_version_and_catalog(wheel):
-    assert wheel.name.startswith("cloud_assessor_core-0.2.0-")
+    assert wheel.name.startswith("cloud_assessor_core-0.2.1-")
     names = zipfile.ZipFile(wheel).namelist()
     for name in ("criteria.json", "schema.json", "scoring.json"):
         assert f"cloud_assessor_core/catalog_data/{name}" in names
@@ -49,4 +49,4 @@ def test_wheel_imports_no_cloud_sdk_and_names_no_endpoint(wheel):
             assert ep not in text, f"{name} references {ep}"
     metadata = next(n for n in z.namelist() if n.endswith("METADATA"))
     requires = re.findall(r"^Requires-Dist: (.+)$", z.read(metadata).decode("utf-8"), re.MULTILINE)
-    assert requires == ["pydantic==2.14.0"]
+    assert requires == ["pydantic<3,>=2.14"]
