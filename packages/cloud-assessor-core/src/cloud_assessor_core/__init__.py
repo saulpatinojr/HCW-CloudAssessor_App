@@ -6,6 +6,6 @@ AddOn repository and moves upstream to HCW-CloudAssessor_App unchanged (ADR-0001
 
 from cloud_assessor_core.model import MODEL_VERSION
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = ["MODEL_VERSION", "__version__"]

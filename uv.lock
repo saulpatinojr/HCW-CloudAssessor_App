@@ -302,14 +302,14 @@ dev = [
 
 [[package]]
 name = "cloud-assessor-core"
-version = "0.2.0"
+version = "0.2.1"
 source = { editable = "packages/cloud-assessor-core" }
 dependencies = [
     { name = "pydantic" },
 ]
 
 [package.metadata]
-requires-dist = [{ name = "pydantic", specifier = "==2.14.0" }]
+requires-dist = [{ name = "pydantic", specifier = ">=2.14,<3" }]
 
 [[package]]
 name = "colorama"

@@ -18,7 +18,7 @@ CORE = ROOT / "packages" / "cloud-assessor-core"
 
 def test_core_manifest_and_default_lock_have_no_cloud_sdk():
     core = (CORE / "pyproject.toml").read_text(encoding="utf-8")
-    assert re.findall(r'^\s*"([a-z0-9-]+)==', core, re.MULTILINE) == ["pydantic"]
+    assert re.findall(r'^\s*"([a-z0-9-]+)[<>=!~]', core, re.MULTILINE) == ["pydantic"]
     for name in ("requirements.lock.txt",):
         text = (ROOT / name).read_text(encoding="utf-8")
         for pkg in ("azure-", "msal", "msrest", "boto3", "botocore"):
