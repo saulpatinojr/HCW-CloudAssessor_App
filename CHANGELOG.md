@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- **Security: `certifi` 2026.7.22 to 2026.10.23 (advisory PYSEC-2026-4320, fixed in 2026.10.19).** Only the Azure runtime lock carried it. `uv.lock` was also stale against `pyproject.toml` (`fastapi` 0.143.0 and `ruff` 0.17.0 against the pinned 0.143.3 and 0.17.1), so the same `uv lock --upgrade-package certifi` brought those in line; no other version moved. `requirements-azure.lock.txt` was re-exported with the commands in the `Makefile`. Verified: `uv lock --check`, `scripts/check-lockfiles.sh`, `pip-audit --strict` on both requirements locks (no known vulnerabilities), ruff, and 194 tests passing.
 - Python base image `python:3.14.8-slim-trixie` by digest in `infrastructure/docker/versions.env` and every `FROM` of the Dockerfile together (Dependabot #12 moved only the Dockerfile, which `scripts/check-versions.sh` rejects as drift).
 - **Core 0.2.1: pydantic is a range, not an exact pin (#15).** `packages/cloud-assessor-core/pyproject.toml` declares
   `pydantic>=2.14,<3` instead of `pydantic==2.14.0`, the same range the AddOn's seed adopted in
