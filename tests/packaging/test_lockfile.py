@@ -25,7 +25,8 @@ def test_uv_lock_reaches_azure_only_through_the_extra():
     app = packages["cloud-assessor-appliance"]
     assert all("azure" not in d["name"] for d in app.get("dependencies", []))
     extra = {d["name"] for d in app.get("optional-dependencies", {}).get("azure", [])}
-    assert extra == {"azure-identity", "azure-mgmt-resourcegraph", "azure-mgmt-costmanagement"}
+    # the three SDKs, plus PyJWT (Entra token validation, T-032): appliance-only like the SDKs, never in the default set
+    assert extra == {"azure-identity", "azure-mgmt-resourcegraph", "azure-mgmt-costmanagement", "pyjwt"}
     core = packages["cloud-assessor-core"]
     assert [d["name"] for d in core.get("dependencies", [])] == ["pydantic"]
     assert "optional-dependencies" not in core

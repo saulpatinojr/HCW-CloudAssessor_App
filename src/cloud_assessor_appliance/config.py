@@ -13,6 +13,9 @@ from pathlib import Path
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 TURNSTILE_ACTION = "cloud-assessment-refresh"
+# The app role (and delegated scope) a caller's token must carry when sign-in is on; the owner creates it on the app
+# registration, or sets CA_AUTH_REQUIRED_ROLES / CA_AUTH_REQUIRED_SCOPES to the names chosen there.
+DEFAULT_AUTH_PERMISSION = "Assessment.Read"
 
 # Upper bound for every numeric setting: large enough for any real deployment, small enough that every derived value
 # (minutes * 60, seconds into asyncio/datetime arithmetic) stays representable.
@@ -36,6 +39,11 @@ def _flag(env: Mapping[str, str], key: str, default: bool = False) -> bool:
     if not raw:
         return default
     return raw in {"1", "true", "yes", "on"}
+
+
+def _words(env: Mapping[str, str], key: str, default: tuple[str, ...] = ()) -> tuple[str, ...]:
+    raw = env.get(key, "").replace(",", " ").split()
+    return tuple(dict.fromkeys(raw)) if raw else default
 
 
 def _origins(env: Mapping[str, str], key: str) -> tuple[str, ...]:
@@ -71,6 +79,15 @@ class Settings:
     page_size: int = 1000
     max_rows: int = 50_000
     collect_timeout_seconds: int = 900
+    # Entra ID sign-in (REVIEW.md R-009 option b, TODO.md T-032). Off by default; see security/entra.py.
+    auth_enabled: bool = False
+    auth_tenant_id: str | None = None
+    auth_audiences: tuple[str, ...] = ()
+    auth_authority_host: str | None = None
+    auth_jwks_url: str | None = None
+    auth_clock_skew_seconds: int = 60
+    auth_required_roles: tuple[str, ...] = (DEFAULT_AUTH_PERMISSION,)
+    auth_required_scopes: tuple[str, ...] = (DEFAULT_AUTH_PERMISSION,)
 
     @property
     def turnstile_required(self) -> bool:
@@ -85,7 +102,7 @@ class Settings:
         if any(ch in frame_ancestors for ch in ";\n\r"):
             raise ValueError("CA_FRAME_ANCESTORS must be a single CSP source list")
         static_dir = Path(env.get("CA_STATIC_DIR", "").strip() or cls.static_dir)
-        return cls(
+        settings = cls(
             port=_int(env, "PORT", 8080, minimum=1),
             allowed_origins=_origins(env, "CA_ALLOWED_ORIGINS"),
             frame_ancestors=frame_ancestors,
@@ -105,4 +122,30 @@ class Settings:
             page_size=_int(env, "CA_PAGE_SIZE", 1000, minimum=1),
             max_rows=_int(env, "CA_MAX_ROWS", 50_000, minimum=1),
             collect_timeout_seconds=_int(env, "CA_COLLECT_TIMEOUT_SECONDS", 900, minimum=1),
+            auth_enabled=_flag(env, "CA_AUTH_ENABLED"),
+            auth_tenant_id=env.get("CA_AUTH_TENANT_ID", "").strip() or None,
+            auth_audiences=_words(env, "CA_AUTH_AUDIENCE"),
+            auth_authority_host=env.get("CA_AUTH_AUTHORITY_HOST", "").strip() or None,
+            auth_jwks_url=env.get("CA_AUTH_JWKS_URL", "").strip() or None,
+            auth_clock_skew_seconds=_int(env, "CA_AUTH_CLOCK_SKEW_SECONDS", 60, minimum=0),
+            auth_required_roles=_words(env, "CA_AUTH_REQUIRED_ROLES", (DEFAULT_AUTH_PERMISSION,)),
+            auth_required_scopes=_words(env, "CA_AUTH_REQUIRED_SCOPES", (DEFAULT_AUTH_PERMISSION,)),
         )
+        settings.validate_startup()
+        return settings
+
+    def validate_startup(self) -> None:
+        """Refuses a combination that would be less safe than the owner's decision (REVIEW.md R-009 option b):
+        results may be published only when sign-in is on, and sign-in on needs its tenant and audience."""
+        if self.auth_enabled:
+            from cloud_assessor_appliance.security.entra import AuthConfig, AuthConfigError
+
+            try:
+                AuthConfig.from_settings(self)
+            except AuthConfigError as exc:
+                raise ValueError(f"CA_AUTH_ENABLED is true but {exc}") from None
+        elif self.public_results:
+            raise ValueError(
+                "CA_PUBLIC_RESULTS=true needs sign-in: set CA_AUTH_ENABLED=true with CA_AUTH_TENANT_ID, "
+                "CA_AUTH_AUDIENCE and CA_AUTH_AUTHORITY_HOST (REVIEW.md R-009)"
+            )
