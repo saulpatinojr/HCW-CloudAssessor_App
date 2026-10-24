@@ -6,7 +6,7 @@ requires a decision, an approval, an access grant, or external input from a name
 Bugs, refactoring, technical debt, tests, and documentation work do not belong here — they
 belong in [TODO.md](TODO.md).
 
-**Open blockers: 8** (R-001 resolved by owner decision on 2026-10-09; R-009 added on 2026-10-10)
+**Open blockers: 7** (R-001 resolved by owner decision on 2026-10-09; R-009 added on 2026-10-10 and resolved by owner decision on 2026-10-24)
 
 | ID | Blocker | Required owner | Blocks |
 |----|---------|----------------|--------|
@@ -18,7 +18,7 @@ belong in [TODO.md](TODO.md).
 | R-006 | Assessment output data classification undecided | Security / Compliance | Storing and sharing results |
 | R-007 | GitHub Wiki not writable by automation | Repository admin | Wiki documentation migration |
 | R-008 | `qlty check` errors Cloud-side and the log is not readable | Repository admin / qlty account owner | A permanently red check on every pull request |
-| R-009 | Anonymous appliance results versus Entra token validation | Repository owner, Security | Flipping `CA_PUBLIC_RESULTS` to `true`; T-032 |
+| R-009 | Anonymous appliance results versus Entra token validation — **resolved** (option b) | Repository owner, Security | Nothing further from this entry; turning sign-in on is an owner step (see entry) and `CA_PUBLIC_RESULTS` still waits on R-006 |
 
 ---
 
@@ -363,6 +363,37 @@ check should not be added to branch protection.
 ---
 
 ## R-009 — Anonymous appliance results versus Entra token validation
+
+**Resolved by owner decision (2026-10-24): option (b), results must be authenticated.** The owner took the recommended
+option. Consequences, all recorded here because this repository has no separate ADR folder (the documentation model
+allows only the root files):
+
+- **Decision.** Every appliance route except `GET /api/health` requires a Microsoft Entra ID access token. The agent
+  built the validation (`TODO.md` T-032, done in the pull request that records this) before any client deployment.
+- **The gate stays.** `CA_PUBLIC_RESULTS` is unchanged and stays `false` by default. Sign-in is an additional lock,
+  not a replacement: with a valid token and the gate off the results routes still answer `403 results_not_public`.
+  As a safeguard, `CA_PUBLIC_RESULTS=true` now refuses to start unless sign-in is also enabled.
+- **Design.** `src/cloud_assessor_appliance/security/entra.py`. PyJWT with the `crypto` extra, pinned exactly, in the
+  appliance-only `azure` extra (never the default dependency set, never the engine package). Signature checked against
+  the tenant's public signing keys (JWKS) with RS256 only; `iss` (v2.0 and v1.0 forms for the configured tenant), `aud`,
+  `exp`, `nbf` (both required, declared clock skew, default 60 seconds, at most 300) and `tid` are checked; the token
+  must carry an app role (`roles`) or delegated scope (`scp`) named in `CA_AUTH_REQUIRED_ROLES` /
+  `CA_AUTH_REQUIRED_SCOPES` (default `Assessment.Read`). Every failure is `401 unauthorized` with
+  `WWW-Authenticate: Bearer` and the usual error envelope; logs carry a status and a number, never a token or a claim.
+  Off by default (`CA_AUTH_ENABLED=false`, the behaviour of the previous release); enabled without a tenant, audience
+  or authority host, the appliance refuses to start. The authority host is a setting, not a literal, so the existing
+  boundary test that forbids Azure endpoint strings in `src/` is untouched.
+- **Needs the owner's confirmation** (choices the agent made; each is one setting or one line to change): (1) the pane
+  and the static files also need a token, because "every route except health" was taken literally, so the website pane
+  cannot load from the appliance until it signs users in (a follow-up, not built); (2) the default required permission
+  `Assessment.Read`; (3) the 60-second clock skew; (4) the JWKS outage answers `401`, not `503`.
+- **Still open: R-006.** Whether to label results "client confidential" is not decided; it still blocks flipping
+  `CA_PUBLIC_RESULTS` to `true`. Not changed by this entry.
+- **Owner steps before turning sign-in on** are in the pull request and in `README.md` (Sign-in). Terraform plumbing
+  for the `CA_AUTH_*` values and an `azuread_application` is a follow-up; nothing was applied.
+- **Not tested:** against a real Entra tenant. Tests use a locally generated key pair and a local JWKS.
+
+The original entry is kept below as the record of the question.
 
 **Problem**
 The owner's 2026-10-09 decision names "anonymous live results, no visitor credential" as the appliance's target

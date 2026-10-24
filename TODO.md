@@ -563,12 +563,12 @@ Proposed by `REFACTOR_APP.md` (sections 13 and 18) at execution on 2026-10-10.
   decision, behind the `CA_PUBLIC_RESULTS` release gate (`403 results_not_public` until the owner flips it). Bearer
   validation on `POST /api/refresh` and the four `/api/assessments/current*` routes would let results stay private
   to the client's tenant without the gate.
-- **Dependencies:** R-009 (anonymous results versus token validation), R-006
+- **Dependencies:** R-009 (resolved, option b), R-006 (still open; it gates `CA_PUBLIC_RESULTS`, not this item)
 - **Recommended Action:** If R-009 lands on token validation: validate Entra ID access tokens (issuer, audience,
   signature from the tenant's JWKS) in a FastAPI dependency applied to the five routes; register the audience with a
   Terraform `azuread_application`; keep `CA_PUBLIC_RESULTS` as the switch between the two postures. Never a client
   secret: the validation path needs the public keys only.
-- **Status:** Blocked
+- **Status:** Done (2026-10-24, R-009 option b). Implemented in `src/cloud_assessor_appliance/security/entra.py` with tests in `tests/unit/test_entra.py` and `tests/security/test_auth_boundary.py`. Not yet tested against a real Entra tenant, and the Terraform `azuread_application` plus `CA_AUTH_*` app settings are not added (owner follow-up; see the pull request).
 - **Notes for Future Engineers:** The AzMigrate appliance's Terraform root shows the `azuread_application` and app-role
   shape to copy; keep the pane's `/api/health` flat so the lab is unaffected.
 
