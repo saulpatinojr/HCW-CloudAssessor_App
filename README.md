@@ -25,11 +25,16 @@ principles. **Azure is the only target platform.**
 ## Project status
 
 Implementation of [`REFACTOR_APP.md`](REFACTOR_APP.md) (the owner-approved plan) has landed: the engine is adopted
-from the lab edition, the appliance edition exists, and CI, security, image and release workflows are in place. No
-release has been tagged yet; `v0.1.0` is the next step (section 15, step 8), after which the lab edition pins this
-repository's releases. Everything still queued is in [TODO.md](TODO.md); every decision that needs a human is in
-[REVIEW.md](REVIEW.md). Limitations and verification results are recorded per change in
-[CHANGELOG.md](CHANGELOG.md).
+from the lab edition, the appliance edition exists, and CI, security, image and release workflows are in place.
+Two releases exist, [`v0.2.0`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.0) (2026-10-12)
+and [`v0.2.1`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/tag/v0.2.1) (2026-10-18); each attaches
+the engine wheel (`cloud_assessor_core-<version>-py3-none-any.whl`) that the lab edition is meant to pin. There is no
+`v0.1.0` tag in this repository: `0.1.0` is the version of the engine seed adopted from the lab edition and of the
+appliance in the root `pyproject.toml`, while the engine and the release tags are `0.2.x` (the versioning policy is
+ticket [#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33), an owner decision). The lab edition has
+not adopted a release yet; what it carries and what changed here are tracked in its `docs/whats-new-upstream.md`.
+Everything still queued is in [TODO.md](TODO.md); every decision that needs a human is in [REVIEW.md](REVIEW.md).
+Limitations and verification results are recorded per change in [CHANGELOG.md](CHANGELOG.md).
 
 > Not production until the owner records R-003 (license), R-005 (framework content rights) and R-006 (data
 > classification). Every criterion's reference link is marked `[VERIFY]` until the owner confirms it.
@@ -50,8 +55,9 @@ Two editions share one engine and one pane (ADR-0028, recorded in the AddOn repo
 | **Lab** (downstream) | `HCW-CloudAssessor_AddOn` | Never: visitors upload a Resource Graph export; the image is technically unable to construct an Azure credential | `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` |
 
 The engine (`packages/cloud-assessor-core`) is published from here as a wheel on every `v*` tag; the lab edition's
-`core-update` workflow tests each release and opens its adoption pull request. Engine changes are made here, released,
-and adopted downstream; never the reverse.
+`core-update` workflow tests each release and opens its adoption pull request once the lab edition pins a release.
+Engine changes are made here, released, and adopted downstream; never the reverse. The lab edition keeps a running
+note of what reaches it in its `docs/whats-new-upstream.md`.
 
 ## Repository layout
 
@@ -68,7 +74,7 @@ and adopted downstream; never the reverse.
 ├── infrastructure/docker/               one Dockerfile, two targets (appliance; lab boundary proof), versions.env
 ├── infrastructure/terraform/appliance-azure/   Container Apps, identity, role assignments, budget
 ├── tests/                               unit, security (boundary, no secrets), packaging (wheel, lockfiles)
-└── .github/                             CODEOWNERS, SECURITY.md, templates, Dependabot, workflows (ci, security, publish-*, release)
+└── .github/                             CODEOWNERS, SECURITY.md, templates, Dependabot, workflows (ci, security, publish-*, release, repository-admin)
 ```
 
 ## Quick start
@@ -132,8 +138,16 @@ Consumption Container App (`min_replicas = max_replicas = 1`), a user-assigned m
 100 percent notifications. `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
 floating tag. `terraform apply` is an owner step after human review.
 
-The engine is installable on its own from a release tag with no cloud SDK:
-`cloud-assessor-core @ git+https://github.com/saulpatinojr/HCW-CloudAssessor_App@v0.1.0#subdirectory=packages/cloud-assessor-core`.
+The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
+pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). It needs Python 3.14.6 or
+newer, and the command is the same in bash and PowerShell:
+
+```bash
+python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.2.1/cloud_assessor_core-0.2.1-py3-none-any.whl
+```
+
+Replace `v0.2.1` and `0.2.1` together to install another release; the list is on the
+[releases page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases).
 
 ## Configuration
 
@@ -158,7 +172,7 @@ single purpose:
 | [CHANGELOG.md](CHANGELOG.md) | Completed work only |
 | [REVIEW.md](REVIEW.md) | Blockers that require a human decision or external input |
 | [TODO.md](TODO.md) | The authoritative engineering backlog |
-| [REFACTOR_APP.md](REFACTOR_APP.md) | The implementation plan, superseded section by section as work lands in `CHANGELOG.md`; moves to the wiki page `Implementation-Plan` at the first release |
+| [REFACTOR_APP.md](REFACTOR_APP.md) | The implementation plan, superseded section by section as work lands in `CHANGELOG.md`; moves to the wiki page `Implementation-Plan` once the wiki can be written (R-007; the first release, v0.2.0, has already been cut) |
 
 All other documentation — architecture, design, ADRs, roadmaps, runbooks, troubleshooting guides, research, and
 knowledge transfer material — belongs in the
@@ -172,7 +186,7 @@ verbatim from the lab edition.
 
 - **Documentation destination is determined by content, not filename.** Repository purpose goes in `README.md`;
   completed work in `CHANGELOG.md`; human-resolvable blockers in `REVIEW.md`; all actionable engineering work in
-  `TODO.md`; the plan in `REFACTOR_APP.md` until its first release; everything else in the wiki.
+  `TODO.md`; the plan in `REFACTOR_APP.md` until it moves to the wiki (R-007); everything else in the wiki.
 - **No documentation in dot-prefixed folders.** `.github/`, `.vscode/`, and similar directories hold tool and
   platform configuration only. The sole exceptions are markdown files the platform itself requires, such as issue and
   pull request templates and `SECURITY.md`.
