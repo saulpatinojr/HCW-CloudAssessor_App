@@ -10,6 +10,14 @@ title = "HCW-CloudAssessor_App"
 useDefault = true
 
 [allowlist]
-description = "SHA-pinned GitHub Actions references are commit ids, not tokens"
+description = "SHA-pinned GitHub Actions references (in workflows, and quoted in prose) are commit ids, not tokens"
 regexTarget = "line"
-regexes = ['''uses:\s+[\w.\-]+/[\w.\-/]+@[0-9a-f]{40}\s*#\s*v\d''']
+regexes = [
+  '''uses:\s+[\w.\-]+/[\w.\-/]+@[0-9a-f]{40}\s*#\s*v\d''',
+  # The same pins also appear mid-sentence, inside backticks, in REFACTOR_APP.md (commit ed4ead3, lines 299 and 315:
+  # nine findings, all on the scheduled full-history scan). There is no `uses:` in front of them there. This pattern
+  # needs a 40-hex string after `@` AND a `# vN` version comment after it, which is how a pinned action is written;
+  # a bare 40-hex string is still reported. gitleaks scans history, so rewording the file could not clear a finding
+  # that lives in an old commit.
+  '''[\w.\-/*]+@[0-9a-f]{40}\s*#\s*v\d''',
+]
