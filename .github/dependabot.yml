@@ -1,6 +1,10 @@
 version: 2
 updates:
-  - package-ecosystem: pip
+  # uv ecosystem (not pip): uv.lock is the source of truth and the pip ecosystem never edits it, so every pip pull
+  # request failed `uv lock --check`. The engine package is a workspace member (pyproject.toml [tool.uv.workspace]), so this
+  # one entry covers it too. Dependabot does not regenerate the two requirements*.lock.txt exports: run `make lock` on a
+  # Dependabot pull request and push the result (scripts/check-lockfiles.sh fails until you do).
+  - package-ecosystem: uv
     directory: /
     schedule: { interval: weekly }
     groups:
@@ -10,9 +14,6 @@ updates:
       # pydantic pins pydantic-core to one exact version, so the two must move in one pull request; a pydantic-core bump
       # on its own cannot resolve against the pinned pydantic.
       pydantic: { patterns: ["pydantic", "pydantic-core"] }
-  - package-ecosystem: pip
-    directory: /packages/cloud-assessor-core
-    schedule: { interval: weekly }
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: weekly }
