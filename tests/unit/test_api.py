@@ -7,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from cloud_assessor_appliance import __version__
 from cloud_assessor_appliance.api import api_routes, create_app
+from cloud_assessor_appliance.collectors.resource_graph import CollectorError
 from cloud_assessor_appliance.config import TURNSTILE_ACTION
 from cloud_assessor_appliance.security.headers import VERIFICATION_ORIGIN
 
@@ -74,6 +75,54 @@ def test_health_reports_a_timeout_and_keeps_the_previous_snapshot():
         assert health["lastError"] == "timeout" and health["lastRun"] == first
         assert not app.state.refresher.running, "the single-flight lock is released after a timeout"
         assert c.get("/api/assessments/current").status_code == 200
+
+
+def test_health_is_degraded_before_the_first_collection(client):
+    r = client.get("/api/health")
+    body = r.json()
+    assert r.status_code == 200 and body["ok"] is True, "probes and the pane keep reading 200 and ok"
+    assert body["status"] == "degraded" and body["degradedReason"] == "no_snapshot"
+
+
+def test_health_is_ok_after_a_good_collection(client):
+    run_refresh(client)
+    body = client.get("/api/health").json()
+    assert body["status"] == "ok" and body["degradedReason"] is None and body["lastError"] is None
+
+
+def test_health_is_degraded_when_the_collector_fails_and_recovers():
+    class Failing:
+        def collect(self):
+            raise CollectorError("sub hcw-sample-leak boom /subscriptions/x")
+
+    app = make_app(make_settings(public_results=True))
+    with TestClient(app) as c:
+        good = app.state.refresher._resources
+        app.state.refresher._resources = Failing()
+        run_refresh(c)  # failing before any snapshot
+        r = c.get("/api/health")
+        assert r.status_code == 200 and r.json()["status"] == "degraded"
+        assert r.json()["degradedReason"] == "collector_error"
+        # no identifier or exception text leaks anywhere in the body
+        for fragment in ("hcw-sample-leak", "boom", "/subscriptions/x", "CollectorError"):
+            assert fragment not in r.text
+        app.state.refresher._resources = good
+        run_refresh(c)
+        assert c.get("/api/health").json()["status"] == "ok"
+        app.state.refresher._resources = Failing()
+        run_refresh(c)  # failing with a kept snapshot is still degraded
+        body = c.get("/api/health").json()
+        assert body["status"] == "degraded" and body["degradedReason"] == "collector_error" and body["lastRun"]
+
+
+def test_health_degraded_on_timeout_keeps_ok_true():
+    app = make_app(make_settings(public_results=True, collect_timeout_seconds=1))
+    with TestClient(app) as c:
+        app.state.refresher._resources = HangingCollector()
+        app.state.refresher._timeout = 0.05
+        run_refresh(c)
+        body = c.get("/api/health").json()
+        assert body["ok"] is True and body["status"] == "degraded" and body["degradedReason"] == "timeout"
 
 
 def test_post_assessments_is_edition_readonly(client):

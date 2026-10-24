@@ -331,8 +331,11 @@ def create_app(
 def health_body(app: FastAPI) -> dict:
     settings: Settings = app.state.settings
     refresher: Refresher = app.state.refresher
+    status, reason = collector_status(refresher)
     return {
         "ok": True,
+        "status": status,
+        "degradedReason": reason,
         "id": ADDON_ID,
         "version": __version__,
         "edition": EDITION,
@@ -352,6 +355,18 @@ def health_body(app: FastAPI) -> dict:
         "snapshotAgeSeconds": refresher.snapshot.age_seconds(datetime.now(UTC)),
         "publicResults": settings.public_results,
     }
+
+
+def collector_status(refresher: Refresher) -> tuple[str, str | None]:
+    """('ok', None) or ('degraded', code). The code is `lastError` (an error code, never a message) when the latest
+    run failed, else `no_snapshot` when nothing has been collected yet. HTTP status and `ok` are unchanged: the
+    Container Apps probes and the pane read them, and a 503 would restart a replica that is only waiting on Azure."""
+    snap = refresher.snapshot
+    if snap.last_error:
+        return "degraded", snap.last_error
+    if not snap.ready:
+        return "degraded", "no_snapshot"
+    return "ok", None
 
 
 def scope_counts(app: FastAPI) -> dict:
