@@ -164,8 +164,9 @@ All other documentation — architecture, design, ADRs, roadmaps, runbooks, trou
 knowledge transfer material — belongs in the
 [GitHub Wiki](https://github.com/saulpatinojr/HCW-CloudAssessor_App/wiki). The wiki is enabled but not yet populated
 (REVIEW.md R-007); proposed pages are listed in the Phase 6 section of [TODO.md](TODO.md). `scripts/check-docs-governance.py`
-enforces the model in CI (T-019); the one exception it allow-lists is `packages/cloud-assessor-core/README.md`, which
-the engine's wheel metadata requires and which is adopted verbatim from the lab edition.
+enforces the model in CI (T-019). It allow-lists two exceptions: `CLAUDE.md`, the working agreement for AI coding
+agents, and `packages/cloud-assessor-core/README.md`, which the engine's wheel metadata requires and which is adopted
+verbatim from the lab edition.
 
 ## Repository conventions
 
@@ -176,7 +177,7 @@ the engine's wheel metadata requires and which is adopted verbatim from the lab 
   platform configuration only. The sole exceptions are markdown files the platform itself requires, such as issue and
   pull request templates and `SECURITY.md`.
 - **No non-root README files.** A `README.md` outside the repository root is documentation and belongs in the wiki
-  (the engine package's README is the allow-listed exception above).
+  (the engine package's README is an allow-listed exception, as is `CLAUDE.md` at the root).
 - **There must never be competing sources of truth.** Before adding a document, check whether an existing one already
   owns that content.
 - **Issues** are used for feature and integration proposals. Work accepted from an issue should be reflected in

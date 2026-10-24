@@ -21,6 +21,8 @@ def test_check_docs_governance_passes_here_and_fails_on_a_stray_markdown(tmp_pat
     for name in ("README.md", "CHANGELOG.md", "REVIEW.md", "TODO.md", "REFACTOR_APP.md"):
         (tree / name).write_text("# x\n[ok](README.md)\n", encoding="utf-8")
     assert _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree)).returncode == 0
+    (tree / "CLAUDE.md").write_text("# agents\n", encoding="utf-8")
+    assert _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree)).returncode == 0
     (tree / "docs").mkdir()
     (tree / "docs" / "design.md").write_text("# stray\n", encoding="utf-8")
     bad = _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree))
