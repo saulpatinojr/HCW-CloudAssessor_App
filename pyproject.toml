@@ -18,6 +18,9 @@ azure = [
   "azure-identity==1.26.0",
   "azure-mgmt-resourcegraph==8.0.1",
   "azure-mgmt-costmanagement==5.0.0",
+  # Entra access-token validation (src/cloud_assessor_appliance/security/entra.py): signature check with the tenant's
+  # public keys only. Appliance-only like the SDKs above, so the default set and the lab stage never carry it.
+  "pyjwt[crypto]==2.15.1",
 ]
 
 [dependency-groups]
