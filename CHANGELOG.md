@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+- Dependencies: `pydantic` 2.14.0 → 2.14.1 (the exact pin in `pyproject.toml`), with `pydantic-core` 2.50.0 → 2.50.1 and `starlette` 1.7.0 → 1.9.0 in `uv.lock` and both `requirements*.lock.txt` files. This replaces the open Dependabot pull requests #19, #20 and #22: #19 (`pydantic-core` alone) could not resolve because pydantic pins its core to one exact version. `.github/dependabot.yml` now groups `pydantic` and `pydantic-core` so they arrive in one pull request. The engine package's `pydantic>=2.14,<3` range is unchanged, so nothing reaches the lab edition. Verified: `make lint`, `make test` (195 passed, 1 skipped, coverage 95.83 %) and `make test-security` (16 passed).
+
 ### Fixed
 - `scripts/check-lockfiles.sh` (CI and `make lint`) now fails with a clear message when `uv.lock` is out of date with `pyproject.toml` (`uv lock --check`), and exports with `--locked` so it can no longer silently rewrite `uv.lock` before comparing (ticket #27). New test `test_check_lockfiles_fails_on_a_stale_uv_lock_without_rewriting_it`; it fails against the old script and passes against the new one. `ci.yml` still installs with `uv sync --frozen`; changing that to `--locked` is proposed in ticket #24 and not done here.
 
