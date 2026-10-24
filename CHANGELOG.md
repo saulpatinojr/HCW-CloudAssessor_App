@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 
 ### Fixed
+- `uv.lock` pinned `fastapi` 0.156.8 while `pyproject.toml` and both `requirements*.lock.txt` already said 0.157.0, because the Dependabot bump (#47) edited only the two requirements files. `uv lock --check` (and so `make lint` and CI) failed on `main`. `uv.lock` is regenerated with `make lock`; nothing else changes. The `uv` ecosystem entry added to `.github/dependabot.yml` in #48 is what stops this recurring; the next Dependabot Python pull request will show whether it does.
 - `scripts/check-lockfiles.sh` (CI and `make lint`) now fails with a clear message when `uv.lock` is out of date with `pyproject.toml` (`uv lock --check`), and exports with `--locked` so it can no longer silently rewrite `uv.lock` before comparing (ticket #27). New test `test_check_lockfiles_fails_on_a_stale_uv_lock_without_rewriting_it`; it fails against the old script and passes against the new one. `ci.yml` still installs with `uv sync --frozen`; changing that to `--locked` is proposed in ticket #24 and not done here.
 
 ### Security
