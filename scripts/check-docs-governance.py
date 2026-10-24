@@ -57,7 +57,7 @@ def check(root: Path) -> list[str]:
             if rel in ROOT_FILES or rel in ALLOWED or rel.startswith(ALLOWED_PREFIXES):
                 continue
             problems.append(
-                f"{rel}: markdown outside the four-file model; move it to the wiki (see README.md 'Documentation')"
+                f"{rel}: markdown outside the five-file model; move it to the wiki (see README.md 'Documentation')"
             )
     for name in ROOT_FILES:
         path = root / name

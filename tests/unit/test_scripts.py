@@ -27,6 +27,7 @@ def test_check_docs_governance_passes_here_and_fails_on_a_stray_markdown(tmp_pat
     (tree / "docs" / "design.md").write_text("# stray\n", encoding="utf-8")
     bad = _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree))
     assert bad.returncode == 1 and "docs/design.md" in bad.stderr and "wiki" in bad.stderr
+    assert "five-file model" in bad.stderr
     (tree / "docs" / "design.md").unlink()
     (tree / "README.md").write_text("[broken](nope.md)\n", encoding="utf-8")
     bad = _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree))

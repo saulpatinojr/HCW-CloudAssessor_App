@@ -177,7 +177,7 @@ verbatim from the lab edition.
   platform configuration only. The sole exceptions are markdown files the platform itself requires, such as issue and
   pull request templates and `SECURITY.md`.
 - **No non-root README files.** A `README.md` outside the repository root is documentation and belongs in the wiki
-  (the engine package's README is an allow-listed exception, as is `CLAUDE.md` at the root).
+  (the engine package's README is the allow-listed exception above).
 - **There must never be competing sources of truth.** Before adding a document, check whether an existing one already
   owns that content.
 - **Issues** are used for feature and integration proposals. Work accepted from an issue should be reflected in
