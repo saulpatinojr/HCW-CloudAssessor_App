@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [Unreleased]
 
 ### Changed
+- `.github/dependabot.yml` no longer proposes updates to the `python` base image. It is a pair with `infrastructure/docker/versions.env` (image and digest) that `scripts/check-versions.sh` enforces, so every Dependabot image pull request failed `lint` and `test` by design (#42, a 3.15.0 image, also conflicts with `requires-python >=3.14.6,<3.15`). The image is moved by hand, in one change, with its digest.
 - Dependencies: `pydantic` 2.14.0 → 2.14.1 (the exact pin in `pyproject.toml`), with `pydantic-core` 2.50.0 → 2.50.1 and `starlette` 1.7.0 → 1.9.0 in `uv.lock` and both `requirements*.lock.txt` files. This replaces the open Dependabot pull requests #19, #20 and #22: #19 (`pydantic-core` alone) could not resolve because pydantic pins its core to one exact version. `.github/dependabot.yml` now groups `pydantic` and `pydantic-core` so they arrive in one pull request. The engine package's `pydantic>=2.14,<3` range is unchanged, so nothing reaches the lab edition. Verified: `make lint`, `make test` (195 passed, 1 skipped, coverage 95.83 %) and `make test-security` (16 passed).
 
 ### Fixed
