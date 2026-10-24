@@ -32,7 +32,7 @@ downstream; never the reverse. `README.md` is the human intro; this file states 
 ## Documentation model
 
 Markdown lives only in the five root files (`README.md`, `CHANGELOG.md`, `REVIEW.md`, `TODO.md`, `REFACTOR_APP.md`),
-this `CLAUDE.md`, the platform templates under `.github/`, and the engine package's `README.md`.
+this `CLAUDE.md`, `.github/SECURITY.md`, the platform templates under `.github/`, and the engine package's `README.md`.
 `scripts/check-docs-governance.py` enforces this in CI. Everything else belongs in the GitHub Wiki. Documentation
 destination is decided by content, not filename, and there must never be competing sources of truth.
 
@@ -51,9 +51,11 @@ memory of earlier sessions.
 - **When you ask the owner a question, make it answerable.** Say what is being decided and why it matters, list the
   options in plain words with what each one means, give a recommendation, and say exactly how to answer (a word to reply
   with, or the steps and the link for where to click). Never ask a bare "A, B or C?" or "OK to proceed?".
-- **When the owner has to fill in a form or a setting, give every value.** For each field, say the exact text to type or
-  paste (name, description, URL), which boxes to tick or leave empty, and where to find it. Always supply a description
-  wherever a form has a description field.
+- **When the owner has to fill in a form or a setting, give every non-secret value.** For each field, say the exact text
+  to type or paste (name, description, URL), which boxes to tick or leave empty, and where to find it. Always supply a
+  description wherever a form has a description field. Never put a password, token, client secret, certificate or private
+  key in chat, pull requests, issues or documentation; tell the owner to enter each secret only in the approved secure
+  settings field, or through a script that reads it from a file.
 - **Include links.** Point to the exact settings page, the issue or pull request, and the official documentation
   (Microsoft Learn, GitHub Docs and similar) whenever one exists.
 - **Be honest about status.** Separate what was checked, what is assumed, and what is blocked. Never present a guess as a result.

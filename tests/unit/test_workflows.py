@@ -17,6 +17,7 @@ def test_workflow_set_is_complete():
         "publish-core.yml",
         "publish-images.yml",
         "release.yml",
+        "repository-admin.yml",
         "security.yml",
     ]
 
