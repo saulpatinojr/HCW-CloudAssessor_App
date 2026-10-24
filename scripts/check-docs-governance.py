@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 """Documentation governance gate (README.md "Documentation", T-019, REFACTOR_APP.md 7.14 and 16).
 
-Markdown is allowed only as the five root files, the platform templates under .github/, and the package README that
-the cloud-assessor-core wheel metadata requires (adopted verbatim from the AddOn; `readme = "README.md"`). Relative
-links inside the five root files must resolve (T-016; the wiki host is excluded until T-030). Exits non-zero otherwise.
+Markdown is allowed only as the five root files, CLAUDE.md, the platform templates under .github/, and the package
+README that the cloud-assessor-core wheel metadata requires (adopted verbatim from the AddOn;
+`readme = "README.md"`). Relative links inside the five root files must resolve (T-016; the wiki host is
+excluded until T-030). Exits non-zero otherwise.
 
 uv run python scripts/check-docs-governance.py            # validate (CI)
 uv run python scripts/check-docs-governance.py --root DIR # validate another tree (tests)
@@ -18,6 +19,8 @@ from pathlib import Path
 
 ROOT_FILES = ("README.md", "CHANGELOG.md", "REVIEW.md", "TODO.md", "REFACTOR_APP.md")
 ALLOWED = {
+    # working agreement for AI coding agents; allow-listed by the owner on 2026-10-24
+    "CLAUDE.md",
     ".github/SECURITY.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/pull_request_template.md",
@@ -54,7 +57,7 @@ def check(root: Path) -> list[str]:
             if rel in ROOT_FILES or rel in ALLOWED or rel.startswith(ALLOWED_PREFIXES):
                 continue
             problems.append(
-                f"{rel}: markdown outside the four-file model; move it to the wiki (see README.md 'Documentation')"
+                f"{rel}: markdown outside the five-file model; move it to the wiki (see README.md 'Documentation')"
             )
     for name in ROOT_FILES:
         path = root / name
