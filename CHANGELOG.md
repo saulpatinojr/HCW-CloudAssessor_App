@@ -16,10 +16,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 - `.github/workflows/repository-admin.yml`: an owner-approved, manually started workflow (dry run unless "apply" is ticked, every run approved in the `admin-ops` environment, short-lived GitHub App token limited to this repository). Tasks: `show-plan`, `protect-main` (ruleset requiring a pull request and the lint, test, boundary, catalog-check, secret-scan, image and terraform checks; `pip-audit` is added once it is stable), `protect-release-tags`, `delete-merged-branches`. `tests/unit/test_workflows.py` lists it.
+- `CLAUDE.md`: the working agreement for AI coding agents (commands, never-weaken list, documentation model, and a plain-language communication section for the owner). `scripts/check-docs-governance.py` now allow-lists it, and its test asserts a root `CLAUDE.md` passes while other stray markdown still fails.
 
 ### Changed
 - **Security: `certifi` 2026.7.22 to 2026.10.23 (advisory PYSEC-2026-4320, fixed in 2026.10.19).** Only the Azure runtime lock carried it. `uv.lock` was also stale against `pyproject.toml` (`fastapi` 0.143.0 and `ruff` 0.17.0 against the pinned 0.143.3 and 0.17.1), so the same `uv lock --upgrade-package certifi` brought those in line; no other version moved. `requirements-azure.lock.txt` was re-exported with the commands in the `Makefile`. Verified: `uv lock --check`, `scripts/check-lockfiles.sh`, `pip-audit --strict` on both requirements locks (no known vulnerabilities), ruff, and 194 tests passing.
 - Python base image `python:3.14.8-slim-trixie` by digest in `infrastructure/docker/versions.env` and every `FROM` of the Dockerfile together (Dependabot #12 moved only the Dockerfile, which `scripts/check-versions.sh` rejects as drift).
+- **Documents brought in line with reality (tickets #31 and #33, docs only).** `README.md` now names the two releases that exist (`v0.2.0`, 2026-10-12, and `v0.2.1`, 2026-10-18), says that no `v0.1.0` tag exists here (`0.1.0` is the seed's version and the appliance's), gives an install command that works (the release wheel, tested with `pip` on Python 3.14; the old `git+https` pin at `@v0.1.0` pointed at a tag that does not exist), and says the lab edition has not adopted a release yet. `REVIEW.md` R-003 now states the verified facts (an MIT `LICENSE` is in place, the repository is public) and leaves the license and visibility decision with the owner. Two `TODO.md` notes that called the repository private are corrected. `CLAUDE.md` gains the rule to record changes that reach the lab edition in its `docs/whats-new-upstream.md`. This file now groups the old `[Unreleased]` pile under the release each entry shipped in (nothing was removed or reworded).
+
+## [0.2.1] - 2026-10-18
+
+### Changed
 - **Core 0.2.1: pydantic is a range, not an exact pin (#15).** `packages/cloud-assessor-core/pyproject.toml` declares
   `pydantic>=2.14,<3` instead of `pydantic==2.14.0`, the same range the AddOn's seed adopted in
   `HCW-CloudAssessor_AddOn` #17. The engine is a library: an exact pin in the wheel and another in the app that
@@ -29,12 +35,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   release `v0.2.1` attaches `cloud_assessor_core-0.2.1-py3-none-any.whl` for the AddOn to adopt. The packaging and
   boundary tests now assert the range (`Requires-Dist: pydantic<3,>=2.14`) and match any specifier operator in the
   core manifest rather than `==` alone.
+
+## [0.2.0] - 2026-10-12
+
+First release tag. Everything below, down to the repository initialization entry, shipped in it.
+
+### Changed
 - README: badges (ci, security, release, Python, licence, lab edition) and a "new here?" opener in plain words that says what the product does and where the free lab edition will appear.
 - `publish-core.yml`: the header names the contract the AddOn actually uses, the release wheel pinned by URL and sha256 (its `core-update.yml` was changed on 2026-10-11 because a `git+https` pin cannot be verified by its image's `pip install --require-hashes`). Comment only.
 
 ### Added
-- `CLAUDE.md`: the working agreement for AI coding agents (commands, never-weaken list, documentation model, and a plain-language communication section for the owner). `scripts/check-docs-governance.py` now allow-lists it, and its test asserts a root `CLAUDE.md` passes while other stray markdown still fails.
-
 - **Engine adopted (change set A).** `packages/cloud-assessor-core` copied verbatim from `HCW-CloudAssessor_AddOn`
   `main` (commit `d552c6c`, the AddOn's 0.1.0 seed; `git diff --no-index` empty at adoption) with its unit tests,
   `catalog/{criteria,schema,scoring}.json`, `scripts/check-catalog.py` and the fictional `samples/`. From this commit the

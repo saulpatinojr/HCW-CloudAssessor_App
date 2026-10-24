@@ -290,9 +290,9 @@ infrastructure inventory. Security controls should land before the first collect
 - **Recommended Action:** Add a link-checking job to CI covering the four root markdown
   files. Allow the wiki links to be checked leniently until T-029 populates the wiki.
 - **Status:** Done
-- **Notes for Future Engineers:** The repository is private, so an unauthenticated link
-  checker will report wiki links as 404. Configure it with a token or exclude the wiki host
-  until T-030 completes.
+- **Notes for Future Engineers:** The wiki is enabled but not yet populated (R-007), so a
+  link checker reports wiki links as 404. Exclude the wiki host (as the governance script
+  does) until T-030 completes.
 
 ---
 
@@ -311,8 +311,8 @@ infrastructure inventory. Security controls should land before the first collect
   redacted output — the fields that determine whether a report is actionable here.
 - **Status:** Done
 - **Notes for Future Engineers:** Remind reporters in the template to redact account,
-  subscription, and tenant identifiers before pasting output. This is a private repository,
-  but the habit should hold regardless.
+  subscription, and tenant identifiers before pasting output. This repository is public, so
+  the habit matters more, not less.
 - **Done (2026-10-10):** `.github/ISSUE_TEMPLATE/bug_report.md` (asks for the scope kind and redacted output) and `config.yml`.
 
 ### T-018 — Add a pull request template

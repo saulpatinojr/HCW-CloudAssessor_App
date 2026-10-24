@@ -12,7 +12,7 @@ belong in [TODO.md](TODO.md).
 |----|---------|----------------|--------|
 | R-001 | Assessment deliverable format undefined — **resolved** | Product owner | Nothing (see entry) |
 | R-002 | Read-only access to the Azure assessment target not provisioned | Azure platform owner | Collector development and testing |
-| R-003 | No license selected for the repository | Repository owner / Legal | Contribution, reuse, distribution |
+| R-003 | License choice not yet confirmed by the owner (an MIT `LICENSE` is in place; the repository is public) | Repository owner / Legal | Contribution, reuse, distribution |
 | R-004 | Third-party integration adoption not approved | Repository owner / Legal | Issues #1, #2, #3 |
 | R-005 | Benchmark framework content usage rights unconfirmed | Legal | Publishing assessment criteria |
 | R-006 | Assessment output data classification undecided | Security / Compliance | Storing and sharing results |
@@ -106,31 +106,32 @@ identifiers plus the federation configuration in the wiki.
 
 ---
 
-## R-003 — No license has been selected for the repository
+## R-003 — The license choice has not been confirmed by the owner
 
 **Problem**
-The repository contains no `LICENSE` file and GitHub reports no license for it. The
-repository is currently private.
+Facts checked on 2026-10-24: the repository contains an MIT `LICENSE` file (added on 2026-10-10 as an interim
+choice to match the lab edition; `NOTICE` marks it `[REVIEW REQUIRED]`), GitHub detects it as MIT, and the repository
+is **public**. What is missing is the owner's confirmation of the license and of public visibility, with legal review
+if assessments will be delivered to clients.
 
 **Why it blocks progress**
-Without a license, default copyright applies. Contributors have no grant of rights, the
-code cannot be shared with clients or partners, and any decision to vendor or fork
-third-party code (see R-004) cannot be evaluated for compatibility.
+Until the owner confirms the MIT license (or chooses another), the interim grant is provisional: contributors and
+clients cannot rely on it, and any decision to vendor or fork third-party code (see R-004) cannot be evaluated for
+compatibility.
 
 **Required owner**
 Repository owner, with legal review if the assessment will be delivered to clients.
 
 **Required action**
-Choose a license (or explicitly confirm the repository stays proprietary and private) and
-state the decision. If proprietary, record the intended distribution model for assessment
-outputs delivered to clients.
+Confirm MIT (or choose another license, or take the repository back to proprietary and private) and state the
+decision. If proprietary, record the intended distribution model for assessment outputs delivered to clients.
 
 **Impact if unresolved**
-Blocks external contribution, blocks any open-source integration decision, and creates
-legal ambiguity around anything delivered from this repository.
+Blocks confident external contribution, blocks any open-source integration decision, and leaves legal ambiguity
+around anything delivered from this repository.
 
 **References**
-- Repository has no `LICENSE` file
+- `LICENSE` (MIT) and `NOTICE`; ticket [#31](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/31) (documents against reality)
 - `TODO.md` — T-002
 
 **Recommended next step**

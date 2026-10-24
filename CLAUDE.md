@@ -14,6 +14,7 @@ downstream; never the reverse. `README.md` is the human intro; this file states 
   `requirements*.lock.txt` files together. Never edit them by hand.
 - Azure is the only target platform. Never run `terraform apply`, and never call live Azure, from an agent session.
 - Owner-pasteable commands: no placeholders; bash and PowerShell both acceptable; say which shell.
+- The lab edition keeps a running note of what reaches it: `docs/whats-new-upstream.md` in `saulpatinojr/HCW-CloudAssessor_AddOn`. When a change lands here that reaches the lab edition (engine public surface, catalog, evaluator kinds, `MODEL_VERSION`, release or wheel contract, CI or lockfile rules it mirrors), add an entry there in the same change set, or say in the pull request why none is needed.
 - Pull requests open ready for review and follow `.github/PULL_REQUEST_TEMPLATE.md`. Keep `CHANGELOG.md` current in the
   same pull request.
 
