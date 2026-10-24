@@ -23,7 +23,7 @@
 #         docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"          # exit non-zero
 #         docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"   # exit 0
 
-FROM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS deps
+FROM python:3.15.0-slim-trixie@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 COPY requirements.lock.txt ./
@@ -40,7 +40,7 @@ for forbidden in ("azure", "msal", "boto3"):
 print("edition boundary: no cloud SDK in the default set")
 PY
 
-FROM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS deps-azure
+FROM python:3.15.0-slim-trixie@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS deps-azure
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 COPY requirements-azure.lock.txt ./
@@ -51,7 +51,7 @@ COPY src/cloud_assessor_appliance /install/lib/python3.14/site-packages/cloud_as
 RUN find /install -name "__pycache__" -type d -prune -exec rm -rf {} +
 
 # ---- lab: boundary-proof build only (never pushed, never deployed) ----
-FROM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS lab
+FROM python:3.15.0-slim-trixie@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS lab
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
@@ -68,7 +68,7 @@ USER 10001:10001
 CMD ["python", "-c", "import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None; print('lab boundary proof: core', cloud_assessor_core.__version__, 'imports; azure absent')"]
 
 # ---- appliance: the deployed image ----
-FROM python:3.14.8-slim-trixie@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 AS appliance
+FROM python:3.15.0-slim-trixie@sha256:f5b92f2a669a4c347044f29367f31983280b648250ca94dea66f98c53bc87e58 AS appliance
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 \
     CA_STATIC_DIR=/usr/local/lib/python3.14/site-packages/cloud_assessor_appliance/web CA_FRAME_ANCESTORS="'none'"
 RUN apt-get update \
