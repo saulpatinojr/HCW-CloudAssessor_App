@@ -63,6 +63,25 @@ def test_check_lockfiles_passes_here_and_fails_on_drift(tmp_path):
     assert bad.returncode != 0
 
 
+def test_check_lockfiles_fails_on_a_stale_uv_lock_without_rewriting_it(tmp_path):
+    """A pyproject.toml pin that uv.lock no longer matches must fail with a clear message and leave uv.lock alone."""
+    if shutil.which("uv") is None:
+        import pytest
+
+        pytest.skip("uv not on PATH")
+    copy = tmp_path / "repo"
+    shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__", ".pytest_cache"))
+    pyproject = copy / "pyproject.toml"
+    text = pyproject.read_text(encoding="utf-8")
+    assert '"fastapi==' in text
+    pyproject.write_text(text.replace('"fastapi==', '"fastapi<=', 1), encoding="utf-8")
+    lock_before = (copy / "uv.lock").read_bytes()
+    bad = _run("bash", str(copy / "scripts" / "check-lockfiles.sh"), cwd=copy)
+    assert bad.returncode != 0
+    assert "uv.lock is out of date" in bad.stdout + bad.stderr
+    assert (copy / "uv.lock").read_bytes() == lock_before
+
+
 def test_check_catalog_fails_on_a_bad_learn_url(tmp_path, monkeypatch):
     import json
 

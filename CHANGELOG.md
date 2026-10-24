@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+- `scripts/check-lockfiles.sh` (CI and `make lint`) now fails with a clear message when `uv.lock` is out of date with `pyproject.toml` (`uv lock --check`), and exports with `--locked` so it can no longer silently rewrite `uv.lock` before comparing (ticket #27). New test `test_check_lockfiles_fails_on_a_stale_uv_lock_without_rewriting_it`; it fails against the old script and passes against the new one. `ci.yml` still installs with `uv sync --frozen`; changing that to `--locked` is proposed in ticket #24 and not done here.
+
 ### Security
 - `release.yml` and `publish-images.yml`: the release tag, image digest and image version are now passed to their shell scripts through `env:` and quoted, instead of being pasted into the script text with `${{ }}` (ticket #34). No behaviour change; it removes a script-injection risk if a tag name were ever unusual. `tests/unit/test_workflows.py` (SHA-pinned actions, `ubuntu-26.04`, read-only permissions) still passes.
 
