@@ -266,6 +266,7 @@ azure = [
     { name = "azure-identity" },
     { name = "azure-mgmt-costmanagement" },
     { name = "azure-mgmt-resourcegraph" },
+    { name = "pyjwt", extra = ["crypto"] },
 ]
 
 [package.dev-dependencies]
@@ -286,6 +287,7 @@ requires-dist = [
     { name = "cloud-assessor-core", editable = "packages/cloud-assessor-core" },
     { name = "fastapi", specifier = "==0.157.0" },
     { name = "pydantic", specifier = "==2.14.1" },
+    { name = "pyjwt", extras = ["crypto"], marker = "extra == 'azure'", specifier = "==2.15.1" },
     { name = "uvicorn", specifier = "==0.54.0" },
 ]
 provides-extras = ["azure"]

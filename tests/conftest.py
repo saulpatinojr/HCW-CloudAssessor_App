@@ -102,13 +102,16 @@ def make_collector(settings: Settings | None = None, client: FakeResourceGraphCl
     return ResourceGraphCollector(client or FakeResourceGraphClient(), allowlist, sleep=lambda s: None, **kw)
 
 
-def make_app(settings: Settings | None = None, *, cost=None, client=None, verifier=None, timer=False):
+def make_app(
+    settings: Settings | None = None, *, cost=None, client=None, verifier=None, token_verifier=None, timer=False
+):
     settings = settings or make_settings()
     return create_app(
         settings,
         resource_collector=make_collector(settings, client),
         cost_collector=cost if cost is not None else FakeCostCollector(make_evidence()),
         verifier=verifier,
+        token_verifier=token_verifier,
         timer=timer,
         env=NO_AZURE_ENV,
     )

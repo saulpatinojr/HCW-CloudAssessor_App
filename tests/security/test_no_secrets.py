@@ -45,6 +45,14 @@ ENV_KEYS = (
     "CA_COLLECT_TIMEOUT_SECONDS",
     "CA_LOG_SILENT",
     "CA_STATIC_DIR",
+    "CA_AUTH_ENABLED",
+    "CA_AUTH_TENANT_ID",
+    "CA_AUTH_AUDIENCE",
+    "CA_AUTH_AUTHORITY_HOST",
+    "CA_AUTH_JWKS_URL",
+    "CA_AUTH_CLOCK_SKEW_SECONDS",
+    "CA_AUTH_REQUIRED_ROLES",
+    "CA_AUTH_REQUIRED_SCOPES",
 )
 
 
@@ -75,7 +83,9 @@ def test_env_example_lists_every_key_with_no_value():
     for key in ENV_KEYS:
         assert re.search(rf"^{key}=", env, re.MULTILINE), key
     for line in env.splitlines():
-        if line.startswith(("TURNSTILE_SECRET", "AZURE_CLIENT_ID", "CA_SCOPES")):
+        if line.startswith(
+            ("TURNSTILE_SECRET", "AZURE_CLIENT_ID", "CA_SCOPES", "CA_AUTH_TENANT_ID", "CA_AUTH_AUDIENCE")
+        ):
             assert line.strip().endswith("="), line
     assert not re.search(r"SECRET\s*=[ \t]*\S", env)
     for forbidden in ("AZURE_CLIENT_SECRET=", "AZURE_TENANT_ID=", "AZURE_USERNAME=", "AZURE_PASSWORD="):

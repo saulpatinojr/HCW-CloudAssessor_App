@@ -1,8 +1,9 @@
 """The application factory for the appliance edition: the section 8 routes, the standard headers, no upload path.
 
-Results are public for the scope by owner decision, behind the CA_PUBLIC_RESULTS release gate (403 results_not_public
-until the owner flips it; REVIEW.md R-006 and R-009). There are no owner tokens and no `{id}` paths: one scope, one
-current assessment.
+Results sit behind the CA_PUBLIC_RESULTS release gate (403 results_not_public until the owner flips it) AND, by owner
+decision R-009 option b (2026-10-24), behind Entra sign-in: with CA_AUTH_ENABLED every route except GET /api/health
+answers 401 without a valid access token (security/entra.py), and CA_PUBLIC_RESULTS=true refuses to start without it.
+There are no owner tokens and no `{id}` paths: one scope, one current assessment.
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from cloud_assessor_appliance.identity import refuse_forbidden_env
 from cloud_assessor_appliance.refresh import Refresher
 from cloud_assessor_appliance.security import logging as logs
 from cloud_assessor_appliance.security.cors import ExactOriginCorsMiddleware
+from cloud_assessor_appliance.security.entra import AuthConfig, EntraAuthMiddleware, EntraTokenVerifier
 from cloud_assessor_appliance.security.headers import SecurityHeadersMiddleware
 from cloud_assessor_appliance.security.limits import client_address
 from cloud_assessor_appliance.security.ratelimit import TokenBucketLimiter
@@ -79,6 +81,7 @@ def create_app(
     resource_collector=None,
     cost_collector=None,
     verifier=None,
+    token_verifier=None,
     timer: bool = True,
     env: Mapping[str, str] | None = None,
 ) -> FastAPI:
@@ -94,6 +97,8 @@ def create_app(
         cost_collector = cost_collector or live_cost
     elif not settings.cost_enabled:
         cost_collector = None
+    if settings.auth_enabled and token_verifier is None:
+        token_verifier = EntraTokenVerifier(AuthConfig.from_settings(settings))  # raises AuthConfigError: no start
     refresher = Refresher(
         catalog=catalog_doc,
         scoring=scoring,
@@ -112,6 +117,7 @@ def create_app(
             scopes=len(allowlist.scopes),
             turnstileRequired=settings.turnstile_required,
             publicResults=settings.public_results,
+            authEnabled=settings.auth_enabled,
             costEnabled=cost_collector is not None,
         )
         task = asyncio.create_task(refresher.timer(settings.refresh_minutes * 60)) if timer else None
@@ -323,6 +329,8 @@ def create_app(
             raise ApiError(404, "not_found", "Not found.")
         return FileResponse(file, media_type=MEDIA_TYPES.get(file.suffix, "application/octet-stream"))
 
+    if settings.auth_enabled:
+        app.add_middleware(EntraAuthMiddleware, verifier=token_verifier)  # innermost: CORS and headers wrap its 401
     app.add_middleware(ExactOriginCorsMiddleware, allowed_origins=settings.allowed_origins)
     app.add_middleware(SecurityHeadersMiddleware, settings=settings)
     return app

@@ -161,6 +161,32 @@ global refresh cooldown, `CA_PAGE_SIZE`, `CA_MAX_ROWS`, `PORT`. `AZURE_CLIENT_SE
 `AZURE_USERNAME`, `AZURE_PASSWORD` and `AZURE_TENANT_ID` are refused at startup: managed identity only, never a client
 secret.
 
+### Sign-in (Microsoft Entra ID)
+
+Results require a sign-in (owner decision, `REVIEW.md` R-009 option b). It is off by default; the `CA_PUBLIC_RESULTS` gate
+is a separate lock and stays off by default whatever the sign-in setting. With `CA_AUTH_ENABLED=true`, every route except
+`GET /api/health` (which stays open and content-free) needs `Authorization: Bearer <access token>` and otherwise answers
+`401 unauthorized` with `WWW-Authenticate: Bearer`. That includes the pane files, so until the pane signs users in, call
+the API directly or put the pane's sign-in in front of it. The appliance holds no secret for this: it checks tokens with
+the tenant's public signing keys. Reference: [access tokens](https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens)
+and [claims validation](https://learn.microsoft.com/en-us/entra/identity-platform/claims-validation).
+
+| Setting | Required when sign-in is on | Example shape (not real values) |
+|---------|-----------------------------|---------------------------------|
+| `CA_AUTH_ENABLED` | yes, `true` | `true` |
+| `CA_AUTH_TENANT_ID` | yes: the tenant (directory) id | `00000000-0000-0000-0000-000000000000` |
+| `CA_AUTH_AUDIENCE` | yes: the app registration's application (client) id and/or its `api://` URI, space or comma separated | `00000000-0000-0000-0000-000000000000 api://hcw-cloud-assessor` |
+| `CA_AUTH_AUTHORITY_HOST` | yes: the sign-in host name only (builds the issuer and the key address) | `login.microsoftonline.com` |
+| `CA_AUTH_JWKS_URL` | no: an `https` address for the signing keys instead of the built one | `https://login.microsoftonline.com/<tenant id>/discovery/v2.0/keys` |
+| `CA_AUTH_CLOCK_SKEW_SECONDS` | no: 0 to 300, default 60 | `60` |
+| `CA_AUTH_REQUIRED_ROLES` / `CA_AUTH_REQUIRED_SCOPES` | no: the app role (`roles`) or delegated scope (`scp`) a token must carry, default `Assessment.Read` for both | `Assessment.Read` |
+
+The appliance refuses to start if sign-in is on and the tenant, audience or authority host is missing or malformed, and
+if `CA_PUBLIC_RESULTS=true` is set without sign-in. What is checked on each request: RS256 signature (never `none` or
+`HS*`; an unknown key id is refused), `iss` (the v2.0 and v1.0 forms for the tenant), `aud`, `exp`, `nbf`, `tid`, and the
+required role or scope. Logs carry a status and a number, never a token or a claim. Validated only against locally
+generated keys, not yet against a real tenant.
+
 ## Documentation
 
 This repository uses a deliberately small documentation model. Five markdown files live at the root, each with a
