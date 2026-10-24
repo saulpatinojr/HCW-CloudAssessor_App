@@ -93,11 +93,12 @@ jobs:
           push-to-registry: true
       - if: steps.gate.outputs.push == 'true' && startsWith(github.ref, 'refs/tags/v')
         name: Record the immutable digest for Terraform var.image_ref
+        env: { DIGEST: "${{ steps.build.outputs.digest }}", VERSION: "${{ steps.version.outputs.version }}" }
         run: |
           {
             echo "## Published"
             echo '```'
-            echo "${IMAGE}@${{ steps.build.outputs.digest }}"
+            echo "${IMAGE}@${DIGEST}"
             echo '```'
-            echo "image_tag: ${{ steps.version.outputs.version }}"
+            echo "image_tag: ${VERSION}"
           } | tee -a "$GITHUB_STEP_SUMMARY"

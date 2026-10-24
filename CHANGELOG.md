@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Security
+- `release.yml` and `publish-images.yml`: the release tag, image digest and image version are now passed to their shell scripts through `env:` and quoted, instead of being pasted into the script text with `${{ }}` (ticket #34). No behaviour change; it removes a script-injection risk if a tag name were ever unusual. `tests/unit/test_workflows.py` (SHA-pinned actions, `ubuntu-26.04`, read-only permissions) still passes.
+
 ### Added
 - `.github/workflows/repository-admin.yml`: an owner-approved, manually started workflow (dry run unless "apply" is ticked, every run approved in the `admin-ops` environment, short-lived GitHub App token limited to this repository). Tasks: `show-plan`, `protect-main` (ruleset requiring a pull request and the lint, test, boundary, catalog-check, secret-scan, image and terraform checks; `pip-audit` is added once it is stable), `protect-release-tags`, `delete-merged-branches`. `tests/unit/test_workflows.py` lists it.
 
