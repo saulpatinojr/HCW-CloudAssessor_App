@@ -1,7 +1,8 @@
 # Cloud Assessor appliance on Azure (REFACTOR_APP.md section 12): one Consumption Container App running the published
 # appliance image by digest under a user-assigned managed identity with Reader and Cost Management Reader on the
 # allow-listed scopes, Log Analytics (30 days), a resource-group budget with 80/100 percent notifications, and an
-# optional custom domain. No VNet, no database, no Entra application, no secrets: the identity is the only credential.
+# optional custom domain. No VNet, no database, no secrets: the identity is the only credential. Caller authentication
+# (auth.tf) adds an Entra application registration only when auth_enabled is set; it never holds a client secret.
 #
 # Pattern copied from HCW-AzMigrateOrchestrator_App/infrastructure/terraform/appliance-azure and reduced. Planned and
 # validated in CI; `apply` is an owner step after human review (section 20). [REVIEW REQUIRED] role assignments,
@@ -10,12 +11,16 @@ terraform {
   required_version = ">= 1.9.0"
   required_providers {
     azurerm = { source = "hashicorp/azurerm", version = "~> 4.0" }
+    azuread = { source = "hashicorp/azuread", version = "~> 3.0" }
   }
 }
 
 provider "azurerm" {
   features {}
 }
+
+# Used only by auth.tf, and only when auth_enabled and auth_create_app_registration are both true.
+provider "azuread" {}
 
 locals {
   name = "${var.prefix}-${var.environment}-${var.location_short}"
@@ -80,6 +85,26 @@ resource "azurerm_container_app" "api" {
   revision_mode                = "Single"
   tags                         = local.tags
 
+  lifecycle {
+    # Safe default (ticket CA-3): the plan itself refuses to publish an appliance that does not check who calls it.
+    precondition {
+      condition     = !var.external_enabled || var.auth_enabled || var.dangerously_allow_unauthenticated_external_ingress
+      error_message = "Refusing to plan an externally reachable appliance without caller authentication. Set auth_enabled = true (README.md, Sign-in), or external_enabled = false for a private ingress. dangerously_allow_unauthenticated_external_ingress = true overrides this and publishes an appliance that does not check who calls it; it is an owner decision (REVIEW.md R-009), not a default."
+    }
+    precondition {
+      condition     = !var.public_results || var.auth_enabled
+      error_message = "public_results = true needs auth_enabled = true: the appliance refuses to start with CA_PUBLIC_RESULTS=true and no sign-in (REVIEW.md R-009)."
+    }
+    precondition {
+      condition     = !var.auth_enabled || var.auth_create_app_registration || (var.auth_tenant_id != "" && length(var.auth_audiences) > 0)
+      error_message = "auth_enabled with auth_create_app_registration = false needs auth_tenant_id and at least one auth_audiences entry: the appliance refuses to start without them."
+    }
+    precondition {
+      condition     = local.auth_create_registration || (length(var.auth_assigned_object_ids) == 0 && length(var.auth_preauthorized_client_ids) == 0)
+      error_message = "auth_assigned_object_ids and auth_preauthorized_client_ids only apply when auth_enabled and auth_create_app_registration are both true."
+    }
+  }
+
   identity {
     type         = "UserAssigned"
     identity_ids = [azurerm_user_assigned_identity.app.id]
@@ -87,7 +112,7 @@ resource "azurerm_container_app" "api" {
 
   # TLS is terminated by the platform; the container listens on plain HTTP 8080 behind it.
   ingress {
-    external_enabled = true
+    external_enabled = var.external_enabled
     target_port      = 8080
     transport        = "http"
     traffic_weight {
@@ -136,6 +161,14 @@ resource "azurerm_container_app" "api" {
       env {
         name  = "CA_PUBLIC_RESULTS"
         value = tostring(var.public_results)
+      }
+      # CA_AUTH_*: the names config.py reads; values come from auth.tf.
+      dynamic "env" {
+        for_each = local.auth_env
+        content {
+          name  = env.key
+          value = env.value
+        }
       }
       env {
         name  = "CA_FRAME_ANCESTORS"

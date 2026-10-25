@@ -568,7 +568,7 @@ Proposed by `REFACTOR_APP.md` (sections 13 and 18) at execution on 2026-10-10.
   signature from the tenant's JWKS) in a FastAPI dependency applied to the five routes; register the audience with a
   Terraform `azuread_application`; keep `CA_PUBLIC_RESULTS` as the switch between the two postures. Never a client
   secret: the validation path needs the public keys only.
-- **Status:** Done (2026-10-24, R-009 option b). Implemented in `src/cloud_assessor_appliance/security/entra.py` with tests in `tests/unit/test_entra.py` and `tests/security/test_auth_boundary.py`. Not yet tested against a real Entra tenant, and the Terraform `azuread_application` plus `CA_AUTH_*` app settings are not added (owner follow-up; see the pull request).
+- **Status:** Done (2026-10-24, R-009 option b). Implemented in `src/cloud_assessor_appliance/security/entra.py` with tests in `tests/unit/test_entra.py` and `tests/security/test_auth_boundary.py`. Terraform plumbing (`auth.tf`: `azuread_application`, app role and scope, service principal requiring assignment, `CA_AUTH_*` app settings) and a plan-time guard against an unauthenticated public ingress added for ticket CA-3. Still not tested against a real Entra tenant: the owner runs the runbook in `README.md` (Sign-in) in a sandbox tenant.
 - **Notes for Future Engineers:** The AzMigrate appliance's Terraform root shows the `azuread_application` and app-role
   shape to copy; keep the pane's `/api/health` flat so the lab is unaffected.
 

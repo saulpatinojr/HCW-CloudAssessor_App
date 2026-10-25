@@ -111,15 +111,17 @@ prints `appliance`, `managed-identity` and the scope count. A `503 no_snapshot` 
 the first minute is the timer still running, not a failure; a `403 results_not_public` after it is the release gate
 (`CA_PUBLIC_RESULTS`, see Configuration).
 
-Terraform (PowerShell; `validate` needs no variables; `plan` reads your current subscription; never `apply` from a session):
+Terraform (PowerShell; `validate` needs no variables; `plan` reads your current subscription; never `apply` from a session). `terraform test` runs the plan-only guard tests with mock providers and needs no login:
 
 ```powershell
-terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false; terraform -chdir=infrastructure/terraform/appliance-azure validate
+terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false; terraform -chdir=infrastructure/terraform/appliance-azure validate; terraform -chdir=infrastructure/terraform/appliance-azure test
 ```
 
 ```powershell
-$sub = (az account show -o json | ConvertFrom-Json).id; $start = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var "budget_start_date=$start" -var 'image_ref=docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+$sub = az account show --query id -o tsv; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; terraform -chdir=infrastructure/terraform/appliance-azure plan
 ```
+
+`plan` needs `auth_enabled = true` (or `external_enabled = false`): an internet-reachable appliance without sign-in is refused by the plan itself. See Sign-in below.
 
 Image boundary, both targets (bash; needs a Docker daemon):
 
@@ -136,7 +138,7 @@ The appliance is deployed from `infrastructure/terraform/appliance-azure` into t
 Consumption Container App (`min_replicas = max_replicas = 1`), a user-assigned managed identity, `Reader` and
 `Cost Management Reader` on each `scope_ids` entry, Log Analytics (30 days) and a resource-group budget with 80 and
 100 percent notifications. `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
-floating tag. `terraform apply` is an owner step after human review.
+floating tag. The plan refuses an internet-reachable appliance unless `auth_enabled = true` (Microsoft Entra ID sign-in, see Sign-in) or `external_enabled = false`. `terraform apply` is an owner step after human review.
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
 pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). It needs Python 3.14.6 or
@@ -250,6 +252,199 @@ if `CA_PUBLIC_RESULTS=true` is set without sign-in. What is checked on each requ
 `HS*`; an unknown key id is refused), `iss` (the v2.0 and v1.0 forms for the tenant), `aud`, `exp`, `nbf`, `tid`, and the
 required role or scope. Logs carry a status and a number, never a token or a claim. Validated only against locally
 generated keys, not yet against a real tenant.
+
+#### Supported exposure
+
+The appliance may be reached from the internet only with sign-in on. Terraform enforces it: with the defaults
+(`external_enabled = true`, `auth_enabled = false`) `terraform plan` stops with "Refusing to plan an externally
+reachable appliance without caller authentication". There are exactly two supported ways to deploy, and one override
+that is not supported:
+
+| Posture | Terraform inputs | Supported |
+|---------|------------------|-----------|
+| Reachable from the internet, callers sign in with Microsoft Entra ID | `auth_enabled = true` | Yes |
+| Private: only things inside the Container Apps environment can reach it | `external_enabled = false` | Yes |
+| Reachable from the internet, nobody signs in | `dangerously_allow_unauthenticated_external_ingress = true` | No. It is an owner decision recorded in `REVIEW.md`, and `terraform output caller_authentication` then starts with `NONE` |
+
+`public_results = true` (the `CA_PUBLIC_RESULTS` gate) also needs `auth_enabled = true`, in the plan as in the
+appliance's own startup check. The override does not relax that.
+
+#### Turning sign-in on with Terraform
+
+`infrastructure/terraform/appliance-azure/auth.tf` wires every `CA_AUTH_*` setting the code reads (`CA_AUTH_JWKS_URL` is
+left unset on purpose: the code builds the key address from the authority host and the tenant). Nothing in it is a
+secret, and nothing creates one: no client secret, certificate or password, because the appliance only checks tokens
+with the tenant's public keys. With `auth_enabled = true` Terraform creates, in the tenant of the signed-in user:
+
+- an application registration (one tenant only, v2 access tokens) with an app role and a delegated scope, both named
+  `Assessment.Read` (`auth_permission`), and the `api://<client id>` identifier URI;
+- a service principal with `app_role_assignment_required = true`, so Entra issues a token for this API only to users,
+  groups or managed identities you assigned (`auth_assigned_object_ids`). This is a second lock in front of the
+  appliance's own checks;
+- optionally, client applications allowed to request the scope without a consent prompt (`auth_preauthorized_client_ids`,
+  empty by default).
+
+| Appliance setting | Terraform |
+|-------------------|-----------|
+| `CA_AUTH_ENABLED` | `auth_enabled` (default `false`) |
+| `CA_AUTH_TENANT_ID` | the tenant of the created registration, or `auth_tenant_id` |
+| `CA_AUTH_AUDIENCE` | the registration's client id and its `api://<client id>` URI, or `auth_audiences` |
+| `CA_AUTH_AUTHORITY_HOST` | `auth_authority_host` (default `login.microsoftonline.com`) |
+| `CA_AUTH_CLOCK_SKEW_SECONDS` | `auth_clock_skew_seconds` (default 60) |
+| `CA_AUTH_REQUIRED_ROLES`, `CA_AUTH_REQUIRED_SCOPES` | `auth_permission` (default `Assessment.Read`) |
+| `CA_AUTH_JWKS_URL` | not set |
+
+The person who runs `terraform apply` needs the Azure roles they already need, plus the right to create applications
+and assign app roles in Entra: the `Application Administrator` role is normally enough for a user (not tested here), and the provider's own
+[authentication guide](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs) lists the Microsoft Graph
+permissions for a service principal. To use a registration that already exists, set `auth_create_app_registration =
+false` with `auth_tenant_id` and `auth_audiences`; nothing is then created in Entra and the inputs are passed through.
+`terraform.tfvars.example` shows both. `terraform plan` (PowerShell; reads your `az login` session and creates
+nothing, and the all-zero digest is the usual plan-only placeholder):
+
+```powershell
+$sub = az account show --query id -o tsv; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_assigned_object_ids = '["' + (az ad signed-in-user show --query id -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; terraform -chdir=infrastructure/terraform/appliance-azure plan
+```
+
+`alert_emails` is set because the budget resource needs at least one notification recipient even though the variable
+says an empty list "disables" them (a defect that was already there; see Known gaps below).
+
+#### What is verified, and what is NOT verified
+
+Verified on a developer machine, with no tenant, subscription or credential (the exact commands and results are in the
+pull request that added this section):
+
+| What | How |
+|------|-----|
+| Token checks: missing, malformed, expired, not yet valid, wrong audience, wrong issuer, wrong tenant, another tenant's token, unknown key id, `alg: none`, HS256 signed with the public key, tampered payload, missing role | `tests/unit/test_entra.py`, with a key pair generated at test time and a local key set |
+| Every route except `GET /api/health` answers `401` without a token | `tests/security/test_auth_boundary.py` |
+| The plan refuses an internet-reachable appliance without sign-in, accepts the two supported postures, rejects the override combined with `public_results`, and wires each `CA_AUTH_*` value | `terraform test` with mock providers (15 plan-only runs); `tests/security/test_terraform_auth_guard.py` (static checks on the HCL, including that no secret resource exists) |
+| The HCL is formatted, valid, and the misconfiguration scan has no HIGH or CRITICAL finding | `terraform fmt -check -recursive`, `terraform validate`, `trivy config` |
+
+**NOT verified** (nothing below has been run against a real tenant, and the first four need your tenant):
+
+- That Microsoft Entra ID issues a token with the claims the code expects (`aud`, `iss`, `tid`, `scp`, `roles`) for this
+  registration, and that the appliance accepts it. The tests use tokens signed by a key generated at test time.
+- That the appliance can fetch the tenant's real signing keys from `login.microsoftonline.com` from a Container App.
+- That the `azuread` resources apply cleanly (permissions, the identifier URI, the role assignment, the pre-authorized
+  client) and that `app_role_assignment_required` behaves as described. `terraform test` only plans against mock
+  providers; no `apply` has ever run.
+- That the Azure CLI can obtain a token for the scope, which the runbook below does.
+- That the deployed Container App starts with these settings. No image has been published yet.
+- Sign-in for the website pane: it is not built, so with sign-in on the pane files also answer `401`.
+
+#### Real-tenant verification runbook
+
+Run this once, in a sandbox tenant and subscription, before trusting sign-in in a client deployment. It touches Entra
+only (four objects), plus read-only calls to the sandbox subscription if you run the appliance on your machine. Nothing
+here is run by CI or by an agent. The commands are PowerShell; the bash version follows. You need the Azure CLI, `uv`,
+Terraform 1.9 or newer, and an account that can create applications in the sandbox tenant.
+
+1. Sign in and create the Entra objects (owner step, sandbox only). The `-target` flags limit the apply to the Entra
+   objects (Terraform will warn about targeting; that is expected here). It lets the Azure CLI request the scope and
+   assigns the role to you, so only you can get a token:
+
+```powershell
+az login; $sub = az account show --query id -o tsv; $env:TF_VAR_environment = 'sandbox'; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; $env:TF_VAR_auth_assigned_object_ids = '["' + (az ad signed-in-user show --query id -o tsv) + '"]'; $env:TF_VAR_auth_preauthorized_client_ids = '["04b07795-8ddb-461a-bbee-02f9e1bf7b46"]'
+terraform -chdir=infrastructure/terraform/appliance-azure init -input=false -backend=false; terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_service_principal.api -target=azuread_application_identifier_uri.api -target=azuread_app_role_assignment.assigned -target=azuread_application_pre_authorized.client
+```
+
+   Check the plan lists only `azuread_*` objects, then type `yes`. `04b07795-8ddb-461a-bbee-02f9e1bf7b46` is the Azure
+   CLI's public application id ([Microsoft Learn](https://learn.microsoft.com/azure/azure-sovereign-clouds/private/foundry-local/how-to-configure-authentication#step-4-authorize-azure-cli)); never pre-authorize it outside a sandbox.
+   The state is a local `terraform.tfstate` file (git-ignored).
+
+2. Read back what Entra now holds, and check the role and scope exist:
+
+```powershell
+$tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv; az ad app show --id $app --query '{appRoles: appRoles[].value, scopes: api.oauth2PermissionScopes[].value, tokenVersion: api.requestedAccessTokenVersion, identifierUris: identifierUris}' -o json
+```
+
+   Expect `appRoles` and `scopes` both `["Assessment.Read"]`, `tokenVersion` `2`, and `identifierUris` `["api://<the app id>"]`.
+
+3. Start the appliance on your machine with the same settings Terraform gives the Container App (a second PowerShell
+   window; it reads your `az login` session for the sandbox subscription, read-only). Leave it running:
+
+```powershell
+$tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv; $env:CA_SCOPES = '/subscriptions/' + (az account show --query id -o tsv); $env:CA_AUTH_ENABLED = 'true'; $env:CA_AUTH_TENANT_ID = $tenant; $env:CA_AUTH_AUDIENCE = "$app api://$app"; $env:CA_AUTH_AUTHORITY_HOST = 'login.microsoftonline.com'; $env:PORT = '8080'; uv run --extra azure python -m cloud_assessor_appliance
+```
+
+   To test a deployed appliance instead, skip this step and set `$base` in step 4 to `https://` plus
+   `terraform output -raw app_fqdn`.
+
+4. Call it. Back in the first window (the token stays in a variable; never paste it anywhere):
+
+```powershell
+$base = 'http://127.0.0.1:8080'; $tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv
+$good = az account get-access-token --tenant $tenant --scope "api://$app/Assessment.Read" --query accessToken -o tsv
+$wrong = az account get-access-token --tenant $tenant --resource-type arm --query accessToken -o tsv
+"1 health, no token      (expect 200): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/health")
+"2 catalog, no token     (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/catalog")
+"3 catalog, junk token   (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' -H 'Authorization: Bearer not-a-token' "$base/api/catalog")
+"4 catalog, wrong audience (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' -H "Authorization: Bearer $wrong" "$base/api/catalog")
+"5 catalog, valid token  (expect 200): " + (curl.exe -s -o NUL -w '%{http_code}' -H "Authorization: Bearer $good" "$base/api/catalog")
+"6 results, valid token  (expect 403 results_not_public, or 503 no_snapshot in the first minute): " + (curl.exe -s -H "Authorization: Bearer $good" "$base/api/assessments/current")
+"7 results, no token     (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/assessments/current")
+```
+
+   Line 4 uses an Azure Resource Manager token, which is valid but for a different audience. If `az` says the sign-in
+   needs a new scope, run the `az login --scope ...` command it prints, then repeat. The first `401` should also carry
+   `WWW-Authenticate: Bearer` (add `-i` to a call to see headers). A `403 results_not_public` on line 6 is correct and is
+   the proof the token passed: the separate `CA_PUBLIC_RESULTS` gate is still closed.
+
+5. Optional, expiry: keep `$good` for the rest of its life (about an hour; the exact time is the `exp` claim), then repeat
+   line 5. Expect `401`. A stricter alternative is the unit tests, which cover expiry with a fixed clock.
+
+6. Clean up. Stop the appliance with Ctrl+C in the second window, then remove the Entra objects (they are the only
+   things in the state) and the variables:
+
+```powershell
+terraform -chdir=infrastructure/terraform/appliance-azure destroy -target=azuread_application.api; Remove-Item Env:TF_VAR_*
+```
+
+   Type `yes` after checking the plan lists only the `azuread_*` objects.
+
+The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1, 3, 4 and 6 in one block; step 2 is
+the PowerShell one with `$x = ...` written as `x=$(...)`:
+
+```bash
+sub=$(az account show --query id -o tsv)
+export TF_VAR_environment=sandbox TF_VAR_auth_enabled=true TF_VAR_scope_ids="[\"/subscriptions/$sub\"]" \
+  TF_VAR_budget_start_date="$(date -u +%Y-%m-01)T00:00:00Z" \
+  TF_VAR_image_ref=docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000 \
+  TF_VAR_alert_emails="[\"$(az account show --query user.name -o tsv)\"]" \
+  TF_VAR_auth_assigned_object_ids="[\"$(az ad signed-in-user show --query id -o tsv)\"]" \
+  TF_VAR_auth_preauthorized_client_ids='["04b07795-8ddb-461a-bbee-02f9e1bf7b46"]'
+terraform -chdir=infrastructure/terraform/appliance-azure init -input=false -backend=false
+terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_service_principal.api -target=azuread_application_identifier_uri.api -target=azuread_app_role_assignment.assigned -target=azuread_application_pre_authorized.client
+tenant=$(az account show --query tenantId -o tsv); app=$(az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv)
+CA_SCOPES="/subscriptions/$sub" CA_AUTH_ENABLED=true CA_AUTH_TENANT_ID=$tenant CA_AUTH_AUDIENCE="$app api://$app" CA_AUTH_AUTHORITY_HOST=login.microsoftonline.com PORT=8080 uv run --extra azure python -m cloud_assessor_appliance &
+base=http://127.0.0.1:8080
+good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/Assessment.Read" --query accessToken -o tsv)
+wrong=$(az account get-access-token --tenant "$tenant" --resource-type arm --query accessToken -o tsv)
+for pair in "no-token:" "junk-token:not-a-token" "wrong-audience:$wrong" "valid-token:$good"; do
+  name=${pair%%:*}; tok=${pair#*:}; printf "catalog, $name: "
+  if [ -z "$tok" ]; then curl -s -o /dev/null -w '%{http_code}\n' "$base/api/catalog"
+  else curl -s -o /dev/null -w '%{http_code}\n' -H "Authorization: Bearer $tok" "$base/api/catalog"; fi
+done
+curl -s -o /dev/null -w 'health: %{http_code}\n' "$base/api/health"
+curl -s -H "Authorization: Bearer $good" "$base/api/assessments/current"; echo
+kill %1; terraform -chdir=infrastructure/terraform/appliance-azure destroy -target=azuread_application.api
+```
+
+   Expected, in order: `401`, `401`, `401`, `200`, `health: 200`, then `403 results_not_public` (or `503 no_snapshot` in the
+   first minute).
+
+If any line differs, do not turn sign-in on for a client. Open an issue with the line number and the status code only;
+never paste a token, a tenant id or an application id.
+
+#### Known gaps
+
+- The `azuread` resources and the runbook above have never been applied or run; see the NOT verified list.
+- `azurerm_consumption_budget_resource_group` needs at least one notification, so `alert_emails = []` (the default,
+  documented as "no notifications") makes `terraform plan` fail on the real provider. It was already so before sign-in;
+  it is not changed here. The tests and the plan command above pass a recipient.
+- The pane does not sign users in yet (T-032 follow-up), so a browser cannot use the pane of a sign-in-protected
+  deployment.
 
 ## Documentation
 

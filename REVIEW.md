@@ -390,8 +390,12 @@ allows only the root files):
 - **Still open: R-006.** Whether to label results "client confidential" is not decided; it still blocks flipping
   `CA_PUBLIC_RESULTS` to `true`. Not changed by this entry.
 - **Owner steps before turning sign-in on** are in the pull request and in `README.md` (Sign-in). Terraform plumbing
-  for the `CA_AUTH_*` values and an `azuread_application` is a follow-up; nothing was applied.
-- **Not tested:** against a real Entra tenant. Tests use a locally generated key pair and a local JWKS.
+  (the `CA_AUTH_*` values, an `azuread_application` with the `Assessment.Read` role and scope, and a plan that refuses
+  an internet-reachable appliance without sign-in) was added for ticket CA-3; nothing was applied.
+- **Not tested:** against a real Entra tenant. Tests use a locally generated key pair and a local JWKS. The
+  owner's real-tenant runbook is in `README.md` (Sign-in); ticket CA-3 stays open until it has been run.
+- **Override.** `dangerously_allow_unauthenticated_external_ingress` exists so that an owner can publish an
+  unauthenticated appliance knowingly. Using it is a decision to record here first.
 
 The original entry is kept below as the record of the question.
 
