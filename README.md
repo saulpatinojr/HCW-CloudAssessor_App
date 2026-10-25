@@ -136,8 +136,10 @@ docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identit
 
 The appliance is deployed from `infrastructure/terraform/appliance-azure` into the client's subscription: one
 Consumption Container App (`min_replicas = max_replicas = 1`), a user-assigned managed identity, `Reader` and
-`Cost Management Reader` on each `scope_ids` entry, Log Analytics (30 days) and a resource-group budget with 80 and
-100 percent notifications. `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
+`Cost Management Reader` on each `scope_ids` entry, Log Analytics (30 days) and, when `alert_emails` lists at least one
+address, a resource-group budget with 80 and 100 percent notifications to those addresses (Azure needs a recipient on
+every budget notification, so the default empty `alert_emails` creates no budget; `terraform output budget_notifications`
+states which applies; the plan is covered by `infrastructure/terraform/appliance-azure/tests/budget_notifications.tftest.hcl`). `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
 floating tag. The plan refuses an internet-reachable appliance unless `auth_enabled = true` (Microsoft Entra ID sign-in, see Sign-in) or `external_enabled = false`. `terraform apply` is an owner step after human review.
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
@@ -306,8 +308,9 @@ nothing, and the all-zero digest is the usual plan-only placeholder):
 $sub = az account show --query id -o tsv; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_assigned_object_ids = '["' + (az ad signed-in-user show --query id -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; terraform -chdir=infrastructure/terraform/appliance-azure plan
 ```
 
-`alert_emails` is set because the budget resource needs at least one notification recipient even though the variable
-says an empty list "disables" them (a defect that was already there; see Known gaps below).
+`alert_emails` is set here so the plan includes the budget. It is optional: the budget needs at least one notification
+recipient, so with the default empty list the plan succeeds and simply creates no budget (`terraform output
+budget_notifications` says so).
 
 #### What is verified, and what is NOT verified
 
@@ -440,9 +443,10 @@ never paste a token, a tenant id or an application id.
 #### Known gaps
 
 - The `azuread` resources and the runbook above have never been applied or run; see the NOT verified list.
-- `azurerm_consumption_budget_resource_group` needs at least one notification, so `alert_emails = []` (the default,
-  documented as "no notifications") makes `terraform plan` fail on the real provider. It was already so before sign-in;
-  it is not changed here. The tests and the plan command above pass a recipient.
+- The budget is created only when `alert_emails` has an address (ticket
+  [#60](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/60)): `azurerm_consumption_budget_resource_group`
+  needs a recipient on every notification, and the mock-provider tests showed that the default empty list made the plan
+  fail. Verified with mock providers only (`terraform test`); a plan or apply against a real subscription has not been run.
 - The pane does not sign users in yet (T-032 follow-up), so a browser cannot use the pane of a sign-in-protected
   deployment.
 

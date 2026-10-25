@@ -4,6 +4,9 @@ image_ref = "docker.io/hybridcloudworks/img-ca-appliance-app@sha256:000000000000
 scope_ids = ["/subscriptions/00000000-0000-0000-0000-000000000001"]
 # The first day of a month (UTC); the owner sets the current month at plan time, since any fixed date expires.
 budget_start_date = "2026-11-01T00:00:00Z"
+# Who is told at 80 and 100 percent of monthly_budget. The budget exists only when this lists at least one address
+# (Azure needs a recipient on every budget notification); leave it empty to create no budget (ticket #60).
+alert_emails = ["owner@example.com"]
 
 # Caller authentication (ticket CA-3). An externally reachable appliance is refused by `plan` unless sign-in is on.
 # Creates the Entra application, its Assessment.Read app role and scope, and a service principal that requires assignment
