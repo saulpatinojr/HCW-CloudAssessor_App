@@ -1,6 +1,6 @@
 # Copy to terraform.tfvars (gitignored). The digest is the one printed by publish-images.yml; the all-zero value below is
 # a syntactically valid placeholder for `plan` only (REFACTOR_APP.md section 20).
-image_ref = "docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000"
+image_ref = "docker.io/hybridcloudworks/hcw-cloudassessor@sha256:0000000000000000000000000000000000000000000000000000000000000000"
 scope_ids = ["/subscriptions/00000000-0000-0000-0000-000000000001"]
 # The first day of a month (UTC); the owner sets the current month at plan time, since any fixed date expires.
 budget_start_date = "2026-11-01T00:00:00Z"

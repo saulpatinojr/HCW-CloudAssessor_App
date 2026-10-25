@@ -51,7 +51,7 @@ Two editions share one engine and one pane (ADR-0028, recorded in the AddOn repo
 
 | Edition | Repository | How it reads Azure | Image |
 |---|---|---|---|
-| **Appliance** (this repository) | `HCW-CloudAssessor_App` | Live Resource Graph and Cost Management under a user-assigned managed identity with `Reader` and `Cost Management Reader` on an allow-listed scope; no upload route; results in memory, refreshed on a timer | `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance` (by digest) |
+| **Appliance** (this repository) | `HCW-CloudAssessor_App` | Live Resource Graph and Cost Management under a user-assigned managed identity with `Reader` and `Cost Management Reader` on an allow-listed scope; no upload route; results in memory, refreshed on a timer | `docker.io/hybridcloudworks/hcw-cloudassessor` (by digest) |
 | **Lab** (downstream) | `HCW-CloudAssessor_AddOn` | Never: visitors upload a Resource Graph export; the image is technically unable to construct an Azure credential | `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` |
 
 The engine (`packages/cloud-assessor-core`) is published from here as a wheel on every `v*` tag; the lab edition's
@@ -118,7 +118,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false; t
 ```
 
 ```powershell
-$sub = (az account show -o json | ConvertFrom-Json).id; $start = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var "budget_start_date=$start" -var 'image_ref=docker.io/hybridcloudworks/hcw-cloud-assessor-appliance@sha256:0000000000000000000000000000000000000000000000000000000000000000'
+$sub = (az account show -o json | ConvertFrom-Json).id; $start = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; terraform -chdir=infrastructure/terraform/appliance-azure plan -var ('scope_ids=["/subscriptions/{0}"]' -f $sub) -var "budget_start_date=$start" -var 'image_ref=docker.io/hybridcloudworks/hcw-cloudassessor@sha256:0000000000000000000000000000000000000000000000000000000000000000'
 ```
 
 Image boundary, both targets (bash; needs a Docker daemon):
