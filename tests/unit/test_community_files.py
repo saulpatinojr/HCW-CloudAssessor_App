@@ -79,12 +79,21 @@ def test_blank_issues_are_off_and_the_contact_links_stay_inside_this_repository_
     assert any(url.endswith("/security/advisories/new") for url in urls), "the private route must be offered"
 
 
+OWNER_EMAIL = "security@hybridcloudworks.com"
+OWNER_SLA = "Expect an acknowledgement within 3 business days."
+
+
 def test_contributing_and_code_of_conduct_exist_and_route_private_reports_through_github():
     for name in ("CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md"):
         text = (GITHUB / name).read_text(encoding="utf-8")
         assert text.strip(), name
-        assert "@" not in text.replace("@saulpatinojr", ""), f"{name}: no e-mail address or other contact is invented"
-        assert not re.search(r"business day|within \d|\d+ (hours|days)", text.lower()), f"{name}: no invented SLA"
+        # The owner's own contact and response time (written on main in SECURITY.md) are the only ones allowed; any
+        # other e-mail address or time promise is invented.
+        if name == "SECURITY.md":
+            assert OWNER_EMAIL in text and OWNER_SLA in text, "the owner contact or acknowledgement time was removed"
+            text = text.replace(OWNER_EMAIL, "").replace(OWNER_SLA, "")
+        assert not re.search(r"[\w.+-]+@[\w-]+\.[\w.-]+", text), f"{name}: an e-mail address that is not the owner's"
+        assert not re.search(r"business day|within \d|\d+ (hours|days)", text.lower()), f"{name}: an invented SLA"
     for name in ("CODE_OF_CONDUCT.md", "SECURITY.md"):
         assert "security/advisories/new" in (GITHUB / name).read_text(encoding="utf-8"), name
     assert ".github/CODE_OF_CONDUCT.md" in (GITHUB / "CONTRIBUTING.md").read_text(encoding="utf-8")
