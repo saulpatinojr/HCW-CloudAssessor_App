@@ -8,7 +8,7 @@
 #               package is importable, so running the image at all is the proof. The deployed lab image is
 #               docker.io/hybridcloudworks/hcw-addon-cloud-assessment, built by HCW-CloudAssessor_AddOn from its own
 #               src/cloud_assessment_lab on the published core; this repository contains no lab application.
-#   appliance   the deployed image: docker.io/hybridcloudworks/hcw-cloudassessor.
+#   appliance   the deployed image: docker.io/hybridcloudworks/img-ca-appliance-app.
 #
 # Every FROM is the digest in infrastructure/docker/versions.env (scripts/check-versions.sh fails CI on drift).
 # Both final stages: apt upgrade, pip/ensurepip/setuptools removed, USER 10001:10001, /tmp the only writable path.
