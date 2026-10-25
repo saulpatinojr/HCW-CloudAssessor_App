@@ -3,7 +3,7 @@
 # repository was authored with, because astral-sh/setup-uv is pinned nowhere in scope (conventions-actions.md).
 # Jobs: lint (ruff, catalog, docs governance, versions.env, lockfile exports, startup refusal without the azure extra),
 # test (85 percent coverage gate, with the azure extra), catalog-check, boundary (security + packaging suites on the
-# default set), terraform (fmt, validate), image (both targets built; the lab target's CMD is the boundary proof).
+# default set), terraform (fmt, validate, test), image (both targets built; the lab target's CMD is the boundary proof).
 name: ci
 on:
   pull_request:
@@ -87,6 +87,8 @@ jobs:
       - run: terraform fmt -check -recursive infrastructure/terraform
       - run: terraform -chdir=infrastructure/terraform/appliance-azure init -backend=false -input=false
       - run: terraform -chdir=infrastructure/terraform/appliance-azure validate
+      - name: Plan-only guard tests with mock providers (no login, no cloud call)
+        run: terraform -chdir=infrastructure/terraform/appliance-azure test
   image:
     runs-on: ubuntu-26.04
     needs: [lint]

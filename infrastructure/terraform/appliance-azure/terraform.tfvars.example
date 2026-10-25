@@ -4,3 +4,18 @@ image_ref = "docker.io/hybridcloudworks/img-ca-appliance-app@sha256:000000000000
 scope_ids = ["/subscriptions/00000000-0000-0000-0000-000000000001"]
 # The first day of a month (UTC); the owner sets the current month at plan time, since any fixed date expires.
 budget_start_date = "2026-11-01T00:00:00Z"
+
+# Caller authentication (ticket CA-3). An externally reachable appliance is refused by `plan` unless sign-in is on.
+# Creates the Entra application, its Assessment.Read app role and scope, and a service principal that requires assignment
+# (README.md, "Sign-in (Microsoft Entra ID)"). The deploying identity needs the azuread permissions listed there.
+auth_enabled = true
+# The users, groups or managed identities (Entra object ids) that may call the appliance. Only these can obtain a token.
+# auth_assigned_object_ids = ["00000000-0000-4000-8000-000000000001"]
+#
+# To use a registration that already exists instead of creating one:
+# auth_create_app_registration = false
+# auth_tenant_id               = "00000000-0000-4000-8000-000000000001"
+# auth_audiences               = ["api://hcw-sample-assessor"]
+#
+# Private ingress instead of sign-in (nothing outside the Container Apps environment can reach it):
+# external_enabled = false

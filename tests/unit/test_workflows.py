@@ -79,6 +79,7 @@ def test_ci_runs_every_section_20_check_that_can_run_in_ci():
         "tests/security tests/packaging",
         "terraform fmt -check",
         "validate",
+        "terraform -chdir=infrastructure/terraform/appliance-azure test",
         "--target lab" if "--target lab" in text else "target: lab",
         "target: appliance",
         'python -c "import azure"',
