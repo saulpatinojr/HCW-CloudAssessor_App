@@ -6,12 +6,41 @@ in [REVIEW.md](REVIEW.md).
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## Conventions (checked by `scripts/check-release-version.py`)
+
+- **One version for the whole repository.** The engine wheel, the appliance, `/api/health` and the container image share a
+  plain `X.Y.Z`, and one `vX.Y.Z` tag releases all of them. The policy, the places that name the version and the release
+  steps are in [README.md](README.md), section "Releasing and versioning".
+- **Work lands under `## [Unreleased]`**, in the same pull request as the change. Use the Keep a Changelog headings
+  (`### Added`, `### Changed`, `### Fixed`, `### Security`, `### Removed`).
+- **A release is a pull request.** It changes the version in the four places and `uv.lock`, moves everything under
+  `## [Unreleased]` into a new `## [X.Y.Z] - YYYY-MM-DD` section (the exact heading format; the section is the release
+  notes), and leaves `## [Unreleased]` with no entries. The release workflows refuse a tag while the section is missing,
+  undated or empty, or while `[Unreleased]` still has entries.
+- Headings that do not look like `## [X.Y.Z] - date` (for example the repository initialization entry) are history and are
+  ignored by the check.
+
 ## [Unreleased]
 
 ### Security
 - **Microsoft Entra ID sign-in for the appliance (T-032; owner decision R-009 option b, 2026-10-24).** With `CA_AUTH_ENABLED=true` every route except `GET /api/health` needs `Authorization: Bearer <access token>`, otherwise `401 unauthorized` with `WWW-Authenticate: Bearer`. The token must have an RS256 signature from the tenant's published keys (`alg` none, HS*, other algorithms and an unknown `kid` are refused), a valid `iss` (v2.0 or v1.0 form of the configured tenant), a configured `aud`, `exp` and `nbf` (both required, 60 seconds of clock skew by default, at most 300), `tid` equal to the configured tenant, and an app role or scope named in `CA_AUTH_REQUIRED_ROLES` / `CA_AUTH_REQUIRED_SCOPES` (default `Assessment.Read`). New settings, all in `.env.example`: `CA_AUTH_ENABLED`, `CA_AUTH_TENANT_ID`, `CA_AUTH_AUDIENCE`, `CA_AUTH_AUTHORITY_HOST`, `CA_AUTH_JWKS_URL`, `CA_AUTH_CLOCK_SKEW_SECONDS`, `CA_AUTH_REQUIRED_ROLES`, `CA_AUTH_REQUIRED_SCOPES`. Off by default, so a deployment that does not set them behaves as before. The `CA_PUBLIC_RESULTS` gate is unchanged and stays off by default: a valid token with the gate off still gets `403 results_not_public`. New startup refusals: sign-in enabled without a tenant, audience or authority host, and `CA_PUBLIC_RESULTS=true` without sign-in. Logs carry a status and a numeric reason code only, never a token or a claim. Tested with a key pair generated at test time and a local key set; **not tested against a real Entra tenant**. Appliance code only: `packages/cloud-assessor-core` and the lab edition are untouched (no entry needed in the lab edition's `docs/whats-new-upstream.md`). Terraform plumbing (`CA_AUTH_*` app settings and an `azuread_application`) is a follow-up; `REVIEW.md` R-006 (labelling results "client confidential") is still open.
 
 ### Changed
+- **Version hygiene (ticket #33, CA-10).** The appliance moves from `0.1.0` to `0.2.1`, the version the engine and the
+  `v0.2.1` tag already had, so `/api/health` (`version`), the `x-addon-version` header, `pyproject.toml`, `uv.lock` and the
+  engine now say the same thing. Policy: one version for the engine, the appliance and the image; one tag publishes all
+  three; the version is raised only in a release pull request (README "Releasing and versioning", an owner-confirmable
+  decision). `release.yml` is now two jobs (`check` with read-only permissions, then `create` with write permission); its
+  release notes come from the changelog section for the tag and a missing section fails instead of falling back to a
+  generic line. `publish-core.yml` and `publish-images.yml` run the version guard before they build, attest, attach or
+  push anything; `publish-core.yml` builds with `--no-create-gitignore` so only the wheel and the sdist are in `dist/`.
+  The three workflows now check out the full history so the tagged commit can be compared with `main`. `uv.lock` changes
+  only the appliance's version line; both `requirements*.lock.txt` exports are unchanged.
+- **Community files and issue forms (ticket #32, CA-9).** `.github/SECURITY.md` now routes reports only through GitHub
+  private vulnerability reporting and no longer names an e-mail address or an acknowledgement time, because neither
+  could be verified from the repository (restore them in a pull request if the owner confirms them).
+  `scripts/check-docs-governance.py` allow-lists `.github/CONTRIBUTING.md` and `.github/CODE_OF_CONDUCT.md`, and its
+  fallback file walk now reports paths with `/` on every platform.
 - **Appliance image name follows the owner's convention `img-<short name>-<job>-<type>` (2026-10-25):** `docker.io/hybridcloudworks/img-ca-appliance-app`. This replaces `hcw-cloudassessor` from the entry below. The image has never been published, so no image moves and nothing needs copying. The tag is now the full release tag (`v0.2.1`, not `0.2.1`); the `sha-` tag is unchanged. `publish-images.yml`, the Terraform `image_ref` description, validation pattern and example, the Dockerfile comment, the README and `tests/unit/test_workflows.py` follow. Terraform still accepts only an exact `@sha256:` digest. The Docker OIDC connection must allow this repository to push to `img-ca-appliance-app` before the next `v*` tag. The lab edition keeps its own image (`img-ca-lab-addon`) and is not affected.
 - **Appliance image renamed** from `docker.io/hybridcloudworks/hcw-cloud-assessor-appliance` to `docker.io/hybridcloudworks/hcw-cloudassessor` (owner naming convention, 2026-10-25). The appliance image has not been published yet, so no image moves and nothing needs copying. `publish-images.yml` (`IMAGE` and the image title label), the Terraform `image_ref` description, validation pattern and example, the Dockerfile comment, the README and `tests/unit/test_workflows.py` follow. Terraform still accepts only an exact `@sha256:` digest. Local `:dev` build tags are unchanged. The Docker OIDC connection must allow this repository to push to the new Docker Hub repository before the next `v*` tag. The lab edition (`HCW-CloudAssessor_AddOn`) keeps its own image name and is not affected, so it needs no `docs/whats-new-upstream.md` entry.
 - `pyproject.toml`: `pyjwt[crypto]==2.15.1` is now declared in the appliance-only `azure` extra. It was already locked as a dependency of `msal`; `uv.lock` and `requirements-azure.lock.txt` change only in how they record it, and `requirements.lock.txt` (the default set) is unchanged. `tests/packaging/test_lockfile.py` now lists `pyjwt` as a fourth member of that extra.
@@ -31,6 +60,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `.gitleaks.toml` (ticket #30): a second, narrow allow-list pattern for SHA-pinned action references quoted in prose. The scheduled full-history scan reported nine `sourcegraph-access-token` findings, all in one old commit (`ed4ead3`, `REFACTOR_APP.md` lines 299 and 315), all of the form `owner/action@<40-hex> # vN`; the existing pattern needed a `uses:` prefix. The new pattern needs the `@<40-hex>` and the `# vN` comment, so a bare 40-hex string is still reported (checked with a negative control). Reproduced with gitleaks 8.24.3, the CI version: 9 findings before, none after. A real run of the `security` workflow is still needed to confirm CI.
 
 ### Added
+- **Release version guard (ticket #33, CA-10).** `scripts/check-release-version.py` (standard library only) fails when
+  the engine's and the appliance's `pyproject.toml`, their two `__version__` constants and their two `uv.lock` entries do
+  not name the same plain `X.Y.Z`. With `--tag` it also requires the exact tag `vX.Y.Z`, a dated non-empty
+  `## [X.Y.Z] - YYYY-MM-DD` changelog section, an empty `[Unreleased]`, and (`--ancestor-of origin/main`) a tagged commit
+  that is on `main`; `--dist` checks the built files and `--notes-out` writes the release notes. Run by `ci.yml` (`lint`),
+  `make lint` and the three tag workflows. `tests/unit/test_release_guard.py` covers it, including that `/api/health`
+  reports the same version as `pyproject.toml`.
+- **`CONTRIBUTING.md`, `CODE_OF_CONDUCT.md` and YAML issue forms (ticket #32, CA-9).** Both documents live under `.github/`.
+  The markdown issue templates are replaced by forms with required fields and fixed dropdown values: `bug_report.yml`,
+  `feature_request.yml` and `work_item.yml` (the shape the tracked tickets use; its dropdowns use the repository's
+  priority, severity and workstream label values). `config.yml` keeps blank issues off. The README links to all of them
+  ("Contributing and reporting"). `tests/unit/test_community_files.py` checks the forms and the files.
+- **`security.yml` can be started by hand (ticket #30, CA-7).** The workflow now also has a `workflow_dispatch` trigger with
+  no inputs, so the gitleaks scan can be run on demand instead of only on Mondays. Nothing else about the workflow
+  changed; the dependency review job still runs only for pull requests. `tests/unit/test_workflows.py` pins this.
 - **Self-merging pull request, ready for the workflows that will need it.** The composite action `.github/actions/self-merging-pr` (the same file is in every HCW application repository) turns the files a job changed into one pull request on a fixed branch, opened with a short-lived GitHub App token scoped to this repository (Contents and Pull requests write), because `main` is protected by a ruleset that requires a pull request and a pull request opened with `GITHUB_TOKEN` neither is allowed here nor starts the required checks. It can turn on squash auto-merge and wait for the merge. `rehearse-self-merging-pr.yml` (Run workflow) rehearses it against a harmless file: by default it opens the pull request, turns on auto-merge, confirms the required checks start, and closes the pull request again; with `merge` ticked it really merges `.github/rehearsal.txt` once as the end-to-end proof. The credential is the repository-admin App (HCW Portfolio Admin) held by the `admin-ops` environment, an interim choice; `dependabot.yml` now also reads `.github/actions/*` so the action's pins stay current. **[VERIFY]** by running the rehearsal; it has not run yet.
 - `.github/workflows/repository-admin.yml`: an owner-approved, manually started workflow (dry run unless "apply" is ticked, every run approved in the `admin-ops` environment, short-lived GitHub App token limited to this repository). Tasks: `show-plan`, `protect-main` (ruleset requiring a pull request and the lint, test, boundary, catalog-check, secret-scan, image and terraform checks; `pip-audit` is added once it is stable), `protect-release-tags`, `delete-merged-branches`. `tests/unit/test_workflows.py` lists it.
 - `CLAUDE.md`: the working agreement for AI coding agents (commands, never-weaken list, documentation model, and a plain-language communication section for the owner). `scripts/check-docs-governance.py` now allow-lists it, and its test asserts a root `CLAUDE.md` passes while other stray markdown still fails.

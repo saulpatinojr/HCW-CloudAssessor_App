@@ -1,0 +1,61 @@
+name: Feature request
+description: Suggest an improvement or a new capability.
+title: "[Feature]: "
+labels:
+  - enhancement
+  - product:cloudassessor
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for the idea. Please search the existing issues first. Do not paste credentials, customer data, or
+        tenant, subscription or resource identifiers.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem you want solved
+      description: What are you trying to do, and what gets in the way today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like to see
+      description: Describe the change in plain words. A sketch is fine.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Which part would change
+      options:
+        - Engine (packages/cloud-assessor-core)
+        - Criteria catalog (packages/cloud-assessor-core/catalog)
+        - Appliance API and collectors (src/cloud_assessor_appliance)
+        - Appliance pane (the web page)
+        - Container images and the image build (infrastructure/docker)
+        - Terraform deployment (infrastructure/terraform/appliance-azure)
+        - CI, workflows and repository policy (.github)
+        - Documentation
+        - Not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Other ways you considered
+
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Boundaries
+      description: These are rules of this repository. A request that needs one of them to change is a decision for the owner, so say so below.
+      options:
+        - label: This request keeps identity to a managed identity (or the signed-in `az login` session), keeps Azure as the only target platform, and keeps the lab edition unable to reach Azure, or I say below why it must not.
+          required: true
+        - label: This request does not weaken the scope allow-list, the `CA_PUBLIC_RESULTS` release gate or the content-free logs, or I say below why it must not.
+          required: true

@@ -73,6 +73,7 @@ def test_ci_runs_every_section_20_check_that_can_run_in_ci():
         "uv run ruff format --check .",
         "scripts/check-catalog.py",
         "scripts/check-docs-governance.py",
+        "scripts/check-release-version.py",
         "scripts/check-versions.sh",
         "scripts/check-lockfiles.sh",
         "--cov-fail-under=85",
@@ -86,3 +87,52 @@ def test_ci_runs_every_section_20_check_that_can_run_in_ci():
         "ClientSecretCredential",
     ):
         assert needle in text, needle
+
+
+def _steps(name: str) -> list[dict]:
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
+    return [step for job in doc["jobs"].values() for step in job["steps"]]
+
+
+def test_the_release_version_guard_runs_before_anything_is_built_or_published():
+    """CA-10 (ticket #33): a v* tag can never be moved or deleted, so every workflow a tag starts refuses a tag that
+    does not match the version in the code, the lock, the changelog and main, before it builds or publishes."""
+    guard = "scripts/check-release-version.py"
+    assert (ROOT / guard).is_file()
+    first_publishing = {
+        "release.yml": "gh release create",
+        "publish-core.yml": "uv build",
+        "publish-images.yml": "docker/",
+    }
+    for name, publishing in first_publishing.items():
+        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        assert "--tag" in text and "--ancestor-of origin/main" in text and "fetch-depth: 0" in text, name
+        rendered = [yaml.safe_dump(step) for step in _steps(name)]
+        guarded = next(n for n, step in enumerate(rendered) if guard in step)
+        publishes = next(n for n, step in enumerate(rendered) if publishing in step)
+        assert guarded < publishes, f"{name}: the version guard must run before '{publishing}'"
+    assert "--dist dist" in (ROOT / ".github" / "workflows" / "publish-core.yml").read_text(encoding="utf-8")
+    assert "--notes-out" in (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+    assert "uv run python " + guard in (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+    assert "uv run python " + guard in (ROOT / "Makefile").read_text(encoding="utf-8")
+
+
+def test_release_creation_needs_the_check_job_and_only_it_holds_write_permission():
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
+    assert doc["jobs"]["create"]["needs"] == "check"
+    assert "permissions" not in doc["jobs"]["check"]
+    assert doc["jobs"]["create"]["permissions"] == {"contents": "write"}
+
+
+def test_the_security_workflow_can_be_started_by_hand_without_changing_what_it_does_on_a_schedule():
+    """CA-7 (ticket #30): the gitleaks job can be run on demand. The trigger takes no input, and the only job that
+    depends on the event name is the pull-request-only dependency review, which a manual run skips."""
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8"))
+    triggers = doc.get("on", doc.get(True))  # PyYAML reads the bare key `on` as the boolean True
+    assert set(triggers) == {"pull_request", "push", "schedule", "workflow_dispatch"}
+    assert triggers["workflow_dispatch"] is None, "no inputs: a manual run must behave like the scheduled one"
+    assert triggers["schedule"] == [{"cron": "23 6 * * 1"}]
+    text = (ROOT / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8")
+    assert text.count("github.event_name") == 1
+    assert doc["jobs"]["dependency-review"]["if"] == "github.event_name == 'pull_request'"
+    assert "secret-scan" in doc["jobs"] and "gitleaks/gitleaks-action@" in text
