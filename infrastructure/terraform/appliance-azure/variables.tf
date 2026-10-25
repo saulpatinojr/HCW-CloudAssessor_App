@@ -139,8 +139,16 @@ variable "budget_start_date" {
 }
 variable "alert_emails" {
   type        = list(string)
-  description = "Recipients of the 80 and 100 percent budget notifications; empty disables the notifications."
+  description = "Recipients of the 80 and 100 percent budget notifications. The resource-group budget is created only when this has at least one address: Azure requires a recipient on every budget notification, and a budget that tells nobody guards nothing. The default, an empty list, is the opt-out: no budget is created and the budget_notifications output says so. Each entry must be an email address and entries must be unique."
   default     = []
+  validation {
+    condition     = alltrue([for e in var.alert_emails : can(regex("^[^@[:space:]]+@[^@[:space:]]+\\.[^@[:space:]]+$", e))])
+    error_message = "alert_emails entries must be email addresses such as owner@example.com (no blank entries, no spaces)."
+  }
+  validation {
+    condition     = length(var.alert_emails) == length(distinct(var.alert_emails))
+    error_message = "alert_emails must not repeat an address."
+  }
 }
 variable "custom_domain" {
   type        = string

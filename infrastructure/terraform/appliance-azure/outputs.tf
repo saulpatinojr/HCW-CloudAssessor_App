@@ -10,6 +10,12 @@ output "identity_principal_id" {
 output "resource_group_name" {
   value = azurerm_resource_group.app.name
 }
+output "budget_notifications" {
+  description = "Plain-words state of the spend guard: who is told at 80 and 100 percent, or that no budget exists because alert_emails is empty."
+  value = length(var.alert_emails) > 0 ? "80 and 100 percent of ${var.monthly_budget} (actual spend) notify ${length(var.alert_emails)} recipient(s)" : (
+    "none: alert_emails is empty, so no budget is created (set alert_emails to create one)"
+  )
+}
 output "caller_authentication" {
   description = "Plain-words posture of the deployment: entra, none (private ingress), or the loud NONE when the override is set."
   value = var.auth_enabled ? "entra" : (

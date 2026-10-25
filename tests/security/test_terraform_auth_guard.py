@@ -134,8 +134,8 @@ def test_providers_are_pinned_and_locked_with_hashes():
 
 def test_terraform_test_file_exercises_the_guard_both_ways():
     files = sorted((TF_DIR / "tests").glob("*.tftest.hcl"))
-    assert [f.name for f in files] == ["caller_authentication.tftest.hcl"]
-    text = files[0].read_text(encoding="utf-8")
+    assert [f.name for f in files] == ["budget_notifications.tftest.hcl", "caller_authentication.tftest.hcl"]
+    text = (TF_DIR / "tests" / "caller_authentication.tftest.hcl").read_text(encoding="utf-8")
     assert 'mock_provider "azurerm"' in text and 'mock_provider "azuread"' in text
     runs = re.findall(r'^run "([^"]+)"', text, re.MULTILINE)
     assert "default_external_ingress_without_auth_is_refused" in runs
@@ -143,6 +143,22 @@ def test_terraform_test_file_exercises_the_guard_both_ways():
     assert "private_ingress_plans_without_auth" in runs
     assert "auth_enabled_creates_the_registration_and_wires_the_settings" in runs
     assert text.count("expect_failures = [azurerm_container_app.api]") >= 5
+    assert not re.search(r"command\s*=\s*apply", text), "plan-only: a test must never create anything"
+
+
+def test_budget_exists_only_with_a_recipient_and_the_empty_default_is_tested():
+    """Ticket #60: azurerm needs a recipient on every budget notification, so the budget is conditional on
+    `alert_emails` (an empty list is the documented opt-out) and `terraform test` plans both cases."""
+    budget = _block(_read("main.tf"), 'resource "azurerm_consumption_budget_resource_group" "app"')
+    assert "count             = length(var.alert_emails) > 0 ? 1 : 0" in budget
+    assert "for_each = [80, 100]" in budget
+    variable = _block(_read("variables.tf"), 'variable "alert_emails"')
+    assert "default     = []" in variable and "validation" in variable
+    assert 'output "budget_notifications"' in _read("outputs.tf")
+    text = (TF_DIR / "tests" / "budget_notifications.tftest.hcl").read_text(encoding="utf-8")
+    runs = re.findall(r'^run "([^"]+)"', text, re.MULTILINE)
+    assert "empty_alert_emails_plans_without_a_budget" in runs
+    assert "one_recipient_creates_the_budget_with_both_notifications" in runs
     assert not re.search(r"command\s*=\s*apply", text), "plan-only: a test must never create anything"
 
 

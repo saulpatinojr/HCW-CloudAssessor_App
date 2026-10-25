@@ -183,7 +183,11 @@ resource "azurerm_container_app" "api" {
 }
 
 # Spend guard on the appliance's own resource group: 80 and 100 percent of the monthly amount, actual spend.
+# The azurerm resource requires at least one notification and every notification needs a recipient, and a budget that
+# tells nobody guards nothing, so the budget exists only when alert_emails has an entry. An empty list (the default) is
+# the documented opt-out: no budget, and the budget_notifications output says so (ticket #60; tests/budget_notifications.tftest.hcl).
 resource "azurerm_consumption_budget_resource_group" "app" {
+  count             = length(var.alert_emails) > 0 ? 1 : 0
   name              = "budget-${local.name}-01"
   resource_group_id = azurerm_resource_group.app.id
   amount            = var.monthly_budget
@@ -194,7 +198,7 @@ resource "azurerm_consumption_budget_resource_group" "app" {
   }
 
   dynamic "notification" {
-    for_each = length(var.alert_emails) > 0 ? [80, 100] : []
+    for_each = [80, 100]
     content {
       enabled        = true
       threshold      = notification.value
