@@ -28,3 +28,7 @@ output "auth_scope" {
   description = "The scope to request a delegated token with (az account get-access-token --scope ...); null unless the registration was created here."
   value       = local.auth_create_registration ? "api://${azuread_application.api[0].client_id}/${var.auth_permission}" : null
 }
+output "budget" {
+  description = "Plain-words state of the spend guard: created (with the number of recipients) or none."
+  value       = length(var.alert_emails) > 0 ? "created: 80 and 100 percent of ${var.monthly_budget} (Actual), ${length(var.alert_emails)} recipient(s)" : "none: alert_emails is empty, and Azure cannot create a budget without a notification recipient"
+}

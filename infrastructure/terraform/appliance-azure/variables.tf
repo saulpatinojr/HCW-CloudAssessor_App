@@ -139,8 +139,12 @@ variable "budget_start_date" {
 }
 variable "alert_emails" {
   type        = list(string)
-  description = "Recipients of the 80 and 100 percent budget notifications; empty disables the notifications."
+  description = "Recipients of the 80 and 100 percent budget notifications. Empty (the default) creates no budget at all, because Azure cannot create a budget without a notification recipient; give at least one address to get the budget."
   default     = []
+  validation {
+    condition     = alltrue([for e in var.alert_emails : can(regex("^[^@[:space:]]+@[^@[:space:]]+$", e))])
+    error_message = "Each alert_emails entry must be one e-mail address (no spaces, exactly one @)."
+  }
 }
 variable "custom_domain" {
   type        = string

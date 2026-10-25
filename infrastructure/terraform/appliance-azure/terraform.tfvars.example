@@ -19,3 +19,7 @@ auth_enabled = true
 #
 # Private ingress instead of sign-in (nothing outside the Container Apps environment can reach it):
 # external_enabled = false
+
+# Spend budget (80 and 100 percent of monthly_budget). It is created only when at least one address is given, because
+# Azure cannot create a budget without a notification recipient; leave it out and the plan simply has no budget.
+alert_emails = ["owner@example.test"]

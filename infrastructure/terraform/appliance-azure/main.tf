@@ -183,7 +183,12 @@ resource "azurerm_container_app" "api" {
 }
 
 # Spend guard on the appliance's own resource group: 80 and 100 percent of the monthly amount, actual spend.
+# Created only when at least one recipient is given. The azurerm provider requires one or more notification blocks and
+# each one must name a recipient (contact_emails, contact_groups or contact_roles), so a budget cannot exist without
+# one; with alert_emails = [] (the default) there is no budget and the plan still succeeds (ticket CA-12).
+# https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group
 resource "azurerm_consumption_budget_resource_group" "app" {
+  count             = length(var.alert_emails) > 0 ? 1 : 0
   name              = "budget-${local.name}-01"
   resource_group_id = azurerm_resource_group.app.id
   amount            = var.monthly_budget
@@ -194,7 +199,7 @@ resource "azurerm_consumption_budget_resource_group" "app" {
   }
 
   dynamic "notification" {
-    for_each = length(var.alert_emails) > 0 ? [80, 100] : []
+    for_each = [80, 100]
     content {
       enabled        = true
       threshold      = notification.value

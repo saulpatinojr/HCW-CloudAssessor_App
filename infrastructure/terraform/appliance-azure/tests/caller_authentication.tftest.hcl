@@ -18,9 +18,8 @@ variables {
   image_ref         = "docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000"
   scope_ids         = ["/subscriptions/00000000-0000-0000-0000-000000000001"]
   budget_start_date = "2026-11-01T00:00:00Z"
-  # azurerm_consumption_budget_resource_group needs at least one notification block, so a plan needs a recipient even
-  # though the variable's default (empty) is documented as "no notifications".
-  alert_emails = ["owner@example.test"]
+  # alert_emails is deliberately not set here: every run below uses its default (empty), which is what a deployer who
+  # sets nothing gets. The budget runs at the end of this file set it explicitly.
 }
 
 # The safe default: with nothing set, the ingress is external and there is no sign-in, so the plan must fail.
@@ -266,4 +265,54 @@ run "audience_entries_must_not_hold_spaces" {
     auth_audiences               = ["two words"]
   }
   expect_failures = [var.auth_audiences]
+}
+
+# Budget (ticket CA-12). The provider needs at least one notification, and a notification needs a recipient, so the
+# budget exists only when at least one alert e-mail is given. The default plan (empty list) must succeed without it.
+run "default_alert_emails_plans_without_a_budget" {
+  command = plan
+  variables {
+    auth_enabled = true
+  }
+  assert {
+    condition     = length(azurerm_consumption_budget_resource_group.app) == 0
+    error_message = "with no alert e-mail there is no budget, because the provider cannot create one without a recipient"
+  }
+  assert {
+    condition     = startswith(output.budget, "none")
+    error_message = "the output must say plainly that no budget is created"
+  }
+}
+
+run "one_alert_email_creates_the_budget_with_both_notifications" {
+  command = plan
+  variables {
+    auth_enabled = true
+    alert_emails = ["owner@example.test"]
+  }
+  assert {
+    condition     = length(azurerm_consumption_budget_resource_group.app) == 1
+    error_message = "one recipient creates the budget"
+  }
+  assert {
+    condition     = toset([for n in azurerm_consumption_budget_resource_group.app[0].notification : n.threshold]) == toset([80, 100])
+    error_message = "the budget notifies at 80 and 100 percent"
+  }
+  assert {
+    condition     = alltrue([for n in azurerm_consumption_budget_resource_group.app[0].notification : join(",", n.contact_emails) == "owner@example.test"])
+    error_message = "every notification goes to the given recipient"
+  }
+  assert {
+    condition     = startswith(output.budget, "created")
+    error_message = "the output says the budget is created"
+  }
+}
+
+run "alert_email_must_be_an_address" {
+  command = plan
+  variables {
+    auth_enabled = true
+    alert_emails = [""]
+  }
+  expect_failures = [var.alert_emails]
 }

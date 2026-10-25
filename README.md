@@ -137,7 +137,7 @@ docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identit
 The appliance is deployed from `infrastructure/terraform/appliance-azure` into the client's subscription: one
 Consumption Container App (`min_replicas = max_replicas = 1`), a user-assigned managed identity, `Reader` and
 `Cost Management Reader` on each `scope_ids` entry, Log Analytics (30 days) and a resource-group budget with 80 and
-100 percent notifications. `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
+100 percent notifications (created only when `alert_emails` names at least one recipient, see "Spend budget and `alert_emails`"). `image_ref` is the digest printed by the `publish-images` workflow; the plan never pulls a
 floating tag. The plan refuses an internet-reachable appliance unless `auth_enabled = true` (Microsoft Entra ID sign-in, see Sign-in) or `external_enabled = false`. `terraform apply` is an owner step after human review.
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
@@ -150,6 +150,24 @@ python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/rele
 
 Replace `v0.2.1` and `0.2.1` together to install another release; the list is on the
 [releases page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases).
+
+### Spend budget and `alert_emails`
+
+Terraform creates the spend budget (80 and 100 percent of `monthly_budget`, actual spend, on the appliance's own resource
+group) only when `alert_emails` lists at least one e-mail address. Azure cannot create a budget that has no notification
+recipient (the [`azurerm_consumption_budget_resource_group`](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/consumption_budget_resource_group)
+documentation says a `notification` block is required and needs at least one of `contact_emails`, `contact_groups` or
+`contact_roles`). So the two cases are:
+
+- `alert_emails = []` (the default): `terraform plan` succeeds, no budget is created, and the output `budget` says
+  `none: ...`. Nothing warns you about spend, so set a recipient for any real deployment.
+- `alert_emails = ["name@example.com"]`: the budget is created with both notifications, and the output `budget` says
+  `created: ...`. An entry that is not an e-mail address is refused by the plan.
+
+`terraform test` in `infrastructure/terraform/appliance-azure` covers both cases and the refusal (the runs
+`default_alert_emails_plans_without_a_budget`, `one_alert_email_creates_the_budget_with_both_notifications` and
+`alert_email_must_be_an_address`). They use mock providers, so they prove what the plan does, not how a real subscription
+reacts: a real `terraform apply` of the budget has not been run.
 
 ## Releasing and versioning
 
@@ -306,8 +324,8 @@ nothing, and the all-zero digest is the usual plan-only placeholder):
 $sub = az account show --query id -o tsv; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_assigned_object_ids = '["' + (az ad signed-in-user show --query id -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; terraform -chdir=infrastructure/terraform/appliance-azure plan
 ```
 
-`alert_emails` is set because the budget resource needs at least one notification recipient even though the variable
-says an empty list "disables" them (a defect that was already there; see Known gaps below).
+`alert_emails` is set here so that the plan includes the spend budget (see "Spend budget and `alert_emails`" below). It is
+not needed for the plan to work: with the default empty list the plan succeeds and simply has no budget.
 
 #### What is verified, and what is NOT verified
 
@@ -440,9 +458,6 @@ never paste a token, a tenant id or an application id.
 #### Known gaps
 
 - The `azuread` resources and the runbook above have never been applied or run; see the NOT verified list.
-- `azurerm_consumption_budget_resource_group` needs at least one notification, so `alert_emails = []` (the default,
-  documented as "no notifications") makes `terraform plan` fail on the real provider. It was already so before sign-in;
-  it is not changed here. The tests and the plan command above pass a recipient.
 - The pane does not sign users in yet (T-032 follow-up), so a browser cannot use the pane of a sign-in-protected
   deployment.
 
