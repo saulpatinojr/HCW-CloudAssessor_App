@@ -54,13 +54,13 @@ working CI signal.
 ### T-002 — Add a LICENSE file
 
 - **Priority:** P0
-- **Description:** The repository has no `LICENSE` file and GitHub reports no license.
-  Default copyright applies, which leaves contribution and distribution rights undefined.
-- **Dependencies:** R-003 (no license selected)
+- **Description:** The repository had no `LICENSE` file and GitHub reported no license.
+  Default copyright applied, which left contribution and distribution rights undefined.
+- **Dependencies:** R-003 (decided: MIT, public repository)
 - **Recommended Action:** Add the `LICENSE` file matching the decision recorded in R-003
   and add the corresponding SPDX identifier to the project manifest created in T-001.
-- **Status:** Blocked
-- **Interim (2026-10-10):** `LICENSE` is MIT and `pyproject.toml` carries `license = "MIT"` to match the lab edition, marked `[REVIEW REQUIRED]` in `NOTICE` until R-003 is decided.
+- **Status:** Done
+- **Done (2026-10-10, confirmed 2026-10-25):** `LICENSE` is MIT and `pyproject.toml` carries `license = "MIT"` to match the lab edition. The owner confirmed MIT and public visibility (R-003, recorded 2026-10-25), so `NOTICE` no longer carries a review marker for it.
 - **Notes for Future Engineers:** The license choice constrains R-004. If any third-party
   tool is vendored or forked, verify compatibility before merging that integration.
 

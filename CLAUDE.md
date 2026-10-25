@@ -25,7 +25,8 @@ downstream; never the reverse. `README.md` is the human intro; this file states 
 - The `CA_PUBLIC_RESULTS` release gate: results routes answer `403 results_not_public` until it is `true`.
 - Logs stay content-free, and secrets stay out of the repository (`tests/security/test_no_secrets.py`).
 - The lab edition's inability to reach Azure (`tests/security/test_appliance_boundary.py`).
-- The "not production" labels until the owner records R-003, R-005 and R-006 in `REVIEW.md`.
+- The "not production" labels until the owner records R-005 and R-006 in `REVIEW.md`. R-003 is decided: the license is
+  MIT and the repository is public, so no document may call it private or unlicensed.
 - Engine rules: evaluator kinds are only added, never renamed; `MODEL_VERSION` changes only when `Resource` changes. A
   change to any `packages/cloud-assessor-core` public surface reaches the lab edition at the next release; say so in
   the pull request.

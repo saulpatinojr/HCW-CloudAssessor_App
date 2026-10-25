@@ -1,8 +1,8 @@
 Hybrid Cloud Works Cloud Assessor (appliance edition) and the cloud-assessor-core engine
 Copyright (c) 2026 Hybrid Cloud Works. Licensed under MIT (see LICENSE).
 
-[REVIEW REQUIRED] License (REVIEW.md R-003): MIT is adopted to match the lab edition (HCW-CloudAssessor_AddOn); the
-owner confirms or replaces it before any public release.
+License (REVIEW.md R-003, decided by the owner, recorded 2026-10-25): MIT, and the repository is public. The lab edition
+(HCW-CloudAssessor_AddOn) uses the same license.
 
 [REVIEW REQUIRED] Attribution (REVIEW.md R-005): the criteria in packages/cloud-assessor-core/catalog/criteria.json are
 paraphrased from the FinOps Foundation Framework (https://www.finops.org/framework/) and the Microsoft Azure
