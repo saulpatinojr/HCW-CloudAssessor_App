@@ -8,7 +8,7 @@ from ..conftest import ROOT
 
 WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
 USES = re.compile(r"^\s*(?:-\s+)?uses:\s*([^\s#]+)\s*#\s*(v\S+)", re.MULTILINE)
-# A local action (`uses: ./.github/actions/...`) has no SHA to pin; its own `uses:` lines are pinned inside its action.yml.
+# A local action (`uses: ./.github/actions/...`) has no SHA to pin; its own `uses:` are pinned in its action.yml.
 ANY_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(?!\./)(\S+)", re.MULTILINE)
 
 
