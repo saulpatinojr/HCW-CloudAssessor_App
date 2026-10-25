@@ -8,7 +8,8 @@ from ..conftest import ROOT
 
 WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
 USES = re.compile(r"^\s*(?:-\s+)?uses:\s*([^\s#]+)\s*#\s*(v\S+)", re.MULTILINE)
-ANY_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(\S+)", re.MULTILINE)
+# A local action (`uses: ./.github/actions/...`) has no SHA to pin; its own `uses:` lines are pinned inside its action.yml.
+ANY_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(?!\./)(\S+)", re.MULTILINE)
 
 
 def test_workflow_set_is_complete():
@@ -16,6 +17,7 @@ def test_workflow_set_is_complete():
         "ci.yml",
         "publish-core.yml",
         "publish-images.yml",
+        "rehearse-self-merging-pr.yml",
         "release.yml",
         "repository-admin.yml",
         "security.yml",
