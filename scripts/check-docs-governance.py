@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 """Documentation governance gate (README.md "Documentation", T-019, REFACTOR_APP.md 7.14 and 16).
 
-Markdown is allowed only as the five root files, CLAUDE.md, the platform templates under .github/, and the package
+Markdown is allowed only as the five root files, CLAUDE.md, the community-health files and platform templates under
+.github/ (SECURITY, CONTRIBUTING, CODE_OF_CONDUCT, the pull request template), and the package
 README that the cloud-assessor-core wheel metadata requires (adopted verbatim from the AddOn;
 `readme = "README.md"`). Relative links inside the five root files must resolve (T-016; the wiki host is
 excluded until T-030). Exits non-zero otherwise.
@@ -22,6 +23,10 @@ ALLOWED = {
     # working agreement for AI coding agents; allow-listed by the owner on 2026-10-24
     "CLAUDE.md",
     ".github/SECURITY.md",
+    # community health files GitHub itself reads from .github/ (ticket #32, CA-9; the allow-listing is confirmed by the
+    # owner merging that pull request): the contributing guide and the code of conduct. Issue forms are YAML.
+    ".github/CONTRIBUTING.md",
+    ".github/CODE_OF_CONDUCT.md",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/pull_request_template.md",
     ".github/CODEOWNERS",
@@ -44,7 +49,7 @@ def tracked(root: Path) -> list[str]:
         ).stdout
         return [line for line in out.splitlines() if line]
     except subprocess.CalledProcessError, FileNotFoundError:
-        return [str(p.relative_to(root)) for p in root.rglob("*") if p.is_file() and ".git" not in p.parts]
+        return [p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file() and ".git" not in p.parts]
 
 
 def check(root: Path) -> list[str]:

@@ -37,6 +37,25 @@ def test_check_docs_governance_passes_here_and_fails_on_a_stray_markdown(tmp_pat
     assert _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree)).returncode == 0
 
 
+def test_check_docs_governance_allows_the_community_files_only_under_dot_github(tmp_path):
+    """CA-9 (ticket #32): CONTRIBUTING and CODE_OF_CONDUCT are allow-listed under .github/ and nowhere else."""
+    tree = tmp_path / "repo"
+    (tree / ".github").mkdir(parents=True)
+    for name in ("README.md", "CHANGELOG.md", "REVIEW.md", "TODO.md", "REFACTOR_APP.md"):
+        (tree / name).write_text("# x\n", encoding="utf-8")
+    for name in ("CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SECURITY.md", "PULL_REQUEST_TEMPLATE.md"):
+        (tree / ".github" / name).write_text("# x\n", encoding="utf-8")
+    ok = _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree))
+    assert ok.returncode == 0, ok.stderr
+    for stray in ("CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "docs/CONTRIBUTING.md", ".github/docs/CODE_OF_CONDUCT.md"):
+        path = tree / stray
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("# stray\n", encoding="utf-8")
+        bad = _run(sys.executable, str(SCRIPTS / "check-docs-governance.py"), "--root", str(tree))
+        assert bad.returncode == 1 and stray in bad.stderr, stray
+        path.unlink()
+
+
 def test_check_versions_passes_here_and_fails_on_drift(tmp_path):
     assert _run("bash", str(SCRIPTS / "check-versions.sh")).returncode == 0
     dockerfile = tmp_path / "Dockerfile"

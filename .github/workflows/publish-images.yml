@@ -5,6 +5,8 @@
 # build -> boundary checks -> Trivy -> push with provenance + SBOM -> attest -> digest. A failing check publishes nothing.
 # Until the owner creates the OIDC connection and sets DOCKERHUB_ENABLED=true / DOCKERHUB_CONNECTION=<uuid>, the push
 # is skipped. A workflow_dispatch from a branch builds, proves and scans but never pushes: only a v* tag ref can.
+# The first step checks that the tag, every package version, the changelog and the tagged commit agree
+# (scripts/check-release-version.py); if they do not, nothing is built and nothing is pushed.
 name: publish-images
 on:
   push:
@@ -23,6 +25,19 @@ jobs:
       attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
+        with: { python-version: "3.14" }
+      - name: The tag, the versions and the changelog agree (before anything is built or pushed)
+        env: { REF_TYPE: "${{ github.ref_type }}", REF_NAME: "${{ github.ref_name }}" }
+        run: |
+          set -euo pipefail
+          if [ "$REF_TYPE" = "tag" ]; then
+            python scripts/check-release-version.py --tag "$REF_NAME" --ancestor-of origin/main
+          else
+            echo "::notice::manual run, no tag: the checks that need a tag are skipped"
+            python scripts/check-release-version.py
+          fi
       - id: version
         name: Version from the tag (or the pyproject on manual runs)
         run: |

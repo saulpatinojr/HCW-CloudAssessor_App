@@ -1,7 +1,8 @@
 # Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
 # Runners: ubuntu-26.04, never ubuntu-latest (program convention). uv is installed with pip at the exact version this
 # repository was authored with, because astral-sh/setup-uv is pinned nowhere in scope (conventions-actions.md).
-# Jobs: lint (ruff, catalog, docs governance, versions.env, lockfile exports, startup refusal without the azure extra),
+# Jobs: lint (ruff, catalog, docs governance, release version agreement, versions.env, lockfile exports, startup refusal
+# without the azure extra),
 # test (85 percent coverage gate, with the azure extra), catalog-check, boundary (security + packaging suites on the
 # default set), terraform (fmt, validate), image (both targets built; the lab target's CMD is the boundary proof).
 name: ci
@@ -27,6 +28,8 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run python scripts/check-catalog.py
       - run: uv run python scripts/check-docs-governance.py
+      - name: Every place that names the release version agrees (a v* tag can never be corrected)
+        run: uv run python scripts/check-release-version.py
       - run: bash scripts/check-versions.sh
       - run: bash scripts/check-lockfiles.sh
       - name: The appliance refuses to start without the azure extra (default set)

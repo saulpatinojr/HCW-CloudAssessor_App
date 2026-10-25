@@ -16,6 +16,7 @@ lint:
 	uv run ruff format --check .
 	uv run python scripts/check-catalog.py
 	uv run python scripts/check-docs-governance.py
+	uv run python scripts/check-release-version.py
 	bash scripts/check-versions.sh
 	bash scripts/check-lockfiles.sh
 
