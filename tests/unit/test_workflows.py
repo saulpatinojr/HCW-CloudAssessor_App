@@ -55,7 +55,7 @@ def test_publish_images_pushes_only_the_appliance_target():
     pushes = [s for s in steps if isinstance(s.get("with"), dict) and s["with"].get("push") is True]
     assert len(pushes) == 1 and pushes[0]["with"]["target"] == "appliance"
     assert "hcw-cloud-assessor-lab" in text and "hcw-addon-cloud-assessment" not in doc["env"]["IMAGE"]
-    assert doc["env"]["IMAGE"] == "docker.io/hybridcloudworks/hcw-cloudassessor"
+    assert doc["env"]["IMAGE"] == "docker.io/hybridcloudworks/img-ca-appliance-app"
     assert "vars.DOCKERHUB_ENABLED" in text and "DOCKERHUB_OIDC_CONNECTIONID" in text
     assert pushes[0]["if"].count("startsWith(github.ref, 'refs/tags/v')") == 1, "a branch dispatch never pushes"
     login = next(s for s in steps if "login-action" in s.get("uses", ""))

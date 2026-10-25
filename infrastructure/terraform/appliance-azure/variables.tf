@@ -18,10 +18,10 @@ variable "location_short" {
 }
 variable "image_ref" {
   type        = string
-  description = "The appliance image by digest, e.g. docker.io/hybridcloudworks/hcw-cloudassessor@sha256:<digest>. No default, so a plan never pulls a floating tag."
+  description = "The appliance image by digest, e.g. docker.io/hybridcloudworks/img-ca-appliance-app@sha256:<digest>. No default, so a plan never pulls a floating tag."
   validation {
-    condition     = can(regex("^docker\\.io/hybridcloudworks/hcw-cloudassessor@sha256:[0-9a-f]{64}$", var.image_ref))
-    error_message = "image_ref must be docker.io/hybridcloudworks/hcw-cloudassessor@sha256:<64 hex>."
+    condition     = can(regex("^docker\\.io/hybridcloudworks/img-ca-appliance-app@sha256:[0-9a-f]{64}$", var.image_ref))
+    error_message = "image_ref must be docker.io/hybridcloudworks/img-ca-appliance-app@sha256:<64 hex>."
   }
 }
 variable "scope_ids" {
