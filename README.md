@@ -36,8 +36,9 @@ edition has not adopted a release yet; what it carries and what changed here are
 Everything still queued is in [TODO.md](TODO.md); every decision that needs a human is in [REVIEW.md](REVIEW.md).
 Limitations and verification results are recorded per change in [CHANGELOG.md](CHANGELOG.md).
 
-> Not production until the owner records R-003 (license), R-005 (framework content rights) and R-006 (data
-> classification). Every criterion's reference link is marked `[VERIFY]` until the owner confirms it.
+> Not production until the owner records R-005 (framework content rights) and R-006 (data classification). The license
+> and visibility are decided (R-003): this repository is public and MIT-licensed. Every criterion's reference link is
+> marked `[VERIFY]` until the owner confirms it.
 
 ## Overview
 
@@ -64,7 +65,7 @@ note of what reaches it in its `docs/whats-new-upstream.md`.
 ```text
 .
 ├── README.md  CHANGELOG.md  REVIEW.md  TODO.md  REFACTOR_APP.md   the five root documents (see Documentation)
-├── LICENSE  NOTICE                                                 MIT [REVIEW REQUIRED]; framework attribution
+├── LICENSE  NOTICE                                                 MIT (R-003 decided); framework attribution
 ├── pyproject.toml  uv.lock  requirements*.lock.txt  ruff.toml      uv workspace, hash-pinned locks, lint
 ├── .python-version  Makefile  .env.example  .pre-commit-config.yaml
 ├── packages/cloud-assessor-core/        the engine (pydantic only): model, ingestion, catalog, evaluators, score, reports

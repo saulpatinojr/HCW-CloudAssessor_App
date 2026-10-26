@@ -6,13 +6,13 @@ requires a decision, an approval, an access grant, or external input from a name
 Bugs, refactoring, technical debt, tests, and documentation work do not belong here — they
 belong in [TODO.md](TODO.md).
 
-**Open blockers: 7** (R-001 resolved by owner decision on 2026-10-09; R-009 added on 2026-10-10 and resolved by owner decision on 2026-10-24)
+**Open blockers: 6** (R-001 resolved by owner decision on 2026-10-09; R-009 added on 2026-10-10 and resolved by owner decision on 2026-10-24; R-003 resolved by owner decision recorded on 2026-10-25)
 
 | ID | Blocker | Required owner | Blocks |
 |----|---------|----------------|--------|
 | R-001 | Assessment deliverable format undefined — **resolved** | Product owner | Nothing (see entry) |
 | R-002 | Read-only access to the Azure assessment target not provisioned | Azure platform owner | Collector development and testing |
-| R-003 | License choice not yet confirmed by the owner (an MIT `LICENSE` is in place; the repository is public) | Repository owner / Legal | Contribution, reuse, distribution |
+| R-003 | License and visibility — **resolved** (MIT, public) | Repository owner | Nothing (see entry) |
 | R-004 | Third-party integration adoption not approved | Repository owner / Legal | Issues #1, #2, #3 |
 | R-005 | Benchmark framework content usage rights unconfirmed | Legal | Publishing assessment criteria |
 | R-006 | Assessment output data classification undecided | Security / Compliance | Storing and sharing results |
@@ -106,36 +106,37 @@ identifiers plus the federation configuration in the wiki.
 
 ---
 
-## R-003 — The license choice has not been confirmed by the owner
+## R-003 — License and repository visibility
+
+**Resolved by owner decision (recorded 2026-10-25): MIT, and the repository is public.** The owner confirmed the
+interim choice made on 2026-10-10 (an MIT `LICENSE` that matches the lab edition, `HCW-CloudAssessor_AddOn`) and
+confirmed that the repository stays public. Consequences:
+
+- **License.** The `LICENSE` file is MIT, `pyproject.toml` carries `license = "MIT"`, and `NOTICE` states the license
+  without a review marker. GitHub detects the file as MIT.
+- **Visibility.** The repository is public (checked with `gh repo view` on 2026-10-25), so anyone may read, clone and
+  contribute under the MIT terms. Nothing in this repository describes it as private or unlicensed any more.
+- **What this does not settle.** The "Not production" labels stay until R-005 (rights to the benchmark framework
+  content) and R-006 (how assessment output is classified) are decided; R-003 never covered either. Delivering
+  assessments to clients is a separate question from the license of this code, and each client engagement keeps its own
+  terms for the results it receives.
+- **R-004 unblocked on this point.** License compatibility for a third-party tool is now judged against MIT.
+
+The text below is kept as the record of the question.
 
 **Problem**
 Facts checked on 2026-10-24: the repository contains an MIT `LICENSE` file (added on 2026-10-10 as an interim
-choice to match the lab edition; `NOTICE` marks it `[REVIEW REQUIRED]`), GitHub detects it as MIT, and the repository
-is **public**. What is missing is the owner's confirmation of the license and of public visibility, with legal review
-if assessments will be delivered to clients.
+choice to match the lab edition; `NOTICE` marked it `[REVIEW REQUIRED]` until this decision), GitHub detects it as MIT,
+and the repository is **public**. What was missing was the owner's confirmation of the license and of public
+visibility.
 
-**Why it blocks progress**
-Until the owner confirms the MIT license (or chooses another), the interim grant is provisional: contributors and
-clients cannot rely on it, and any decision to vendor or fork third-party code (see R-004) cannot be evaluated for
-compatibility.
-
-**Required owner**
-Repository owner, with legal review if the assessment will be delivered to clients.
-
-**Required action**
+**Required action (was)**
 Confirm MIT (or choose another license, or take the repository back to proprietary and private) and state the
-decision. If proprietary, record the intended distribution model for assessment outputs delivered to clients.
-
-**Impact if unresolved**
-Blocks confident external contribution, blocks any open-source integration decision, and leaves legal ambiguity
-around anything delivered from this repository.
+decision.
 
 **References**
 - `LICENSE` (MIT) and `NOTICE`; ticket [#31](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/31) (documents against reality)
 - `TODO.md` — T-002
-
-**Recommended next step**
-Confirm proprietary versus open-source intent, then add the corresponding `LICENSE` file.
 
 ---
 

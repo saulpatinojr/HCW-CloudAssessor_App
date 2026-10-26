@@ -341,7 +341,7 @@ def create_app(settings: Settings) -> FastAPI:
 - **Required behavior:** `README.md` documentation table gains the `REFACTOR_APP.md` row and the quick start becomes the commands of section 20; `CHANGELOG.md` `[Unreleased]` records each change set as it lands and the T-006/T-008 settings changes; `TODO.md` statuses move per section 18; `REVIEW.md` records R-001 resolved by owner decision and R-006's proposed classification; `.gitignore` gains `*.pem`, `*.pfx`, `*.publishsettings`, `.azure/`, `assessment-output/`, `.terraform/`, `*.tfstate*`, `*.tfvars` (keep `terraform.tfvars.example`); `.qlty/qlty.toml` enables `ruff` and `bandit` beside `trufflehog`; `LICENSE` is MIT to match the AddOn `[REVIEW REQUIRED]` (R-003); `NOTICE` carries the FinOps Foundation and Microsoft attribution with "not affiliated" `[REVIEW REQUIRED]` (R-005).
 - **Tests:** `scripts/check-docs-governance.py` in CI: markdown allowed at the root only for the five named files plus `.github/` platform templates.
 - **Acceptance criteria:** governance check green; `README.md` quick start runs as written.
-- **Priority:** P1. **Dependencies:** R-003, R-005 for the license and notice text. **Rollback:** git revert.
+- **Priority:** P1. **Dependencies:** R-003 (decided 2026-10-25: MIT, public), R-005 for the license and notice text. **Rollback:** git revert.
 
 ### 7.15 `scripts/`
 
@@ -524,7 +524,7 @@ Disposition legend: **Instruction** (a section of this file), **Owner decision**
 | Item | Title | Disposition | Priority |
 |---|---|---|---|
 | T-001 | Project skeleton | Instruction 7.2, section 3 | P0 |
-| T-002 | LICENSE | Stays blocked on R-003; recommendation MIT `[REVIEW REQUIRED]` | P0 |
+| T-002 | LICENSE | Was blocked on R-003; MIT, decided by the owner and recorded 2026-10-25 | P0 |
 | T-003 | CODEOWNERS | Instruction 7.13 | P2 |
 | T-004 | Extend `.gitignore` | Instruction 7.14 | P2 |
 | T-005 | Baseline CI | Instruction 7.13 (`ci.yml`) | P0 |
@@ -556,7 +556,7 @@ Disposition legend: **Instruction** (a section of this file), **Owner decision**
 | T-031 | Mirror issue work | Instruction: standing practice; this plan proposes two new items to add to `TODO.md` at execution, T-032 (Entra token validation on the appliance routes) and T-033 (Microsoft Graph reads for identity-posture criteria); neither is recorded there yet | P3 |
 | R-001 | Deliverable format | Owner decision: web pane plus markdown, JSON, CSV and zip bundle; continuous for the appliance, point-in-time for the lab; consumers are client engineers | Resolved |
 | R-002 | Azure access | Stays blocked; needed only for live validation (section 15 step 11), not for engineering | P1 |
-| R-003 | License | Stays blocked; MIT recommended to match the AddOn `[REVIEW REQUIRED]` | P0 |
+| R-003 | License | Resolved 2026-10-25: MIT, and the repository is public | Resolved |
 | R-004 | Third-party integrations | Stays blocked; spikes deferred, nothing in v1 depends on them | P3 |
 | R-005 | Framework content rights | Stays blocked, mitigated: paraphrased criteria, single `text` field, attribution in `NOTICE`; written confirmation before any public release `[REVIEW REQUIRED]` | P0 |
 | R-006 | Data classification | Proposed "client confidential": in memory only, no fixtures from real environments, redaction on logs; owner confirmation `[REVIEW REQUIRED]` | P1 |
@@ -679,7 +679,7 @@ Items needing a named human before the step that depends on them:
 
 | Item | Flag | Owner | Blocks |
 |---|---|---|---|
-| License: MIT to match the AddOn, or proprietary and private | `[REVIEW REQUIRED]` (R-003) | Repository owner, Legal | T-002, any public release |
+| License: MIT to match the AddOn, and a public repository | Decided 2026-10-25 (R-003) | Repository owner | Nothing |
 | Framework content usage rights: paraphrased, attributed criteria in code and reports | `[REVIEW REQUIRED]` (R-005) | Legal | Public release of the catalog |
 | Data classification of inputs and outputs ("client confidential" proposed) | `[REVIEW REQUIRED]` (R-006) | Security and compliance | Fixture policy, artifact retention, and flipping `CA_PUBLIC_RESULTS` to `true` |
 | Microsoft Graph permissions for identity-posture criteria | `[REVIEW REQUIRED]` | Azure platform owner | T-027 identity half, proposed T-033 |
