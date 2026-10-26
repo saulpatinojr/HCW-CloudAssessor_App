@@ -252,7 +252,7 @@ wheels = [
 
 [[package]]
 name = "cloud-assessor-appliance"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "." }
 dependencies = [
     { name = "cloud-assessor-core" },
@@ -304,7 +304,7 @@ dev = [
 
 [[package]]
 name = "cloud-assessor-core"
-version = "0.2.1"
+version = "0.3.0"
 source = { editable = "packages/cloud-assessor-core" }
 dependencies = [
     { name = "pydantic" },

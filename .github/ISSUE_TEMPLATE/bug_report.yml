@@ -96,7 +96,7 @@ body:
     attributes:
       label: Version
       description: The `version` and `catalog.version` that `GET /api/health` reports, the release tag, or the commit.
-      placeholder: "version 0.2.1, catalog 1.1.0"
+      placeholder: "version 0.3.0, catalog 1.1.0"
 
   - type: input
     id: scope

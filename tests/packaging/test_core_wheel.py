@@ -31,7 +31,7 @@ def wheel(tmp_path_factory):
 
 
 def test_wheel_name_version_and_catalog(wheel):
-    assert wheel.name.startswith("cloud_assessor_core-0.2.1-")
+    assert wheel.name.startswith("cloud_assessor_core-0.3.0-")
     names = zipfile.ZipFile(wheel).namelist()
     for name in ("criteria.json", "schema.json", "scoring.json"):
         assert f"cloud_assessor_core/catalog_data/{name}" in names
