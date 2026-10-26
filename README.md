@@ -349,6 +349,13 @@ only (four objects), plus read-only calls to the sandbox subscription if you run
 here is run by CI or by an agent. The commands are PowerShell; the bash version follows. You need the Azure CLI, `uv`,
 Terraform 1.9 or newer, and an account that can create applications in the sandbox tenant.
 
+Every step below can be pasted into a PowerShell window you have just opened: a step that needs a value from an earlier
+step works it out again on its first line. Two things a new window does not have are the folder and, for step 6, the
+`TF_VAR_` values from step 1. A new window starts in your home folder, not in this repository, and `uv run` and
+`terraform -chdir=infrastructure/...` both look for the repository in the current folder. So steps 1, 3 and 6 begin
+from the folder you cloned this repository into (the one that holds `pyproject.toml`). To check you are in it,
+`Test-Path pyproject.toml` should print `True`.
+
 1. Sign in and create the Entra objects (owner step, sandbox only). The `-target` flags limit the apply to the Entra
    objects (Terraform will warn about targeting; that is expected here). It lets the Azure CLI request the scope and
    assigns the role to you, so only you can get a token:
@@ -375,16 +382,60 @@ $tenant = az account show --query tenantId -o tsv; $app = az ad app list --displ
    and `identifierUris` `["api://<the app id>"]`.
 
 3. Start the appliance on your machine with the same settings Terraform gives the Container App (a second PowerShell
-   window; it reads your `az login` session for the sandbox subscription, read-only). Leave it running:
+   window; it reads your `az login` session for the sandbox subscription, read-only). Leave it running.
+
+   Open the second window **in the repository's folder**. A new window starts in your home folder, where `uv run`
+   finds no project and stops with `No module named cloud_assessor_appliance` (after the warning
+   "`--extra azure` has no effect when used outside of a project"). The easiest way is to open it from the first
+   window, which is already in the right folder (it opens the same kind of PowerShell as the one you are in):
+
+```powershell
+Start-Process (Get-Process -Id $PID).Path -WorkingDirectory (Get-Location).Path
+```
+
+   Or open any PowerShell window and `cd` into the folder you cloned the repository into. Either way, in the new window
+   `Test-Path pyproject.toml` should print `True` before you go on. Then paste:
 
 ```powershell
 $tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv; $env:CA_SCOPES = '/subscriptions/' + (az account show --query id -o tsv); $env:CA_AUTH_ENABLED = 'true'; $env:CA_AUTH_TENANT_ID = $tenant; $env:CA_AUTH_AUDIENCE = "$app api://$app"; $env:CA_AUTH_AUTHORITY_HOST = 'login.microsoftonline.com'; $env:PORT = '8080'; uv run --extra azure python -m cloud_assessor_appliance
 ```
 
+   The first `uv run --extra azure ...` installs the Azure packages into a `.venv` folder in the repository before it
+   starts, so it can sit for a minute with nothing printed. Later runs start in a couple of seconds.
+
+   **What success looks like.** The appliance prints no "listening on port" line (its web server is set to log
+   warnings only, so that nothing but counts and flags ever reaches the log). The sign that it is up is its own log
+   lines, one JSON object each, and a prompt that does not come back:
+
+   ```text
+   {"ts":...,"event":"startup","catalogCriteria":25,"scopes":1,"turnstileRequired":false,"publicResults":false,"authEnabled":true,"costEnabled":true}
+   {"ts":...,"event":"refresh_started","scopes":1}
+   ```
+
+   `"authEnabled":true` is the proof that sign-in is on. When the first read of your subscription finishes, a third
+   line, `"event":"refresh_completed"`, says it worked (not yet seen against a real subscription);
+   `"event":"refresh_failed"` there means it could not read Azure (check that `az login` still works), which does
+   not stop the sign-in checks in step 4. If the window instead prints
+   `{"event": "startup_refused", "reason": ...}` and the prompt returns, a setting is missing or wrong, and the reason
+   names it (for example `CA_AUTH_TENANT_ID must be set to the tenant (directory) id, a GUID`). If it ends with
+   `error while attempting to bind on address ('0.0.0.0', 8080)`, something else is already listening on port 8080 (often an earlier run of this step that is still open): close that window, or set
+   `$env:PORT = '8081'` in this window and use `http://127.0.0.1:8081` for `$base` in step 4.
+
    To test a deployed appliance instead, skip this step and set `$base` in step 4 to `https://` plus
    `terraform output -raw app_fqdn`.
 
-4. Call it. Back in the first window (the token stays in a variable; never paste it anywhere):
+4. Sign in for the scope, then call it. Back in the first window (the token stays in a variable; never paste it anywhere).
+   First, sign in once with the scope named, so the Azure CLI has your consent for it before it asks Entra for a token
+   (without this, `az account get-access-token --scope ...` can stop with a message that the sign-in needs a new
+   scope, or a consent error). The command opens your browser once: choose the sandbox account, and if the terminal
+   then asks you to select a subscription, press Enter to keep the default (this check does not depend on it). When it
+   is done it returns to the prompt:
+
+```powershell
+$tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv; az login --tenant $tenant --scope "api://$app/access_as_user"
+```
+
+   Then the calls. Paste this as a second block, so a sign-in problem shows up before any call:
 
 ```powershell
 $base = 'http://127.0.0.1:8080'; $tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv
@@ -406,8 +457,11 @@ $wrong = az account get-access-token --tenant $tenant --resource-type arm --quer
    scope, so Entra should refuse a user-token request for it with an invalid-scope error (not tried; the expected
    behaviour, not a verified one).
 
-   Line 4 uses an Azure Resource Manager token, which is valid but for a different audience. If `az` says the sign-in
-   needs a new scope, run the `az login --scope ...` command it prints, then repeat. The first `401` should also carry
+   Line 4 uses an Azure Resource Manager token, which is valid but for a different audience. If `az` still says the
+   sign-in needs a new scope, run the `az login --scope ...` command it prints, then repeat. If line 5 prints `401`
+   instead of `200`, check that `$good` is a long text (`$good.Length` is well over 1000; never print the token itself).
+   Lines 1, 2, 3 and 7 use no real token, so the appliance answers them alone; lines 4, 5 and 6 need the tokens above.
+   The first `401` should also carry
    `WWW-Authenticate: Bearer` (add `-i` to a call to see headers). A `403 results_not_public` on line 6 is correct and is
    the proof the token passed: the separate `CA_PUBLIC_RESULTS` gate is still closed.
 
@@ -415,7 +469,8 @@ $wrong = az account get-access-token --tenant $tenant --resource-type arm --quer
    line 5. Expect `401`. A stricter alternative is the unit tests, which cover expiry with a fixed clock.
 
 6. Clean up. Stop the appliance with Ctrl+C in the second window, then remove the Entra objects (they are the only
-   things in the state) and the variables:
+   things in the state) and the variables. Run this in the first window, the one that ran step 1: Terraform needs the
+   `TF_VAR_` values that step set there, and the state file sits in the repository's folder:
 
 ```powershell
 terraform -chdir=infrastructure/terraform/appliance-azure destroy "-target=azuread_application.api"; Remove-Item Env:TF_VAR_*
@@ -423,8 +478,8 @@ terraform -chdir=infrastructure/terraform/appliance-azure destroy "-target=azure
 
    Type `yes` after checking the plan lists only the `azuread_*` objects.
 
-The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1, 3, 4 and 6 in one block; step 2 is
-the PowerShell one with `$x = ...` written as `x=$(...)`:
+The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1, 3, 4 and 6 in one block, run from the
+folder you cloned the repository into; step 2 is the PowerShell one with `$x = ...` written as `x=$(...)`:
 
 ```bash
 sub=$(az account show --query id -o tsv)
@@ -439,6 +494,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_
 tenant=$(az account show --query tenantId -o tsv); app=$(az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv)
 CA_SCOPES="/subscriptions/$sub" CA_AUTH_ENABLED=true CA_AUTH_TENANT_ID=$tenant CA_AUTH_AUDIENCE="$app api://$app" CA_AUTH_AUTHORITY_HOST=login.microsoftonline.com PORT=8080 uv run --extra azure python -m cloud_assessor_appliance &
 base=http://127.0.0.1:8080
+az login --tenant "$tenant" --scope "api://$app/access_as_user"
 good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/access_as_user" --query accessToken -o tsv)
 wrong=$(az account get-access-token --tenant "$tenant" --resource-type arm --query accessToken -o tsv)
 for pair in "no-token:" "junk-token:not-a-token" "wrong-audience:$wrong" "valid-token:$good"; do
