@@ -481,7 +481,9 @@ terraform -chdir=infrastructure/terraform/appliance-azure destroy "-target=azure
    Type `yes` after checking the plan lists only the `azuread_*` objects.
 
 The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1, 3, 4 and 6 in one block, run from the
-folder you cloned the repository into; step 2 is the PowerShell one with `$x = ...` written as `x=$(...)`:
+folder you cloned the repository into; step 2 is the PowerShell one with `$x = ...` written as `x=$(...)`. If the
+appliance does not answer in time the block stops the appliance and ends the shell (save the block as a script and run
+it with `bash` if you would rather keep your window):
 
 ```bash
 az login
@@ -497,7 +499,12 @@ terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_
 tenant=$(az account show --query tenantId -o tsv); app=$(az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv)
 CA_SCOPES="/subscriptions/$sub" CA_AUTH_ENABLED=true CA_AUTH_TENANT_ID=$tenant CA_AUTH_AUDIENCE="$app api://$app" CA_AUTH_AUTHORITY_HOST=login.microsoftonline.com PORT=8080 uv run --extra azure python -m cloud_assessor_appliance &
 base=http://127.0.0.1:8080
-for _ in {1..120}; do curl -fsS "$base/api/health" >/dev/null 2>&1 && break; sleep 1; done
+ready=0
+for _ in {1..120}; do
+  if curl -fsS "$base/api/health" >/dev/null 2>&1; then ready=1; break; fi
+  sleep 1
+done
+if [ "$ready" -ne 1 ]; then echo "The appliance did not answer within 120 seconds; read its log lines above." >&2; kill %1; exit 1; fi
 az login --tenant "$tenant" --scope "api://$app/access_as_user"
 good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/access_as_user" --query accessToken -o tsv)
 wrong=$(az account get-access-token --tenant "$tenant" --resource-type arm --query accessToken -o tsv)
