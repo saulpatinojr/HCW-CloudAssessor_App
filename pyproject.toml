@@ -1,6 +1,6 @@
 [project]
 name = "cloud-assessor-appliance"
-version = "0.2.1"
+version = "0.3.0"
 description = "Hybrid Cloud Works Cloud Assessor, appliance edition: a continuous assessment of the client's own Azure scope (Resource Graph and Cost Management under a user-assigned managed identity) against paraphrased FinOps, Well-Architected cost and Zero Trust criteria."
 readme = "README.md"
 license = "MIT"
