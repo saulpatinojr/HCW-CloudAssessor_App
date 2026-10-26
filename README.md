@@ -482,8 +482,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure destroy "-target=azure
 
 The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1, 3, 4 and 6 in one block, run from the
 folder you cloned the repository into; step 2 is the PowerShell one with `$x = ...` written as `x=$(...)`. If the
-appliance does not answer in time the block stops the appliance and ends the shell (save the block as a script and run
-it with `bash` if you would rather keep your window):
+appliance does not answer in time the block stops the appliance and ends your bash window:
 
 ```bash
 az login
