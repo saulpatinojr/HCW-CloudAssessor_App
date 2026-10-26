@@ -58,7 +58,7 @@ variable "dangerously_allow_unauthenticated_external_ingress" {
 }
 variable "auth_create_app_registration" {
   type        = bool
-  description = "With auth_enabled, create the Entra application, its Assessment.Read app role and delegated scope, and its service principal (needs the azuread permissions in README.md). false uses an existing registration described by auth_tenant_id and auth_audiences."
+  description = "With auth_enabled, create the Entra application, its app role (auth_role_value) and delegated scope (auth_scope_value), and its service principal (needs the azuread permissions in README.md). false uses an existing registration described by auth_tenant_id and auth_audiences."
   default     = true
 }
 variable "auth_tenant_id" {
@@ -88,13 +88,26 @@ variable "auth_authority_host" {
     error_message = "auth_authority_host must be a lower-case host name only (no scheme, path or port)."
   }
 }
-variable "auth_permission" {
+variable "auth_role_value" {
   type        = string
-  description = "The app role and delegated scope a token must carry (CA_AUTH_REQUIRED_ROLES and CA_AUTH_REQUIRED_SCOPES). The registration this module creates defines both with this value; an existing registration must define at least one."
+  description = "The app role value a token may carry in its roles claim (CA_AUTH_REQUIRED_ROLES): an application, a managed identity or an assigned user. The registration this module creates defines the role with this value; an existing registration must define this role or the scope in auth_scope_value."
   default     = "Assessment.Read"
   validation {
-    condition     = can(regex("^[A-Za-z0-9._-]{1,120}$", var.auth_permission))
-    error_message = "auth_permission must be 1 to 120 letters, digits, dots, dashes or underscores."
+    condition     = can(regex("^[A-Za-z0-9._-]{1,120}$", var.auth_role_value))
+    error_message = "auth_role_value must be 1 to 120 letters, digits, dots, dashes or underscores."
+  }
+}
+variable "auth_scope_value" {
+  type        = string
+  description = "The delegated scope a signed-in user's token may carry in its scp claim (CA_AUTH_REQUIRED_SCOPES). The registration this module creates defines the scope with this value. It must differ from auth_role_value: Entra and the azuread provider need every value unique across the app roles and scopes of one registration."
+  default     = "access_as_user"
+  validation {
+    condition     = can(regex("^[A-Za-z0-9._-]{1,120}$", var.auth_scope_value))
+    error_message = "auth_scope_value must be 1 to 120 letters, digits, dots, dashes or underscores."
+  }
+  validation {
+    condition     = var.auth_scope_value != var.auth_role_value
+    error_message = "auth_scope_value must differ from auth_role_value: the azuread provider refuses an app role and a delegated scope with the same value (duplicate value found)."
   }
 }
 variable "auth_clock_skew_seconds" {
@@ -108,7 +121,7 @@ variable "auth_clock_skew_seconds" {
 }
 variable "auth_assigned_object_ids" {
   type        = list(string)
-  description = "Created-registration mode: object ids of the users, groups or service principals (including managed identities) given the Assessment.Read app role. The service principal requires assignment, so only these can sign in. Groups need Entra ID P1 or P2."
+  description = "Created-registration mode: object ids of the users, groups or service principals (including managed identities) given the app role (auth_role_value). The service principal requires assignment, so only these can sign in. Groups need Entra ID P1 or P2."
   default     = []
   validation {
     condition     = alltrue([for o in var.auth_assigned_object_ids : can(regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$", o))])

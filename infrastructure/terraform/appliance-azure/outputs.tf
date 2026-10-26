@@ -32,5 +32,5 @@ output "auth_application_client_id" {
 }
 output "auth_scope" {
   description = "The scope to request a delegated token with (az account get-access-token --scope ...); null unless the registration was created here."
-  value       = local.auth_create_registration ? "api://${azuread_application.api[0].client_id}/${var.auth_permission}" : null
+  value       = local.auth_create_registration ? "api://${azuread_application.api[0].client_id}/${var.auth_scope_value}" : null
 }

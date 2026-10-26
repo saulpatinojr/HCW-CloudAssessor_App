@@ -248,7 +248,7 @@ and [claims validation](https://learn.microsoft.com/en-us/entra/identity-platfor
 | `CA_AUTH_AUTHORITY_HOST` | yes: the sign-in host name only (builds the issuer and the key address) | `login.microsoftonline.com` |
 | `CA_AUTH_JWKS_URL` | no: an `https` address for the signing keys instead of the built one | `https://login.microsoftonline.com/<tenant id>/discovery/v2.0/keys` |
 | `CA_AUTH_CLOCK_SKEW_SECONDS` | no: 0 to 300, default 60 | `60` |
-| `CA_AUTH_REQUIRED_ROLES` / `CA_AUTH_REQUIRED_SCOPES` | no: the app role (`roles`) or delegated scope (`scp`) a token must carry, default `Assessment.Read` for both | `Assessment.Read` |
+| `CA_AUTH_REQUIRED_ROLES` / `CA_AUTH_REQUIRED_SCOPES` | no: the app role (`roles`) or delegated scope (`scp`) a token must carry; the defaults are the role `Assessment.Read` and the scope `access_as_user` (two different values, because Entra needs them unique) | `Assessment.Read` / `access_as_user` |
 
 The appliance refuses to start if sign-in is on and the tenant, audience or authority host is missing or malformed, and
 if `CA_PUBLIC_RESULTS=true` is set without sign-in. What is checked on each request: RS256 signature (never `none` or
@@ -279,8 +279,12 @@ left unset on purpose: the code builds the key address from the authority host a
 secret, and nothing creates one: no client secret, certificate or password, because the appliance only checks tokens
 with the tenant's public keys. With `auth_enabled = true` Terraform creates, in the tenant of the signed-in user:
 
-- an application registration (one tenant only, v2 access tokens) with an app role and a delegated scope, both named
-  `Assessment.Read` (`auth_permission`), and the `api://<client id>` identifier URI;
+- an application registration (one tenant only, v2 access tokens) with an app role named `Assessment.Read`
+  (`auth_role_value`, for applications, managed identities and assigned users) and a delegated scope named
+  `access_as_user` (`auth_scope_value`, for a signed-in user's token), and the `api://<client id>` identifier URI. The
+  two names must differ: Entra keeps app roles and scopes in one shared namespace, and the `azuread` provider refuses
+  a plan that uses one value for both ([provider docs](https://registry.terraform.io/providers/hashicorp/azuread/latest/docs/resources/application)).
+  `access_as_user` is the scope name Microsoft's own web API guide uses ([Microsoft Learn](https://learn.microsoft.com/entra/identity-platform/scenario-protected-web-api-expose-scopes));
 - a service principal with `app_role_assignment_required = true`, so Entra issues a token for this API only to users,
   groups or managed identities you assigned (`auth_assigned_object_ids`). This is a second lock in front of the
   appliance's own checks;
@@ -294,7 +298,8 @@ with the tenant's public keys. With `auth_enabled = true` Terraform creates, in 
 | `CA_AUTH_AUDIENCE` | the registration's client id and its `api://<client id>` URI, or `auth_audiences` |
 | `CA_AUTH_AUTHORITY_HOST` | `auth_authority_host` (default `login.microsoftonline.com`) |
 | `CA_AUTH_CLOCK_SKEW_SECONDS` | `auth_clock_skew_seconds` (default 60) |
-| `CA_AUTH_REQUIRED_ROLES`, `CA_AUTH_REQUIRED_SCOPES` | `auth_permission` (default `Assessment.Read`) |
+| `CA_AUTH_REQUIRED_ROLES` | `auth_role_value` (default `Assessment.Read`) |
+| `CA_AUTH_REQUIRED_SCOPES` | `auth_scope_value` (default `access_as_user`; must differ from `auth_role_value`) |
 | `CA_AUTH_JWKS_URL` | not set |
 
 The person who runs `terraform apply` needs the Azure roles they already need, plus the right to create applications
@@ -322,7 +327,7 @@ pull request that added this section):
 |------|-----|
 | Token checks: missing, malformed, expired, not yet valid, wrong audience, wrong issuer, wrong tenant, another tenant's token, unknown key id, `alg: none`, HS256 signed with the public key, tampered payload, missing role | `tests/unit/test_entra.py`, with a key pair generated at test time and a local key set |
 | Every route except `GET /api/health` answers `401` without a token | `tests/security/test_auth_boundary.py` |
-| The plan refuses an internet-reachable appliance without sign-in, accepts the two supported postures, rejects the override combined with `public_results`, and wires each `CA_AUTH_*` value | `terraform test` with mock providers (15 plan-only runs); `tests/security/test_terraform_auth_guard.py` (static checks on the HCL, including that no secret resource exists) |
+| The plan refuses an internet-reachable appliance without sign-in, accepts the two supported postures, rejects the override combined with `public_results`, and wires each `CA_AUTH_*` value | `terraform test` with mock providers (16 plan-only runs); `tests/security/test_terraform_auth_guard.py` (static checks on the HCL, including that no secret resource exists and that no value is both an app role and a scope, which the mock providers cannot see) |
 | The HCL is formatted, valid, and the misconfiguration scan has no HIGH or CRITICAL finding | `terraform fmt -check -recursive`, `terraform validate`, `trivy config` |
 
 **NOT verified** (nothing below has been run against a real tenant, and the first four need your tenant):
@@ -366,7 +371,8 @@ terraform -chdir=infrastructure/terraform/appliance-azure init -input=false -bac
 $tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv; az ad app show --id $app --query '{appRoles: appRoles[].value, scopes: api.oauth2PermissionScopes[].value, tokenVersion: api.requestedAccessTokenVersion, identifierUris: identifierUris}' -o json
 ```
 
-   Expect `appRoles` and `scopes` both `["Assessment.Read"]`, `tokenVersion` `2`, and `identifierUris` `["api://<the app id>"]`.
+   Expect `appRoles` to be `["Assessment.Read"]` and `scopes` to be `["access_as_user"]` (two different names), `tokenVersion` `2`,
+   and `identifierUris` `["api://<the app id>"]`.
 
 3. Start the appliance on your machine with the same settings Terraform gives the Container App (a second PowerShell
    window; it reads your `az login` session for the sandbox subscription, read-only). Leave it running:
@@ -382,7 +388,7 @@ $tenant = az account show --query tenantId -o tsv; $app = az ad app list --displ
 
 ```powershell
 $base = 'http://127.0.0.1:8080'; $tenant = az account show --query tenantId -o tsv; $app = az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv
-$good = az account get-access-token --tenant $tenant --scope "api://$app/Assessment.Read" --query accessToken -o tsv
+$good = az account get-access-token --tenant $tenant --scope "api://$app/access_as_user" --query accessToken -o tsv
 $wrong = az account get-access-token --tenant $tenant --resource-type arm --query accessToken -o tsv
 "1 health, no token      (expect 200): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/health")
 "2 catalog, no token     (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/catalog")
@@ -392,6 +398,13 @@ $wrong = az account get-access-token --tenant $tenant --resource-type arm --quer
 "6 results, valid token  (expect 403 results_not_public, or 503 no_snapshot in the first minute): " + (curl.exe -s -H "Authorization: Bearer $good" "$base/api/assessments/current")
 "7 results, no token     (expect 401): " + (curl.exe -s -o NUL -w '%{http_code}' "$base/api/assessments/current")
 ```
+
+   `$good` is a signed-in user's token, so you ask for the delegated scope by name: `access_as_user`. Entra puts it in the
+   token's `scp` claim, and because step 1 also assigned the app role to you, the token's `roles` claim should list
+   `Assessment.Read` as well ([claims reference](https://learn.microsoft.com/entra/identity-platform/access-token-claims-reference)). The appliance accepts a token with either one, so
+   line 5 passes on the scope alone. Do not ask for `api://$app/Assessment.Read` here: that name is the app role, not a
+   scope, so Entra should refuse a user-token request for it with an invalid-scope error (not tried; the expected
+   behaviour, not a verified one).
 
    Line 4 uses an Azure Resource Manager token, which is valid but for a different audience. If `az` says the sign-in
    needs a new scope, run the `az login --scope ...` command it prints, then repeat. The first `401` should also carry
@@ -426,7 +439,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_
 tenant=$(az account show --query tenantId -o tsv); app=$(az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv)
 CA_SCOPES="/subscriptions/$sub" CA_AUTH_ENABLED=true CA_AUTH_TENANT_ID=$tenant CA_AUTH_AUDIENCE="$app api://$app" CA_AUTH_AUTHORITY_HOST=login.microsoftonline.com PORT=8080 uv run --extra azure python -m cloud_assessor_appliance &
 base=http://127.0.0.1:8080
-good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/Assessment.Read" --query accessToken -o tsv)
+good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/access_as_user" --query accessToken -o tsv)
 wrong=$(az account get-access-token --tenant "$tenant" --resource-type arm --query accessToken -o tsv)
 for pair in "no-token:" "junk-token:not-a-token" "wrong-audience:$wrong" "valid-token:$good"; do
   name=${pair%%:*}; tok=${pair#*:}; printf "catalog, $name: "
@@ -446,7 +459,9 @@ never paste a token, a tenant id or an application id.
 
 #### Known gaps
 
-- The `azuread` resources and the runbook above have never been applied or run; see the NOT verified list.
+- The `azuread` resources have never been applied; see the NOT verified list. The first real-tenant `plan` found that the
+  app role and the scope shared the value `Assessment.Read` (the provider refuses that); they now differ and a static
+  test guards it, but the runbook has not been completed since, so the next real-tenant error is still possible.
 - The budget is created only when `alert_emails` has an address (ticket
   [#60](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/60)): `azurerm_consumption_budget_resource_group`
   needs a recipient on every notification, and the mock-provider tests showed that the default empty list made the plan

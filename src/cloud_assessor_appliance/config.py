@@ -13,9 +13,12 @@ from pathlib import Path
 
 PACKAGE_DIR = Path(__file__).resolve().parent
 TURNSTILE_ACTION = "cloud-assessment-refresh"
-# The app role (and delegated scope) a caller's token must carry when sign-in is on; the owner creates it on the app
-# registration, or sets CA_AUTH_REQUIRED_ROLES / CA_AUTH_REQUIRED_SCOPES to the names chosen there.
-DEFAULT_AUTH_PERMISSION = "Assessment.Read"
+# What a caller's token must carry when sign-in is on: the app role (roles claim) OR the delegated scope (scp claim).
+# The two values are different on purpose: Entra needs every value unique across the app roles and the scopes of one
+# registration, so the Terraform registration (auth.tf) defines this role and this scope. The owner creates them on
+# the app registration, or sets CA_AUTH_REQUIRED_ROLES / CA_AUTH_REQUIRED_SCOPES to the names chosen there.
+DEFAULT_AUTH_ROLE = "Assessment.Read"
+DEFAULT_AUTH_SCOPE = "access_as_user"
 
 # Upper bound for every numeric setting: large enough for any real deployment, small enough that every derived value
 # (minutes * 60, seconds into asyncio/datetime arithmetic) stays representable.
@@ -86,8 +89,8 @@ class Settings:
     auth_authority_host: str | None = None
     auth_jwks_url: str | None = None
     auth_clock_skew_seconds: int = 60
-    auth_required_roles: tuple[str, ...] = (DEFAULT_AUTH_PERMISSION,)
-    auth_required_scopes: tuple[str, ...] = (DEFAULT_AUTH_PERMISSION,)
+    auth_required_roles: tuple[str, ...] = (DEFAULT_AUTH_ROLE,)
+    auth_required_scopes: tuple[str, ...] = (DEFAULT_AUTH_SCOPE,)
 
     @property
     def turnstile_required(self) -> bool:
@@ -128,8 +131,8 @@ class Settings:
             auth_authority_host=env.get("CA_AUTH_AUTHORITY_HOST", "").strip() or None,
             auth_jwks_url=env.get("CA_AUTH_JWKS_URL", "").strip() or None,
             auth_clock_skew_seconds=_int(env, "CA_AUTH_CLOCK_SKEW_SECONDS", 60, minimum=0),
-            auth_required_roles=_words(env, "CA_AUTH_REQUIRED_ROLES", (DEFAULT_AUTH_PERMISSION,)),
-            auth_required_scopes=_words(env, "CA_AUTH_REQUIRED_SCOPES", (DEFAULT_AUTH_PERMISSION,)),
+            auth_required_roles=_words(env, "CA_AUTH_REQUIRED_ROLES", (DEFAULT_AUTH_ROLE,)),
+            auth_required_scopes=_words(env, "CA_AUTH_REQUIRED_SCOPES", (DEFAULT_AUTH_SCOPE,)),
         )
         settings.validate_startup()
         return settings

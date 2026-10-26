@@ -33,6 +33,7 @@ AUDIENCE = "api://hcw-sample-assessor"
 HOST = "login.example.test"
 KID = "hcw-sample-key-1"
 ROLE = "Assessment.Read"
+SCOPE_VALUE = "access_as_user"
 ROUTES = [
     ("GET", "/"),
     ("GET", "/index.html"),
@@ -157,8 +158,16 @@ def test_valid_v2_token_is_accepted(client):
 
 
 def test_valid_v1_issuer_and_delegated_scope_are_accepted(client):
-    token = mint(iss=f"https://sts.windows.net/{TENANT}/", roles=None, scp="openid Assessment.Read")
+    token = mint(iss=f"https://sts.windows.net/{TENANT}/", roles=None, scp=f"openid {SCOPE_VALUE}")
     assert client.get("/api/catalog", headers=bearer(token)).status_code == 200
+
+
+def test_signed_in_user_token_with_the_default_scope_is_accepted_with_or_without_the_assigned_role(client):
+    """A user token carries the delegated scope in `scp`; if the user is also assigned the app role it carries `roles`
+    too (access-token claims reference). Either one is enough, and the default scope is not the role's name."""
+    assert client.get("/api/catalog", headers=bearer(mint(roles=None, scp=SCOPE_VALUE))).status_code == 200
+    both = mint(roles=[ROLE], scp=f"openid {SCOPE_VALUE}")
+    assert client.get("/api/catalog", headers=bearer(both)).status_code == 200
 
 
 def test_tenant_id_comparison_ignores_case_and_scheme_is_case_insensitive(client):
@@ -231,6 +240,8 @@ REFUSED = {
     "another role": (mint(roles=["Reader"]), Reason.PERMISSION),
     "another scope": (mint(roles=None, scp="User.Read"), Reason.PERMISSION),
     "roles of the wrong type": (mint(roles=ROLE), Reason.PERMISSION),
+    "the role's name in scp": (mint(roles=None, scp=ROLE), Reason.PERMISSION),
+    "the scope's name in roles": (mint(roles=[SCOPE_VALUE]), Reason.PERMISSION),
     "oversized": ("a." * 20_000 + "b", Reason.MALFORMED),
 }
 
@@ -456,7 +467,8 @@ ENV = {
 def test_sign_in_is_off_by_default_and_the_defaults_are_declared():
     s = Settings.from_env({"CA_SCOPES": SCOPE})
     assert not s.auth_enabled and s.auth_clock_skew_seconds == 60
-    assert s.auth_required_roles == (ROLE,) and s.auth_required_scopes == (ROLE,)
+    assert s.auth_required_roles == (ROLE,) and s.auth_required_scopes == (SCOPE_VALUE,)
+    assert ROLE != SCOPE_VALUE, "Entra refuses one value used by both an app role and a delegated scope"
 
 
 def test_env_parsing_when_enabled():
