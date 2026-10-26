@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from cloud_assessor_appliance.config import DEFAULT_AUTH_PERMISSION
+from cloud_assessor_appliance.config import DEFAULT_AUTH_ROLE, DEFAULT_AUTH_SCOPE
 
 from ..conftest import ROOT
 
@@ -35,6 +35,49 @@ def _block(text: str, header: str) -> str:
 
 def _variable(name: str) -> str:
     return _block(_read("variables.tf"), f'variable "{name}"')
+
+
+def _blocks(text: str, header: str) -> list[str]:
+    """Every HCL block that starts with `header` (a registration can declare several roles or scopes)."""
+    found, at = [], 0
+    while (start := text.find(header, at)) != -1:
+        found.append(_block(text[start:], header))
+        at = start + len(header)
+    return found
+
+
+def _resolve_value(expression: str, variables_tf: str) -> str:
+    """The string a `value = ...` line stands for: a literal, or the default of the variable it names."""
+    expression = expression.strip()
+    if literal := re.fullmatch(r'"([^"$]*)"', expression):
+        return literal.group(1)
+    if named := re.fullmatch(r"var\.(\w+)", expression):
+        default = re.search(r'default\s*=\s*"([^"]*)"', _block(variables_tf, f'variable "{named.group(1)}"'))
+        assert default, f"variable {named.group(1)} has no string default to compare"
+        return default.group(1)
+    raise AssertionError(f"cannot resolve {expression!r} statically; use a literal or a variable with a default")
+
+
+def registration_values(auth_tf: str, variables_tf: str) -> tuple[list[str], list[str]]:
+    """(app role values, delegated scope values) of the registration in `auth_tf`."""
+
+    def values(header: str) -> list[str]:
+        found = []
+        for block in _blocks(auth_tf, header):
+            line = re.search(r"^\s*value\s*=\s*(.+)$", block, re.MULTILINE)
+            assert line, f"{header} has no value"
+            found.append(_resolve_value(line.group(1), variables_tf))
+        return found
+
+    return values("app_role {"), values("oauth2_permission_scope {")
+
+
+def duplicated_values(auth_tf: str, variables_tf: str) -> set[str]:
+    """Values used more than once across the app roles AND the scopes. Entra, and the azuread provider at plan time,
+    refuse them ("duplicate value found"); the mock providers `terraform test` uses do not run that check."""
+    roles, scopes = registration_values(auth_tf, variables_tf)
+    every = roles + scopes
+    return {v for v in every if every.count(v) > 1}
 
 
 def _all_tf() -> str:
@@ -86,12 +129,50 @@ def test_every_ca_auth_setting_the_code_reads_is_set_by_terraform():
     assert 'dynamic "env"' in _read("main.tf") and "for_each = local.auth_env" in _read("main.tf")
 
 
-def test_required_permission_matches_the_code_default_and_the_registration_defines_both_kinds():
-    assert re.search(rf'default\s*=\s*"{re.escape(DEFAULT_AUTH_PERMISSION)}"', _variable("auth_permission"))
+def test_no_value_is_both_an_app_role_and_a_delegated_scope():
+    """Found by the first real-tenant run: the registration declared `Assessment.Read` as an app role AND as a scope,
+    and the azuread provider refused the plan with "duplicate value found" (provider source:
+    applicationValidateRolesScopes in internal/services/applications/applications.go). Mock providers cannot see it,
+    so check the HCL itself."""
+    roles, scopes = registration_values(_read("auth.tf"), _read("variables.tf"))
+    assert roles and scopes, "the registration declares at least one role and one scope"
+    assert duplicated_values(_read("auth.tf"), _read("variables.tf")) == set()
+    assert not set(roles) & set(scopes)
+
+
+def test_the_duplicate_value_check_catches_the_defect_the_real_tenant_run_found():
+    """The pre-fix shape: one variable named by both the role and the scope. The checker must report it."""
+    variables = 'variable "auth_permission" {\n  default = "Assessment.Read"\n}\n'
+    auth = (
+        'resource "azuread_application" "api" {\n'
+        "  api {\n    oauth2_permission_scope {\n      value = var.auth_permission\n    }\n  }\n"
+        "  app_role {\n    value = var.auth_permission\n  }\n}\n"
+    )
+    assert duplicated_values(auth, variables) == {"Assessment.Read"}
+    fixed = auth.replace("value = var.auth_permission\n    }\n  }", 'value = "access_as_user"\n    }\n  }')
+    assert fixed != auth and duplicated_values(fixed, variables) == set()
+
+
+def test_required_role_and_scope_match_the_code_defaults_and_the_registration_defines_both_kinds():
+    assert DEFAULT_AUTH_ROLE != DEFAULT_AUTH_SCOPE
+    assert re.search(rf'default\s*=\s*"{re.escape(DEFAULT_AUTH_ROLE)}"', _variable("auth_role_value"))
+    assert re.search(rf'default\s*=\s*"{re.escape(DEFAULT_AUTH_SCOPE)}"', _variable("auth_scope_value"))
+    # a plan that sets both to one value is refused by the variable, not only by the provider
+    assert "var.auth_scope_value != var.auth_role_value" in _variable("auth_scope_value")
     auth = _read("auth.tf")
     assert "app_role {" in auth and "oauth2_permission_scope {" in auth
-    assert "value                = var.auth_permission" in _block(auth, "app_role {")
-    assert "value                      = var.auth_permission" in _block(auth, "oauth2_permission_scope {")
+    assert "value                = var.auth_role_value" in _block(auth, "app_role {")
+    assert "value                      = var.auth_scope_value" in _block(auth, "oauth2_permission_scope {")
+    # the settings the appliance reads name the same role and scope the registration defines
+    assert "CA_AUTH_REQUIRED_ROLES     = var.auth_role_value" in auth
+    assert "CA_AUTH_REQUIRED_SCOPES    = var.auth_scope_value" in auth
+    # the role is assigned, and the pre-authorised client is given the scope, by their own ids
+    assignment = _block(auth, 'resource "azuread_app_role_assignment" "assigned"')
+    assert "app_role_id         = local.auth_role_id" in assignment
+    preauthorized = _block(auth, 'resource "azuread_application_pre_authorized" "client"')
+    assert "permission_ids       = [local.auth_scope_id]" in preauthorized
+    assert "${var.auth_role_value}" in auth and "${var.auth_scope_value}" in auth
+    assert "auth_permission" not in _all_tf()
     # the code validates the v2 issuer and the client-id audience, and accepts the api:// URI too
     assert "requested_access_token_version = 2" in auth
     assert 'sign_in_audience        = "AzureADMyOrg"' in auth

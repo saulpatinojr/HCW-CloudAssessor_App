@@ -11,7 +11,8 @@ What is checked, in order, and each failure is the same `401 unauthorized` with 
   3. `exp` and `nbf` (both required) with a declared clock skew (CA_AUTH_CLOCK_SKEW_SECONDS, default 60, at most 300);
   4. `iss` equals the v2.0 or the v1.0 issuer form of the configured tenant; `aud` is one of the configured audiences;
   5. `tid` equals the configured tenant;
-  6. the token carries a required app role (`roles`) or delegated scope (`scp`), default `Assessment.Read`.
+  6. the token carries a required app role (`roles`) or delegated scope (`scp`); the defaults are the `Assessment.Read`
+     role and the `access_as_user` scope, which differ because Entra needs unique values across roles and scopes.
 
 Nothing from the token is ever logged or returned: the rejection log line carries the status and a numeric reason code
 (Reason below). Spec: https://learn.microsoft.com/en-us/entra/identity-platform/access-tokens and

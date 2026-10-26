@@ -379,19 +379,20 @@ allows only the root files):
   the tenant's public signing keys (JWKS) with RS256 only; `iss` (v2.0 and v1.0 forms for the configured tenant), `aud`,
   `exp`, `nbf` (both required, declared clock skew, default 60 seconds, at most 300) and `tid` are checked; the token
   must carry an app role (`roles`) or delegated scope (`scp`) named in `CA_AUTH_REQUIRED_ROLES` /
-  `CA_AUTH_REQUIRED_SCOPES` (default `Assessment.Read`). Every failure is `401 unauthorized` with
+  `CA_AUTH_REQUIRED_SCOPES` (defaults: the role `Assessment.Read` and the scope `access_as_user`, which differ because
+  Entra needs unique values across roles and scopes). Every failure is `401 unauthorized` with
   `WWW-Authenticate: Bearer` and the usual error envelope; logs carry a status and a number, never a token or a claim.
   Off by default (`CA_AUTH_ENABLED=false`, the behaviour of the previous release); enabled without a tenant, audience
   or authority host, the appliance refuses to start. The authority host is a setting, not a literal, so the existing
   boundary test that forbids Azure endpoint strings in `src/` is untouched.
 - **Needs the owner's confirmation** (choices the agent made; each is one setting or one line to change): (1) the pane
   and the static files also need a token, because "every route except health" was taken literally, so the website pane
-  cannot load from the appliance until it signs users in (a follow-up, not built); (2) the default required permission
-  `Assessment.Read`; (3) the 60-second clock skew; (4) the JWKS outage answers `401`, not `503`.
+  cannot load from the appliance until it signs users in (a follow-up, not built); (2) the default required role
+  `Assessment.Read` and scope `access_as_user`; (3) the 60-second clock skew; (4) the JWKS outage answers `401`, not `503`.
 - **Still open: R-006.** Whether to label results "client confidential" is not decided; it still blocks flipping
   `CA_PUBLIC_RESULTS` to `true`. Not changed by this entry.
 - **Owner steps before turning sign-in on** are in the pull request and in `README.md` (Sign-in). Terraform plumbing
-  (the `CA_AUTH_*` values, an `azuread_application` with the `Assessment.Read` role and scope, and a plan that refuses
+  (the `CA_AUTH_*` values, an `azuread_application` with the `Assessment.Read` role and the `access_as_user` scope, and a plan that refuses
   an internet-reachable appliance without sign-in) was added for ticket CA-3; nothing was applied.
 - **Not tested:** against a real Entra tenant. Tests use a locally generated key pair and a local JWKS. The
   owner's real-tenant runbook is in `README.md` (Sign-in); ticket CA-3 stays open until it has been run.

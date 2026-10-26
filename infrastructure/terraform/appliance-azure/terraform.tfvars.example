@@ -9,7 +9,8 @@ budget_start_date = "2026-11-01T00:00:00Z"
 alert_emails = ["owner@example.com"]
 
 # Caller authentication (ticket CA-3). An externally reachable appliance is refused by `plan` unless sign-in is on.
-# Creates the Entra application, its Assessment.Read app role and scope, and a service principal that requires assignment
+# Creates the Entra application, its Assessment.Read app role and access_as_user scope (two different values: Entra
+# needs them unique), and a service principal that requires assignment
 # (README.md, "Sign-in (Microsoft Entra ID)"). The deploying identity needs the azuread permissions listed there.
 auth_enabled = true
 # The users, groups or managed identities (Entra object ids) that may call the appliance. Only these can obtain a token.

@@ -120,7 +120,7 @@ run "auth_enabled_creates_the_registration_and_wires_the_settings" {
       CA_AUTH_AUTHORITY_HOST     = "login.microsoftonline.com"
       CA_AUTH_CLOCK_SKEW_SECONDS = "60"
       CA_AUTH_REQUIRED_ROLES     = "Assessment.Read"
-      CA_AUTH_REQUIRED_SCOPES    = "Assessment.Read"
+      CA_AUTH_REQUIRED_SCOPES    = "access_as_user"
     }
     error_message = "the CA_AUTH_* settings must match what entra.py validates"
   }
@@ -141,15 +141,25 @@ run "auth_enabled_creates_the_registration_and_wires_the_settings" {
     error_message = "the app role the code requires"
   }
   assert {
-    condition     = one([for a in azuread_application.api[0].api : one([for s in a.oauth2_permission_scope : s.value])]) == "Assessment.Read"
+    condition     = one([for a in azuread_application.api[0].api : one([for s in a.oauth2_permission_scope : s.value])]) == "access_as_user"
     error_message = "the delegated scope the code requires"
+  }
+  # The real azuread provider refuses a plan where one value is used by both an app role and a scope ("duplicate value
+  # found"). Mock providers do not run that check, so it is asserted here, and statically in
+  # tests/security/test_terraform_auth_guard.py.
+  assert {
+    condition = length(setintersection(
+      toset([for r in azuread_application.api[0].app_role : r.value]),
+      toset(flatten([for a in azuread_application.api[0].api : [for s in a.oauth2_permission_scope : s.value]])),
+    )) == 0
+    error_message = "no value may be both an app role and a delegated scope of the same registration"
   }
   assert {
     condition     = length(azuread_app_role_assignment.assigned) == 1 && length(azuread_application_pre_authorized.client) == 1
     error_message = "the assignment and the pre-authorized client are planned"
   }
   assert {
-    condition     = output.auth_scope == "api://00000000-0000-4000-8000-000000000004/Assessment.Read"
+    condition     = output.auth_scope == "api://00000000-0000-4000-8000-000000000004/access_as_user"
     error_message = "the scope to request a token with"
   }
 }
@@ -163,7 +173,8 @@ run "existing_registration_passes_its_values_through" {
     auth_tenant_id               = "00000000-0000-4000-8000-0000000000aa"
     auth_audiences               = ["api://hcw-sample-assessor", "00000000-0000-4000-8000-0000000000bb"]
     auth_authority_host          = "login.example.test"
-    auth_permission              = "Assessment.Read"
+    auth_role_value              = "Assessment.Read"
+    auth_scope_value             = "access_as_user"
     auth_clock_skew_seconds      = 30
   }
   assert {
@@ -178,10 +189,22 @@ run "existing_registration_passes_its_values_through" {
       CA_AUTH_AUTHORITY_HOST     = "login.example.test"
       CA_AUTH_CLOCK_SKEW_SECONDS = "30"
       CA_AUTH_REQUIRED_ROLES     = "Assessment.Read"
-      CA_AUTH_REQUIRED_SCOPES    = "Assessment.Read"
+      CA_AUTH_REQUIRED_SCOPES    = "access_as_user"
     }
     error_message = "the CA_AUTH_* settings are the inputs"
   }
+}
+
+# The real-tenant check found that the provider refuses an app role and a scope that share a value. The variable
+# validation turns that into a plan-time error here, offline.
+run "scope_value_equal_to_the_role_value_is_refused" {
+  command = plan
+  variables {
+    auth_enabled     = true
+    auth_role_value  = "Assessment.Read"
+    auth_scope_value = "Assessment.Read"
+  }
+  expect_failures = [var.auth_scope_value]
 }
 
 # The appliance refuses to start without a tenant and an audience, so the plan refuses first.

@@ -6,15 +6,17 @@
 #   tid   = CA_AUTH_TENANT_ID                       <- the tenant of the registration (or auth_tenant_id)
 #   aud   = one of CA_AUTH_AUDIENCE                 <- the application (client) id and its api:// URI (or auth_audiences)
 #   iss   = v2.0 or v1.0 form for the tenant        <- built by the code from CA_AUTH_AUTHORITY_HOST
-#   roles = CA_AUTH_REQUIRED_ROLES, or scp = CA_AUTH_REQUIRED_SCOPES  <- the Assessment.Read app role and scope below
+#   roles = CA_AUTH_REQUIRED_ROLES, or scp = CA_AUTH_REQUIRED_SCOPES  <- the app role and the delegated scope below
+# The app role and the scope have DIFFERENT values on purpose. Entra (and the azuread provider, which refuses the plan
+# with "duplicate value found") needs every value unique across the app roles AND the scopes of one registration.
 # The registration is optional (auth_create_app_registration = false describes one that already exists).
 
 locals {
   auth_create_registration = var.auth_enabled && var.auth_create_app_registration
   # Deterministic ids, so a re-created registration keeps the same role and scope ids (the same trick the AzMigrate
   # appliance uses), and a plan never shows them as new.
-  auth_role_id  = uuidv5("url", "https://github.com/saulpatinojr/HCW-CloudAssessor_App/app-role/${var.auth_permission}")
-  auth_scope_id = uuidv5("url", "https://github.com/saulpatinojr/HCW-CloudAssessor_App/oauth2-permission-scope/${var.auth_permission}")
+  auth_role_id  = uuidv5("url", "https://github.com/saulpatinojr/HCW-CloudAssessor_App/app-role/${var.auth_role_value}")
+  auth_scope_id = uuidv5("url", "https://github.com/saulpatinojr/HCW-CloudAssessor_App/oauth2-permission-scope/${var.auth_scope_value}")
 
   auth_tenant_id = local.auth_create_registration ? data.azuread_client_config.current[0].tenant_id : var.auth_tenant_id
   # A v2 token (requested_access_token_version = 2 below) carries the client id as aud; a v1 token carries the api:// URI.
@@ -32,8 +34,8 @@ locals {
       CA_AUTH_AUDIENCE           = join(" ", local.auth_audiences)
       CA_AUTH_AUTHORITY_HOST     = var.auth_authority_host
       CA_AUTH_CLOCK_SKEW_SECONDS = tostring(var.auth_clock_skew_seconds)
-      CA_AUTH_REQUIRED_ROLES     = var.auth_permission
-      CA_AUTH_REQUIRED_SCOPES    = var.auth_permission
+      CA_AUTH_REQUIRED_ROLES     = var.auth_role_value
+      CA_AUTH_REQUIRED_SCOPES    = var.auth_scope_value
     } : {},
   )
 }
@@ -43,7 +45,8 @@ data "azuread_client_config" "current" {
 }
 
 # The API registration: one tenant only, v2 access tokens, one app role (for applications, managed identities and users)
-# and one delegated scope (for a signed-in user's token), both named by var.auth_permission.
+# and one delegated scope (for a signed-in user's token). Their values are var.auth_role_value and var.auth_scope_value,
+# which must differ (a validation on auth_scope_value refuses a plan that sets them equal).
 resource "azuread_application" "api" {
   count                   = local.auth_create_registration ? 1 : 0
   display_name            = "Cloud Assessor appliance (${var.environment})"
@@ -57,7 +60,7 @@ resource "azuread_application" "api" {
 
     oauth2_permission_scope {
       id                         = local.auth_scope_id
-      value                      = var.auth_permission
+      value                      = var.auth_scope_value
       type                       = "User"
       enabled                    = true
       admin_consent_display_name = "Read Cloud Assessor assessment results"
@@ -69,8 +72,8 @@ resource "azuread_application" "api" {
 
   app_role {
     id                   = local.auth_role_id
-    value                = var.auth_permission
-    display_name         = var.auth_permission
+    value                = var.auth_role_value
+    display_name         = var.auth_role_value
     description          = "Read the Cloud Assessor assessment results."
     allowed_member_types = ["User", "Application"]
     enabled              = true
