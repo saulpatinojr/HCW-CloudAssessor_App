@@ -414,8 +414,10 @@ $tenant = az account show --query tenantId -o tsv; $app = az ad app list --displ
 
    `"authEnabled":true` is the proof that sign-in is on. When the first read of your subscription finishes, a third
    line, `"event":"refresh_completed"`, says it worked (not yet seen against a real subscription);
-   `"event":"refresh_failed"` there means it could not read Azure (check that `az login` still works), which does
-   not stop the sign-in checks in step 4. If the window instead prints
+   `"event":"refresh_failed"` there means the read did not work, and its `"code"` says why: `collector_error` (Azure
+   refused or could not be reached: check that `az login` still works and that you have read access to the
+   subscription), `timeout` (it ran past the time limit) or `internal_error` (a fault in the appliance; report it). None of
+   them stops the sign-in checks in step 4. If the window instead prints
    `{"event": "startup_refused", "reason": ...}` and the prompt returns, a setting is missing or wrong, and the reason
    names it (for example `CA_AUTH_TENANT_ID must be set to the tenant (directory) id, a GUID`). If it ends with
    `error while attempting to bind on address ('0.0.0.0', 8080)`, something else is already listening on port 8080 (often an earlier run of this step that is still open): close that window, or set
@@ -482,6 +484,7 @@ The same in bash (Git Bash or Linux; needs `curl`, which Git Bash has). Steps 1,
 folder you cloned the repository into; step 2 is the PowerShell one with `$x = ...` written as `x=$(...)`:
 
 ```bash
+az login
 sub=$(az account show --query id -o tsv)
 export TF_VAR_environment=sandbox TF_VAR_auth_enabled=true TF_VAR_scope_ids="[\"/subscriptions/$sub\"]" \
   TF_VAR_budget_start_date="$(date -u +%Y-%m-01)T00:00:00Z" \
@@ -494,6 +497,7 @@ terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_
 tenant=$(az account show --query tenantId -o tsv); app=$(az ad app list --display-name 'Cloud Assessor appliance (sandbox)' --query '[0].appId' -o tsv)
 CA_SCOPES="/subscriptions/$sub" CA_AUTH_ENABLED=true CA_AUTH_TENANT_ID=$tenant CA_AUTH_AUDIENCE="$app api://$app" CA_AUTH_AUTHORITY_HOST=login.microsoftonline.com PORT=8080 uv run --extra azure python -m cloud_assessor_appliance &
 base=http://127.0.0.1:8080
+for _ in {1..120}; do curl -fsS "$base/api/health" >/dev/null 2>&1 && break; sleep 1; done
 az login --tenant "$tenant" --scope "api://$app/access_as_user"
 good=$(az account get-access-token --tenant "$tenant" --scope "api://$app/access_as_user" --query accessToken -o tsv)
 wrong=$(az account get-access-token --tenant "$tenant" --resource-type arm --query accessToken -o tsv)
