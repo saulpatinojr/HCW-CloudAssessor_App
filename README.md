@@ -348,9 +348,12 @@ Terraform 1.9 or newer, and an account that can create applications in the sandb
    objects (Terraform will warn about targeting; that is expected here). It lets the Azure CLI request the scope and
    assigns the role to you, so only you can get a token:
 
+   PowerShell splits an unquoted `-target=name.part` at the dot, so every `-target` in the PowerShell commands is in
+   double quotes. Without the quotes Terraform answers `Too many command line arguments` and `Invalid target`.
+
 ```powershell
 az login; $sub = az account show --query id -o tsv; $env:TF_VAR_environment = 'sandbox'; $env:TF_VAR_scope_ids = '["/subscriptions/' + $sub + '"]'; $env:TF_VAR_budget_start_date = (Get-Date).ToUniversalTime().ToString('yyyy-MM-01') + 'T00:00:00Z'; $env:TF_VAR_image_ref = 'docker.io/hybridcloudworks/img-ca-appliance-app@sha256:0000000000000000000000000000000000000000000000000000000000000000'; $env:TF_VAR_alert_emails = '["' + (az account show --query user.name -o tsv) + '"]'; $env:TF_VAR_auth_enabled = 'true'; $env:TF_VAR_auth_assigned_object_ids = '["' + (az ad signed-in-user show --query id -o tsv) + '"]'; $env:TF_VAR_auth_preauthorized_client_ids = '["04b07795-8ddb-461a-bbee-02f9e1bf7b46"]'
-terraform -chdir=infrastructure/terraform/appliance-azure init -input=false -backend=false; terraform -chdir=infrastructure/terraform/appliance-azure apply -target=azuread_service_principal.api -target=azuread_application_identifier_uri.api -target=azuread_app_role_assignment.assigned -target=azuread_application_pre_authorized.client
+terraform -chdir=infrastructure/terraform/appliance-azure init -input=false -backend=false; terraform -chdir=infrastructure/terraform/appliance-azure apply "-target=azuread_service_principal.api" "-target=azuread_application_identifier_uri.api" "-target=azuread_app_role_assignment.assigned" "-target=azuread_application_pre_authorized.client"
 ```
 
    Check the plan lists only `azuread_*` objects, then type `yes`. `04b07795-8ddb-461a-bbee-02f9e1bf7b46` is the Azure
@@ -402,7 +405,7 @@ $wrong = az account get-access-token --tenant $tenant --resource-type arm --quer
    things in the state) and the variables:
 
 ```powershell
-terraform -chdir=infrastructure/terraform/appliance-azure destroy -target=azuread_application.api; Remove-Item Env:TF_VAR_*
+terraform -chdir=infrastructure/terraform/appliance-azure destroy "-target=azuread_application.api"; Remove-Item Env:TF_VAR_*
 ```
 
    Type `yes` after checking the plan lists only the `azuread_*` objects.
