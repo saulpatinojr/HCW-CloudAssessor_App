@@ -31,7 +31,7 @@ and [`v0.2.1`](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/ta
 the engine wheel (`cloud_assessor_core-<version>-py3-none-any.whl`) that the lab edition is meant to pin. There is no
 `v0.1.0` tag in this repository. The engine, the appliance and the image share one version, and a check refuses a tag
 that disagrees with it (see "Releasing and versioning" below; the policy is ticket
-[#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33), pending the owner's confirmation). The lab
+[#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33), decided by the owner). The lab
 edition has not adopted a release yet; what it carries and what changed here are tracked in its `docs/whats-new-upstream.md`.
 Everything still queued is in [TODO.md](TODO.md); every decision that needs a human is in [REVIEW.md](REVIEW.md).
 Limitations and verification results are recorded per change in [CHANGELOG.md](CHANGELOG.md).
@@ -155,7 +155,7 @@ Replace `v0.2.1` and `0.2.1` together to install another release; the list is on
 
 ## Releasing and versioning
 
-**The policy (ticket [#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33); the owner can overrule it).**
+**The policy (ticket [#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33); owner decision, recorded 2026-10-25).**
 The engine, the appliance and the container image share **one version**, a plain `X.Y.Z` (no pre-release suffix). One
 `vX.Y.Z` tag publishes all three: the engine wheel (`publish-core.yml`), the image (`publish-images.yml`) and the GitHub
 Release (`release.yml`). The tag is `v` plus that version, nothing else. The version is raised only in the pull request
@@ -188,8 +188,8 @@ same tag, and the lab edition pins a release by that tag, so a single number is 
 `/api/health` and the image all show. The alternative is two version lines with their own tag prefixes (for example
 `core-vX.Y.Z` for the engine and `app-vX.Y.Z` for the appliance). It lets an application-only change skip an engine
 release, but it needs new tag rules, changes the release asset URLs the lab edition already pins, and gives a support
-engineer two numbers to compare. It is not adopted here; choose it only if the engine starts to be released on its own
-schedule.
+engineer two numbers to compare. The owner chose one version, so the alternative is not adopted; revisit it only if
+the engine starts to be released on its own schedule.
 
 **To release a version** (the pull request is ordinary; the tag is an owner step, because it cannot be undone):
 
