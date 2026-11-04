@@ -182,7 +182,11 @@ attaches or pushes anything. With a tag it also fails unless the tag is exactly 
 dated, non-empty `## [X.Y.Z] - YYYY-MM-DD` section, nothing is left under `## [Unreleased]`, and the tagged commit is
 on `main`; `publish-core.yml` also checks that the build produced exactly the wheel and the sdist for the version and
 that the wheel's own `__version__` matches its file name. A tag cannot be moved or deleted once pushed (ruleset
-"Protect release tags"), so these checks are the only chance to stop a wrong one.
+"Protect release tags"), so these checks are the only chance to stop a wrong one. A manual run of `publish-core.yml`
+or `publish-images.yml` (the dry run) passes `--rehearse` instead of a tag: the script takes the tag to be `v` plus
+the package version and runs every one of those checks, and also fails if that tag already exists. So a green dry
+run on a commit means the tag on that same commit will pass the check too; a dry run that skipped the changelog is
+how `v0.3.1` came to be refused and burned (see `CHANGELOG.md` 0.3.2).
 
 **Why one version, and the alternative that was not chosen.** The wheel, the image and the release already come from the
 same tag, and the lab edition pins a release by that tag, so a single number is the one the tag, the wheel file name,
@@ -196,18 +200,25 @@ the engine starts to be released on its own schedule.
 
 1. Open a pull request that changes the version in `packages/cloud-assessor-core/pyproject.toml`, `pyproject.toml` and
    both `__version__` constants, runs `make lock` (which updates `uv.lock`), moves everything under `## [Unreleased]` in
-   `CHANGELOG.md` into a new `## [X.Y.Z] - YYYY-MM-DD` section, and leaves `## [Unreleased]` empty. Run `make lint` first;
-   it runs the check without a tag.
+   `CHANGELOG.md` into a new `## [X.Y.Z] - YYYY-MM-DD` section, and leaves `## [Unreleased]` empty. Run `make lint`
+   first (it runs the check without a tag), then `uv run python scripts/check-release-version.py --rehearse`, which
+   runs every check the tag will run.
 2. Merge it after review.
-3. Tag `main` and push the tag. PowerShell, with the version you chose in place of `X.Y.Z`:
+3. Dry-run both publish workflows on `main`: **Run workflow** on
+   [publish-core.yml](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/publish-core.yml) and on
+   [publish-images.yml](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/publish-images.yml),
+   branch `main`. A manual run runs the same checks as the tag, builds, proves and scans, and publishes nothing. Both
+   must be green on the exact commit you are about to tag; if one is red, the tag would fail the same way.
+4. Tag `main` and push the tag. PowerShell, with the version you chose in place of `X.Y.Z`:
 
    ```powershell
    git switch main; git pull origin main; git tag -a vX.Y.Z -m "Cloud Assessor X.Y.Z"; git push origin vX.Y.Z
    ```
 
-4. Open the Actions tab and wait for `release`, `publish-core` and `publish-images` to finish. If one stops at the version
-   check, nothing was built or published: the message names the file that disagrees.
-5. Confirm the result: the [release page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases) lists the
+5. Open the Actions tab and wait for `release`, `publish-core` and `publish-images` to finish. If one stops at the version
+   check, nothing was built or published: the message names the file that disagrees, and the version must move on,
+   because the tag stays.
+6. Confirm the result: the [release page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases) lists the
    release with the wheel and the sdist, and `GET /api/health` of a deployed appliance reports `X.Y.Z` in `version`.
 
 ## Contributing and reporting

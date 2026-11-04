@@ -11,6 +11,12 @@ the code inside says another is worse. The check has two modes, both stdlib only
   `v` + that version, `CHANGELOG.md` must have a dated, non-empty `## [X.Y.Z] - YYYY-MM-DD` section and an empty
   `## [Unreleased]` section (so the release notes are complete), and, with `--ancestor-of REF`, the tagged commit must
   already be on that branch (only reviewed commits are released).
+* With `--rehearse` (publish-core.yml and publish-images.yml started by hand on `main`, the dry run): the tag is taken
+  to be `v` + the package version and every check of the `--tag` mode runs, so the dry run is red for every state this
+  script would refuse the tag for. Because there is no tag yet, it also fails when that tag already exists (the version
+  was released, or the tag was burned and the version must move on). Before this mode existed a manual run checked only
+  the version agreement, and the `v0.3.1` tag was refused for entries left under `[Unreleased]` that the green dry run
+  had never looked at. It cannot reproduce the tag event itself or an older commit's copy of the workflow.
 
 `--notes-out FILE` writes the changelog section for the version (the release notes). `--dist DIR` checks the built
 files: exactly the wheel and the sdist, named for the version, and the wheel's own `__version__` equal to it.
@@ -136,6 +142,18 @@ def on_branch(sha: str, ref: str, root: Path) -> str | None:
     return f"could not compare {sha[:12]} with {ref}: {result.stderr.strip() or 'git failed'}"
 
 
+def tag_exists(tag: str, root: Path) -> str | None:
+    """None when no tag of that name exists here, otherwise the reason the rehearsal must stop."""
+    result = _git(root, "rev-parse", "--quiet", "--verify", f"refs/tags/{tag}")
+    if result.returncode == 0:
+        return (
+            f"the tag {tag} already exists: this version was released (or burned); raise the version everywhere first"
+        )
+    if result.returncode == 1:
+        return None
+    return f"could not look up the tag {tag}: {result.stderr.strip() or 'git failed'}"
+
+
 def check(root: Path, tag: str | None = None, dist: Path | None = None) -> tuple[list[str], str | None]:
     """Return (problems, version). `version` is None when the sources disagree so much that none can be trusted."""
     versions, problems = read_versions(root)
@@ -177,13 +195,27 @@ def check(root: Path, tag: str | None = None, dist: Path | None = None) -> tuple
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parent.parent)
-    parser.add_argument("--tag", help="the tag being released, for example v0.1.0 (refs/tags/ prefix allowed)")
+    which = parser.add_mutually_exclusive_group()
+    which.add_argument("--tag", help="the tag being released, for example v0.1.0 (refs/tags/ prefix allowed)")
+    which.add_argument(
+        "--rehearse",
+        action="store_true",
+        help="dry run: take the tag to be v + the package version and run every check a real tag runs",
+    )
     parser.add_argument("--dist", type=Path, help="directory holding the built wheel and sdist")
     parser.add_argument("--notes-out", type=Path, help="write the changelog section for the version to this file")
-    parser.add_argument("--ancestor-of", metavar="REF", help="with --tag: the tagged commit must be reachable from REF")
+    parser.add_argument(
+        "--ancestor-of", metavar="REF", help="with --tag or --rehearse: the commit must be reachable from REF"
+    )
     args = parser.parse_args(argv)
-    problems, version = check(args.root, args.tag, args.dist)
-    if args.tag and args.ancestor_of and version:
+    tag = args.tag
+    if args.rehearse:
+        version = check(args.root)[1]
+        tag = f"v{version}" if version else None
+    problems, version = check(args.root, tag, args.dist)
+    if args.rehearse and version and (reason := tag_exists(f"v{version}", args.root)):
+        problems.append(reason)
+    if tag and args.ancestor_of and version:
         sha = os.environ.get("GITHUB_SHA") or _git(args.root, "rev-parse", "HEAD").stdout.strip()
         reason = on_branch(sha, args.ancestor_of, args.root)
         if reason:
@@ -196,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
         elif not any("CHANGELOG.md" in p for p in problems):
             problems.append(f"the CHANGELOG.md section for {version} is missing or empty: there are no release notes")
     github = os.environ.get("GITHUB_ACTIONS") == "true"
-    if args.notes_out and not args.tag and version:
+    if args.notes_out and not tag and version:
         sections = changelog_sections((args.root / "CHANGELOG.md").read_text(encoding="utf-8"))
         if "Unreleased" in sections and has_content(sections["Unreleased"][1]):
             warning = (
@@ -207,7 +239,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"::error::{problem}" if github else f"error: {problem}")
     if problems:
         return 1
-    tagged = f", tag {args.tag.removeprefix('refs/tags/')}" if args.tag else ""
+    tagged = f", tag {tag.removeprefix('refs/tags/')}" if tag else ""
     print(f"release version consistent: {version}{tagged}")
     return 0
 

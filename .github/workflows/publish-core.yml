@@ -1,6 +1,9 @@
 # Actions are pinned to full commit SHAs (version in the trailing comment); Dependabot (github-actions ecosystem) proposes updates.
 # On every v* tag: first check that the tag, every package version, the changelog and the tagged commit agree
-# (scripts/check-release-version.py; nothing is built, attested or attached if they do not), then build the
+# (scripts/check-release-version.py; nothing is built, attested or attached if they do not;
+# a manual run, the dry run before a tag, runs the SAME checks with --rehearse: the tag is taken to be v + the package
+# version, so a dry run is red for everything a tag would be refused for, including entries left under [Unreleased];
+# the v0.3.1 tag was refused for exactly that after a green dry run that never read the changelog), then build the
 # cloud-assessor-core wheel and sdist, verify the wheel carries no cloud SDK and no Azure endpoint, attach both to the
 # GitHub Release (release.yml creates it), attest provenance. PyPI trusted publishing is
 # gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
@@ -29,24 +32,19 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
         with: { python-version: "3.14" }
       - run: python -m pip install "uv==0.11.32"
-      - name: The tag, the versions and the changelog agree (before anything is built or attested)
+      - name: The tag, the versions and the changelog agree (a dry run runs the same checks as the tag)
         env: { REF_TYPE: "${{ github.ref_type }}", REF_NAME: "${{ github.ref_name }}" }
         run: |
           set -euo pipefail
-          if [ "$REF_TYPE" = "tag" ]; then
-            python scripts/check-release-version.py --tag "$REF_NAME" --ancestor-of origin/main
-          else
-            echo "::notice::manual run, no tag: the checks that need a tag are skipped"
-            python scripts/check-release-version.py
-          fi
+          if [ "$REF_TYPE" = "tag" ]; then mode=(--tag "$REF_NAME"); else mode=(--rehearse); fi
+          python scripts/check-release-version.py "${mode[@]}" --ancestor-of origin/main
       - run: uv build --no-create-gitignore --package cloud-assessor-core --out-dir dist
       - name: Only the wheel and the sdist for this version were built, and the wheel's own version agrees
         env: { REF_TYPE: "${{ github.ref_type }}", REF_NAME: "${{ github.ref_name }}" }
         run: |
           set -euo pipefail
-          args=(--dist dist)
-          if [ "$REF_TYPE" = "tag" ]; then args+=(--tag "$REF_NAME"); fi
-          python scripts/check-release-version.py "${args[@]}"
+          if [ "$REF_TYPE" = "tag" ]; then mode=(--tag "$REF_NAME"); else mode=(--rehearse); fi
+          python scripts/check-release-version.py "${mode[@]}" --dist dist
       - name: The wheel carries the catalog, no cloud SDK import and no Azure endpoint
         run: |
           set -euo pipefail
