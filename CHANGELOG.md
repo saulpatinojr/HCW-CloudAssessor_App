@@ -22,6 +22,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- Dependencies: `pydantic` 2.14.1 → 2.14.2 (the exact pin in `pyproject.toml`) with `pydantic-core` 2.50.1 → 2.50.2,
+  `starlette` 1.9.0 → 1.10.0 and `opentelemetry-api` 1.45.1 → 1.45.2, in `uv.lock` and both `requirements*.lock.txt`
+  files. This replaces the open Dependabot pull requests #78, #79 and #80, which all failed `lint`: #79 and #80 moved a
+  version in the two exports alone and left `uv.lock` behind, and #78 rewrote the exports in a shape `uv export` does
+  not produce. The engine package's `pydantic>=2.14,<3` range is unchanged, so nothing reaches the lab edition.
+- **Dependabot Python pull requests no longer need a hand-run `make lock`** (TODO T-009 follow-up). `.github/dependabot.yml`
+  excludes both exports from the `uv` entry (`exclude-paths`), so Dependabot edits `pyproject.toml` and `uv.lock` only.
+  The new `.github/workflows/dependabot-lockfiles.yml` regenerates the exports on Dependabot's own pull requests
+  (`uv export --frozen`: it reads `uv.lock` only, so no dependency code runs) and pushes them with a short-lived,
+  contents-only token of a dedicated GitHub App, so the required checks run on that commit as on any push. It cannot
+  use `GITHUB_TOKEN`: a push made with it starts no workflow, and checks from a `workflow_dispatch` run never count as a
+  pull request's required checks ([GitHub documentation](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated)).
+  The job's own `GITHUB_TOKEN` is read-only. **Owner step:** create the App and add the Dependabot secrets
+  `LOCKFILES_APP_CLIENT_ID` and `LOCKFILES_APP_PRIVATE_KEY` (TODO T-009); until then the workflow stops with an error
+  naming them. `scripts/export-lockfiles.sh` is now the one place the export flags live; `make lock` and
+  `scripts/check-lockfiles.sh` call it (the check still runs `uv lock --check` first). `tests/unit/test_workflows.py`
+  pins what the workflow may do.
+- `.github/dependabot.yml`: the `github-actions` entry groups every action into one weekly pull request, as the other
+  App repositories do.
+
+### Fixed
+
+- **CodeQL ran an unreleased build.** `codeql-action/init` and `/analyze` were pinned to `4c0873e…` with the comment
+  `# v4.37.8`, but v4.37.8 is `db488dd…`; the pin was a commit between releases. Because it named no release, Dependabot
+  tracked the branch and proposed another unreleased commit, `913e1bb…`, as two separate pull requests (#82, #83) that
+  each left the pair split. Both are now pinned to the v4.39.2 release, `1fc58d04a4d4374f921bdac573c3811c240f9c26`
+  (read with `git ls-remote https://github.com/github/codeql-action refs/tags/v4.39.2^{}` on 2026-11-04), and a new test
+  fails if `init` and `analyze` are ever pinned apart. This replaces #82 and #83. Every other action pin in the
+  repository was checked the same way and matches its tag.
+
+### Security
+
+- The ten `actions/checkout` steps in `ci.yml` and `security.yml` now set `persist-credentials: false`, so the job's
+  `GITHUB_TOKEN` is not left in `.git/config` for later steps (zizmor `artipacked`, medium). No step in either workflow
+  pushes with git. CloudCrawler already does this everywhere. A new test pins it for those two workflows and the new
+  one. Not yet changed: the checkouts in `publish-core.yml` and `publish-images.yml`, which run only on a release tag,
+  so a pull request cannot prove the change; recorded in TODO T-009's follow-up note.
+
 ## [0.3.1] - 2026-11-03
 
 A metadata-only release. The engine wheel can now be installed on Python 3.15; no code changed.

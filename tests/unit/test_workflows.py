@@ -15,6 +15,7 @@ ANY_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(?!\./)(\S+)", re.MULTILINE)
 def test_workflow_set_is_complete():
     assert [p.name for p in WORKFLOWS] == [
         "ci.yml",
+        "dependabot-lockfiles.yml",
         "publish-core.yml",
         "publish-images.yml",
         "rehearse-self-merging-pr.yml",
@@ -137,3 +138,68 @@ def test_the_security_workflow_can_be_started_by_hand_without_changing_what_it_d
     assert text.count("github.event_name") == 1
     assert doc["jobs"]["dependency-review"]["if"] == "github.event_name == 'pull_request'"
     assert "secret-scan" in doc["jobs"] and "gitleaks/gitleaks-action@" in text
+
+
+def test_codeql_init_and_analyze_share_one_release_pin():
+    """init and analyze are one action: a split pair (Dependabot #82 and #83 each moved one half) breaks analysis."""
+    text = (ROOT / ".github" / "workflows" / "security.yml").read_text(encoding="utf-8")
+    pins = set(re.findall(r"github/codeql-action/(?:init|analyze)@([0-9a-f]{40}) # (v\S+)", text))
+    assert len(pins) == 1, f"codeql-action/init and /analyze are pinned apart: {pins}"
+
+
+def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency_code():
+    """The one workflow that pushes to a pull request branch, so what it may do is pinned."""
+    path = ROOT / ".github" / "workflows" / "dependabot-lockfiles.yml"
+    text = path.read_text(encoding="utf-8")
+    doc = yaml.safe_load(text)
+    triggers = doc.get("on", doc.get(True))
+    assert set(triggers) == {"pull_request"}, "never pull_request_target, workflow_run or workflow_dispatch"
+    job = doc["jobs"]["export"]
+    assert job["permissions"] == {"contents": "read"}, "the push uses the App's token; GITHUB_TOKEN stays read-only"
+    for gate in (
+        "github.event.pull_request.user.login == 'dependabot[bot]'",
+        "github.event.pull_request.head.repo.full_name == github.repository",
+        "startsWith(github.event.pull_request.head.ref, 'dependabot/uv/')",
+    ):
+        assert gate in job["if"], gate
+    assert '"49699333+dependabot[bot]@users.noreply.github.com"' in text
+    code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    assert "github.actor" not in code, "github.actor is spoofable on a re-run (zizmor bot-conditions)"
+    assert job["steps"][0]["with"]["persist-credentials"] is False
+    app = next(step for step in job["steps"] if "create-github-app-token" in step.get("uses", ""))
+    assert app["with"]["permission-contents"] == "write" and len(app["with"]) == 3
+    assert app["with"]["client-id"] == "${{ secrets.LOCKFILES_APP_CLIENT_ID }}"
+    assert app["with"]["private-key"] == "${{ secrets.LOCKFILES_APP_PRIVATE_KEY }}"
+    push = next(step for step in job["steps"] if "push origin" in step.get("run", ""))
+    assert push["env"]["APP_TOKEN"] == "${{ steps.app.outputs.token }}"
+    assert "github.token" not in code and "secrets.GITHUB_TOKEN" not in code
+    # Checks from a workflow_dispatch run never satisfy a pull request's required checks (GitHub documentation,
+    # "Troubleshooting required status checks"): the App-token push is what starts them.
+    assert "gh workflow run" not in code and "workflow_dispatch" not in code
+    runs = [step.get("run", "") for step in job["steps"]]
+    assert any("bash scripts/export-lockfiles.sh" in run for run in runs)
+    for run in runs:
+        for forbidden in ("uv lock", "uv sync", "uv run", "uv build", "make", "pip install -r", "pytest"):
+            assert not re.search(rf"(?m)^\s*{forbidden}\b", run), forbidden
+    assert "git add requirements.lock.txt requirements-azure.lock.txt" in text
+    assert "git add -A" not in text and "git add ." not in text
+    export = (ROOT / "scripts" / "export-lockfiles.sh").read_text(encoding="utf-8")
+    export_code = "\n".join(line.split("#", 1)[0] for line in export.splitlines() if not line.startswith("#!"))
+    assert "--frozen" in export_code and "uv lock" not in export_code.replace("uv.lock", "")
+
+
+def test_dependabot_never_edits_the_generated_exports_and_groups_the_actions():
+    config = yaml.safe_load((ROOT / ".github" / "dependabot.yml").read_text(encoding="utf-8"))
+    by_ecosystem = {entry["package-ecosystem"]: entry for entry in config["updates"]}
+    assert by_ecosystem["uv"]["exclude-paths"] == ["requirements.lock.txt", "requirements-azure.lock.txt"]
+    assert by_ecosystem["github-actions"]["groups"]["github-actions"]["patterns"] == ["*"]
+
+
+def test_checkouts_on_pull_requests_do_not_leave_the_token_on_disk():
+    """zizmor artipacked: a checkout keeps GITHUB_TOKEN in .git/config unless told not to. Nothing in these workflows
+    pushes with git, so none needs it (publish-core.yml and publish-images.yml are not covered yet: they run only on a
+    tag, so a pull request cannot prove a change to them)."""
+    for name in ("ci.yml", "security.yml", "dependabot-lockfiles.yml"):
+        for step in _steps(name):
+            if step.get("uses", "").startswith("actions/checkout@"):
+                assert step.get("with", {}).get("persist-credentials") is False, name

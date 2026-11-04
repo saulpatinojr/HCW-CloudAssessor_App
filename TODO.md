@@ -181,6 +181,28 @@ infrastructure inventory. Security controls should land before the first collect
   per-service packages that release frequently. Group them into a single weekly pull
   request or the queue becomes unmanageable.
 - **Done (2026-10-10):** `.github/dependabot.yml`: pip (grouped `azure-*`/`msal*`/`msrest*`, dev group), the engine package, github-actions, docker, terraform; weekly.
+- **Follow-up done (2026-11-04):** Dependabot Python pull requests no longer need a hand-run `make lock`. The `uv` entry
+  excludes both `requirements*.lock.txt` exports (`exclude-paths`), and `.github/workflows/dependabot-lockfiles.yml`
+  regenerates them on Dependabot's own pull requests and pushes them with a contents-only GitHub App token, so the
+  required checks run on the pushed commit. The `github-actions` entry now groups every action into one weekly pull
+  request, so `codeql-action/init` and `/analyze` can no longer arrive split. The decision and its alternatives are ADR
+  0006 in `HCW-CloudCrawler_App`, which uses the same App. When a Dependabot pull request falls behind `main`, comment
+  `@dependabot recreate` on it (the extra commit stops Dependabot rebasing by itself).
+- **Open (P2, owner, blocks the follow-up above):** set up the lockfile App, once for both App repositories:
+  1. Create it at <https://github.com/settings/apps/new>: name `HCW Lockfile Sync`; description "Pushes the
+     regenerated requirements lock export to Dependabot pull requests in the HCW App repositories."; homepage URL
+     `https://github.com/saulpatinojr/HCW-CloudAssessor_App`; untick **Webhook → Active**; **Repository permissions →
+     Contents: Read and write** and nothing else; **Only on this account**.
+  2. On the App's page, note the **Client ID**, then **Generate a private key** (a `.pem` file downloads).
+  3. **Install App → Only select repositories →** `HCW-CloudAssessor_App` and `HCW-CloudCrawler_App`.
+  4. In each repository, **Settings → Secrets and variables → Dependabot → New repository secret**:
+     `LOCKFILES_APP_CLIENT_ID` = the Client ID; `LOCKFILES_APP_PRIVATE_KEY` = the whole `.pem` file. Then delete the
+     `.pem`.
+  **Not yet seen on GitHub:** it worked when Dependabot's next weekly `uv` pull request shows the commit "Regenerate
+  requirements*.lock.txt from uv.lock (make lock)" and the seven required checks ran on it by themselves.
+- **Open (P3):** set `persist-credentials: false` on the checkouts of `publish-core.yml` and `publish-images.yml` too
+  (zizmor `artipacked`), then prove it with the release dry run (`workflow_dispatch` on a branch) before the next tag.
+  `ci.yml` and `security.yml` were changed on 2026-11-04.
 
 ### T-010 — Add dependency review and static analysis to CI
 
