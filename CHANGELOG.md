@@ -22,6 +22,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-03
+
+A metadata-only release. The engine wheel can now be installed on Python 3.15; no code changed.
+
+### Changed
+- **The Python ceiling widens from `<3.15` to `<3.16` (website issue
+  [HCW-HybridCloudWorks#1386](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1386)).** Both
+  `pyproject.toml` files and `uv.lock` now say `requires-python = ">=3.14.6,<3.16"`. The website moved its Python base
+  to 3.15.2 ([HCW-HybridCloudWorks#1468](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1468)) and the lab
+  edition (`HCW-CloudAssessor_AddOn`, branch `fix/python-315-base`) must follow, but the 0.3.0 wheel carries
+  `Requires-Python: <3.15,>=3.14.6`, so `pip install --require-hashes --no-deps` on 3.15.2 stops with `Package
+  'cloud-assessor-core' requires a different Python: 3.15.2 not in '<3.15,>=3.14.6'`. The code already runs on 3.15.2
+  (the lab edition's 321 tests passed there); only the metadata blocked it. This is a widening, not a move: this
+  repository's own image, CI and `.python-version` stay on 3.14 until the base image is moved by hand with its digest
+  (`infrastructure/docker/versions.env`). New `tests/packaging/test_core_wheel.py::test_wheel_installs_on_python_314_and_315`
+  reads the built wheel's `Requires-Python` so the ceiling cannot drift back unnoticed.
+- **Release 0.3.1 prepared.** The engine, the appliance and the image move together from `0.3.0` to `0.3.1` in
+  `packages/cloud-assessor-core/pyproject.toml`, `pyproject.toml`, both `__version__` constants and `uv.lock`
+  (re-locked with uv 0.11.32, the version CI uses; the dependency set is unchanged). A patch number, because nothing
+  in the engine or the appliance behaves differently. Tagging `v0.3.1` is the owner's step; it publishes the wheel the
+  lab edition will pin, the GitHub Release and the image.
+
 ## [0.3.0] - 2026-10-25
 
 Caller sign-in with Microsoft Entra ID and the Terraform that turns it on, a `/api/health` status that says when collection is failing, the release version guard, repository-admin safety, and fixes. The engine (`packages/cloud-assessor-core`) has no code change since 0.2.1; only its version number moves, so the lab edition receives the same engine under a new number.

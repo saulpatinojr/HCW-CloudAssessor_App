@@ -31,7 +31,7 @@ def wheel(tmp_path_factory):
 
 
 def test_wheel_name_version_and_catalog(wheel):
-    assert wheel.name.startswith("cloud_assessor_core-0.3.0-")
+    assert wheel.name.startswith("cloud_assessor_core-0.3.1-")
     names = zipfile.ZipFile(wheel).namelist()
     for name in ("criteria.json", "schema.json", "scoring.json"):
         assert f"cloud_assessor_core/catalog_data/{name}" in names
@@ -50,3 +50,14 @@ def test_wheel_imports_no_cloud_sdk_and_names_no_endpoint(wheel):
     metadata = next(n for n in z.namelist() if n.endswith("METADATA"))
     requires = re.findall(r"^Requires-Dist: (.+)$", z.read(metadata).decode("utf-8"), re.MULTILINE)
     assert requires == ["pydantic<3,>=2.14"]
+
+
+def test_wheel_installs_on_python_314_and_315(wheel):
+    """The wheel's Requires-Python admits 3.14.6 up to the last 3.15 and nothing from 3.16 on. The AddOn installs
+    the released wheel with `pip install --require-hashes --no-deps` on the website's Python 3.15 base; pip refuses a
+    wheel whose range excludes the interpreter, so a `<3.15` ceiling blocked that image before any code ran."""
+    z = zipfile.ZipFile(wheel)
+    metadata = next(n for n in z.namelist() if n.endswith("METADATA"))
+    line = re.search(r"^Requires-Python: (.+)$", z.read(metadata).decode("utf-8"), re.MULTILINE)
+    assert line is not None, "the wheel declares no Requires-Python"
+    assert {part.strip() for part in line.group(1).split(",")} == {">=3.14.6", "<3.16"}
