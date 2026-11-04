@@ -115,6 +115,11 @@ def test_the_release_version_guard_runs_before_anything_is_built_or_published():
         publishes = next(n for n, step in enumerate(rendered) if publishing in step)
         assert guarded < publishes, f"{name}: the version guard must run before '{publishing}'"
     assert "--dist dist" in (ROOT / ".github" / "workflows" / "publish-core.yml").read_text(encoding="utf-8")
+    for name in ("publish-core.yml", "publish-images.yml"):
+        text = (ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8")
+        # the manual run (the dry run) rehearses: the v0.3.1 tag was refused after a dry run that skipped the changelog
+        assert "mode=(--rehearse)" in text and "checks that need a tag are skipped" not in text, name
+        assert "scripts/check-release-version.py\n" not in text, f"{name}: no bare call that checks only the versions"
     assert "--notes-out" in (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "uv run python " + guard in (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
     assert "uv run python " + guard in (ROOT / "Makefile").read_text(encoding="utf-8")

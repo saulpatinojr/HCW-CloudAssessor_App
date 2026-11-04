@@ -22,6 +22,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-04
+
+A release of what was already on `main`, with the dry run fixed so it checks what the tag checks. **The `v0.3.1`
+tag published nothing**: it was pushed after #87 had added entries under `[Unreleased]`, so the changelog guard in
+all three tag workflows stopped at `CHANGELOG.md still has entries under [Unreleased]`
+([release run 41910568739](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41910568739),
+[publish-core run 41910568892](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41910568892),
+[publish-images run 41910568940](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41910568940)),
+and a `v*` tag can never be moved or deleted (ruleset "Protect release tags"). **0.3.2 is therefore the release
+that carries 0.3.1's `Requires-Python` widening to `<3.16`**, the wheel the lab edition's `fix/python-315-base`
+branch pins; the `[0.3.1]` section below stays as history of what that number was meant to be.
+
 ### Changed
 
 - Dependencies: `pydantic` 2.14.1 → 2.14.2 (the exact pin in `pyproject.toml`) with `pydantic-core` 2.50.1 → 2.50.2,
@@ -44,9 +56,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   pins what the workflow may do.
 - `.github/dependabot.yml`: the `github-actions` entry groups every action into one weekly pull request, as the other
   App repositories do.
+- **Release 0.3.2 prepared.** The engine, the appliance and the image move together from `0.3.1` to `0.3.2` in
+  `packages/cloud-assessor-core/pyproject.toml`, `pyproject.toml`, both `__version__` constants and `uv.lock`
+  (re-locked with uv 0.11.32, the version CI uses; the dependency set is unchanged). The five tests that name the
+  version follow. A patch number: nothing in the engine or the appliance behaves differently from 0.3.1. Tagging
+  `v0.3.2` is the owner's step, after a green dry run of both publish workflows on the commit to be tagged.
 
 ### Fixed
 
+- **The manual dry run of `publish-core.yml` and `publish-images.yml` is now a true rehearsal.** Before this, a
+  manual run called `scripts/check-release-version.py` with no `--tag`, which checks only that the six version
+  places agree and never reads `CHANGELOG.md`; that is why the two dry runs on `08632ed` were green
+  ([41910180301](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41910180301),
+  [41910183097](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/runs/41910183097)) while the `v0.3.1`
+  tag on the same commit was refused. The script gains `--rehearse` (mirroring HCW-CloudCrawler_App): it takes the
+  tag to be `v` + the package version and runs every check a real tag runs (tag format, a dated non-empty changelog
+  section, nothing under `[Unreleased]`, the commit on `main`, the built files), and also fails when that tag already
+  exists, because the version must then move on. Both workflows' manual path now calls it. `make lint` and `ci.yml`
+  still run the script without a tag, so ordinary work with entries under `[Unreleased]` is unaffected.
+  `tests/unit/test_release_guard.py` proves the dry run and the tag run refuse the same states and say the same
+  thing, and `tests/unit/test_workflows.py` pins `--rehearse` in both workflows. README "Releasing and versioning"
+  now tells the release pull request to run the rehearsal locally and the owner to dry-run before tagging.
 - **CodeQL ran an unreleased build.** `codeql-action/init` and `/analyze` were pinned to `4c0873e…` with the comment
   `# v4.37.8`, but v4.37.8 is `db488dd…`; the pin was a commit between releases. Because it named no release, Dependabot
   tracked the branch and proposed another unreleased commit, `913e1bb…`, as two separate pull requests (#82, #83) that

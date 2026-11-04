@@ -282,6 +282,87 @@ def test_only_a_commit_on_the_protected_branch_may_be_released(tmp_path, monkeyp
     assert guard.main(["--root", str(root), "--tag", "v0.1.0", "--ancestor-of", "main"]) == 0
 
 
+def git_repo(root: Path) -> Path:
+    """`root` committed on `main`, so the rehearsal's tag lookup has a repository to ask."""
+    git(root, "init", "-q", "-b", "main")
+    git(root, "add", ".")
+    git(root, "commit", "-q", "-m", "main commit")
+    return root
+
+
+def errors(capsys) -> list[str]:
+    return [line for line in capsys.readouterr().out.splitlines() if line.startswith("error: ")]
+
+
+@needs_git
+def test_rehearse_derives_the_tag_and_runs_every_tag_check(tmp_path, capsys, monkeypatch):
+    """The dry run before a tag must be red for everything the tag would be refused for. v0.3.1 was refused for entries
+    under [Unreleased] after a green dry run that never read the changelog; the tag could not be taken back."""
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    root = git_repo(make_repo(tmp_path / "ok"))
+    assert guard.main(["--root", str(root), "--rehearse"]) == 0
+    assert "release version consistent: 0.1.0, tag v0.1.0" in capsys.readouterr().out
+    bad = {
+        "missing section": "# Changelog\n\n## [Unreleased]\n",
+        "undated": CHANGELOG.replace(" - 2026-10-25", ""),
+        "empty section": CHANGELOG.replace("### Added\n\n- The first release.\n", ""),
+        "unreleased entries": CHANGELOG.replace("## [Unreleased]\n", "## [Unreleased]\n\n### Fixed\n\n- A late fix.\n"),
+    }
+    for label, text in bad.items():
+        root = git_repo(make_repo(tmp_path / label.replace(" ", "-"), changelog=text))
+        assert guard.main(["--root", str(root), "--rehearse"]) == 1, label
+        rehearsal = errors(capsys)
+        assert guard.main(["--root", str(root), "--tag", "v0.1.0"]) == 1, f"{label}: the tag run must refuse it too"
+        assert rehearsal and rehearsal == errors(capsys), f"{label}: the dry run and the tag run must say the same"
+    assert any("still has entries under [Unreleased]" in line for line in rehearsal)
+
+
+def test_rehearse_is_red_for_a_disagreeing_version_and_is_never_a_second_way_to_pick_the_tag(tmp_path, capsys):
+    root = make_repo(tmp_path / "repo", app_py="0.2.0")
+    assert guard.main(["--root", str(root), "--rehearse"]) == 1
+    assert "the version differs between files" in capsys.readouterr().out
+    with pytest.raises(SystemExit):
+        guard.main(["--root", str(root), "--rehearse", "--tag", "v0.1.0"])
+
+
+@needs_git
+def test_rehearse_also_checks_the_built_files(tmp_path, capsys):
+    root = git_repo(make_repo(tmp_path / "repo"))
+    assert guard.main(["--root", str(root), "--rehearse", "--dist", str(build_dist(tmp_path / "ok"))]) == 0
+    lie = build_dist(tmp_path / "lie", inner="0.0.9")
+    assert guard.main(["--root", str(root), "--rehearse", "--dist", str(lie)]) == 1
+    assert "the wheel's own __version__ is 0.0.9" in capsys.readouterr().out
+
+
+@needs_git
+def test_rehearse_checks_ancestry_and_that_the_tag_is_still_free(tmp_path, monkeypatch, capsys):
+    root = git_repo(make_repo(tmp_path))
+    on_main = git(root, "rev-parse", "HEAD")
+    git(root, "switch", "-q", "-c", "feature")
+    (root / "extra.txt").write_text("unreviewed", encoding="utf-8")
+    git(root, "add", ".")
+    git(root, "commit", "-q", "-m", "feature commit")
+    on_feature = git(root, "rev-parse", "HEAD")
+    monkeypatch.setenv("GITHUB_SHA", on_main)
+    assert guard.main(["--root", str(root), "--rehearse", "--ancestor-of", "main"]) == 0
+    monkeypatch.setenv("GITHUB_SHA", on_feature)
+    assert guard.main(["--root", str(root), "--rehearse", "--ancestor-of", "main"]) == 1
+    assert "is not on main" in capsys.readouterr().out
+    monkeypatch.setenv("GITHUB_SHA", on_main)
+    git(root, "tag", "-a", "v0.1.0", on_main, "-m", "already released, or burned")
+    assert guard.main(["--root", str(root), "--rehearse", "--ancestor-of", "main"]) == 1
+    assert "the tag v0.1.0 already exists" in capsys.readouterr().out
+    # the real tag run is the one that creates the tag, so the existing tag is not an error there
+    assert guard.main(["--root", str(root), "--tag", "v0.1.0", "--ancestor-of", "main"]) == 0
+
+
+@needs_git
+def test_rehearse_reports_a_tag_lookup_that_cannot_be_made(tmp_path, capsys):
+    root = make_repo(tmp_path)  # a directory that is not a git repository
+    assert guard.main(["--root", str(root), "--rehearse"]) == 1
+    assert "could not look up the tag v0.1.0" in capsys.readouterr().out
+
+
 def test_the_appliance_reports_the_release_version_it_is_built_as(client):
     """/api/health and the x-addon-version header come from the appliance's __version__; the guard keeps that
     constant equal to pyproject.toml, uv.lock and the engine, so the number a support engineer reads from /api/health
