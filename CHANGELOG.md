@@ -32,11 +32,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Dependabot Python pull requests no longer need a hand-run `make lock`** (TODO T-009 follow-up). `.github/dependabot.yml`
   excludes both exports from the `uv` entry (`exclude-paths`), so Dependabot edits `pyproject.toml` and `uv.lock` only.
   The new `.github/workflows/dependabot-lockfiles.yml` regenerates the exports on Dependabot's own pull requests
-  (`uv export --frozen`: it reads `uv.lock` only, so no dependency code runs while the job holds a write token), pushes
-  them, and starts `ci` and `security` on that commit, because a push made with `GITHUB_TOKEN` starts no workflow by
-  itself and `workflow_dispatch` is the [documented exception](https://docs.github.com/en/actions/concepts/security/github_token).
-  `scripts/export-lockfiles.sh` is now the one place the export flags live; `make lock` and `scripts/check-lockfiles.sh`
-  call it (the check still runs `uv lock --check` first). `tests/unit/test_workflows.py` pins what the workflow may do.
+  (`uv export --frozen`: it reads `uv.lock` only, so no dependency code runs) and pushes them with a short-lived,
+  contents-only token of a dedicated GitHub App, so the required checks run on that commit as on any push. It cannot
+  use `GITHUB_TOKEN`: a push made with it starts no workflow, and checks from a `workflow_dispatch` run never count as a
+  pull request's required checks ([GitHub documentation](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated)).
+  The job's own `GITHUB_TOKEN` is read-only. **Owner step:** create the App and add the Dependabot secrets
+  `LOCKFILES_APP_CLIENT_ID` and `LOCKFILES_APP_PRIVATE_KEY` (TODO T-009); until then the workflow stops with an error
+  naming them. `scripts/export-lockfiles.sh` is now the one place the export flags live; `make lock` and
+  `scripts/check-lockfiles.sh` call it (the check still runs `uv lock --check` first). `tests/unit/test_workflows.py`
+  pins what the workflow may do.
 - `.github/dependabot.yml`: the `github-actions` entry groups every action into one weekly pull request, as the other
   App repositories do.
 

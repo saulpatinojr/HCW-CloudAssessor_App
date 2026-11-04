@@ -148,14 +148,14 @@ def test_codeql_init_and_analyze_share_one_release_pin():
 
 
 def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency_code():
-    """The one workflow that pushes to a pull request branch: it holds a write token, so what it may do is pinned."""
+    """The one workflow that pushes to a pull request branch, so what it may do is pinned."""
     path = ROOT / ".github" / "workflows" / "dependabot-lockfiles.yml"
     text = path.read_text(encoding="utf-8")
     doc = yaml.safe_load(text)
     triggers = doc.get("on", doc.get(True))
-    assert set(triggers) == {"pull_request"}, "never pull_request_target or workflow_run"
+    assert set(triggers) == {"pull_request"}, "never pull_request_target, workflow_run or workflow_dispatch"
     job = doc["jobs"]["export"]
-    assert job["permissions"] == {"contents": "write", "actions": "write"}
+    assert job["permissions"] == {"contents": "read"}, "the push uses the App's token; GITHUB_TOKEN stays read-only"
     for gate in (
         "github.event.pull_request.user.login == 'dependabot[bot]'",
         "github.event.pull_request.head.repo.full_name == github.repository",
@@ -166,8 +166,18 @@ def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency
     code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
     assert "github.actor" not in code, "github.actor is spoofable on a re-run (zizmor bot-conditions)"
     assert job["steps"][0]["with"]["persist-credentials"] is False
+    app = next(step for step in job["steps"] if "create-github-app-token" in step.get("uses", ""))
+    assert app["with"]["permission-contents"] == "write" and len(app["with"]) == 3
+    assert app["with"]["client-id"] == "${{ secrets.LOCKFILES_APP_CLIENT_ID }}"
+    assert app["with"]["private-key"] == "${{ secrets.LOCKFILES_APP_PRIVATE_KEY }}"
+    push = next(step for step in job["steps"] if "push origin" in step.get("run", ""))
+    assert push["env"]["APP_TOKEN"] == "${{ steps.app.outputs.token }}"
+    assert "github.token" not in code and "secrets.GITHUB_TOKEN" not in code
+    # Checks from a workflow_dispatch run never satisfy a pull request's required checks (GitHub documentation,
+    # "Troubleshooting required status checks"): the App-token push is what starts them.
+    assert "gh workflow run" not in code and "workflow_dispatch" not in code
     runs = [step.get("run", "") for step in job["steps"]]
-    assert "bash scripts/export-lockfiles.sh" in runs
+    assert any("bash scripts/export-lockfiles.sh" in run for run in runs)
     for run in runs:
         for forbidden in ("uv lock", "uv sync", "uv run", "uv build", "make", "pip install -r", "pytest"):
             assert not re.search(rf"(?m)^\s*{forbidden}\b", run), forbidden
@@ -176,15 +186,6 @@ def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency
     export = (ROOT / "scripts" / "export-lockfiles.sh").read_text(encoding="utf-8")
     export_code = "\n".join(line.split("#", 1)[0] for line in export.splitlines() if not line.startswith("#!"))
     assert "--frozen" in export_code and "uv lock" not in export_code.replace("uv.lock", "")
-
-
-def test_the_workflows_with_required_checks_can_be_started_on_a_pushed_commit():
-    """dependabot-lockfiles.yml pushes with GITHUB_TOKEN, which starts no workflow, so it starts these by hand."""
-    text = (ROOT / ".github" / "workflows" / "dependabot-lockfiles.yml").read_text(encoding="utf-8")
-    for name in ("ci.yml", "security.yml"):
-        doc = yaml.safe_load((ROOT / ".github" / "workflows" / name).read_text(encoding="utf-8"))
-        assert "workflow_dispatch" in doc.get("on", doc.get(True)), f"{name} cannot be started by hand"
-        assert f"gh workflow run {name}" in text, name
 
 
 def test_dependabot_never_edits_the_generated_exports_and_groups_the_actions():
