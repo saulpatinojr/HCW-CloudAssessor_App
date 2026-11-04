@@ -6,7 +6,8 @@ import yaml
 
 from ..conftest import ROOT
 
-WORKFLOWS = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+# GitHub runs both extensions, so every test here sees both.
+WORKFLOWS = sorted([*(ROOT / ".github" / "workflows").glob("*.yml"), *(ROOT / ".github" / "workflows").glob("*.yaml")])
 USES = re.compile(r"^\s*(?:-\s+)?uses:\s*([^\s#]+)\s*#\s*(v\S+)", re.MULTILINE)
 # A local action (`uses: ./.github/actions/...`) has no SHA to pin; its own `uses:` are pinned in its action.yml.
 ANY_USES = re.compile(r"^\s*(?:-\s+)?uses:\s*(?!\./)(\S+)", re.MULTILINE)
