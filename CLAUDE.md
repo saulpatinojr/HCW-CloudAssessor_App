@@ -11,7 +11,8 @@ downstream; never the reverse. `README.md` is the human intro; this file states 
 - Before claiming anything works, run `make setup`, then `make lint`, `make test` and `make test-security`. Never claim a
   check passed that you did not run; say which ones you could not run (for example Docker image builds).
 - Dependencies are locked. After editing `pyproject.toml`, run `make lock` and commit `uv.lock` and both
-  `requirements*.lock.txt` files together. Never edit them by hand.
+  `requirements*.lock.txt` files together. Never edit them by hand. On Dependabot pull requests
+  `.github/workflows/dependabot-lockfiles.yml` regenerates the exports; `scripts/export-lockfiles.sh` holds the flags.
 - Azure is the only target platform. Never run `terraform apply`, and never call live Azure, from an agent session.
 - Owner-pasteable commands: no placeholders; bash and PowerShell both acceptable; say which shell.
 - The lab edition keeps a running note of what reaches it: `docs/whats-new-upstream.md` in `saulpatinojr/HCW-CloudAssessor_AddOn`. When a change lands here that reaches the lab edition (engine public surface, catalog, evaluator kinds, `MODEL_VERSION`, release or wheel contract, CI or lockfile rules it mirrors), add an entry there in the same change set, or say in the pull request why none is needed.

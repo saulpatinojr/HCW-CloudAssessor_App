@@ -181,6 +181,17 @@ infrastructure inventory. Security controls should land before the first collect
   per-service packages that release frequently. Group them into a single weekly pull
   request or the queue becomes unmanageable.
 - **Done (2026-10-10):** `.github/dependabot.yml`: pip (grouped `azure-*`/`msal*`/`msrest*`, dev group), the engine package, github-actions, docker, terraform; weekly.
+- **Follow-up done (2026-11-04):** Dependabot Python pull requests no longer need a hand-run `make lock`. The `uv` entry
+  excludes both `requirements*.lock.txt` exports (`exclude-paths`), and `.github/workflows/dependabot-lockfiles.yml`
+  regenerates them on Dependabot's own pull requests and starts `ci` and `security` on the pushed commit. The
+  `github-actions` entry now groups every action into one weekly pull request, so `codeql-action/init` and
+  `/analyze` can no longer arrive split. **Not yet seen on GitHub:** the first run is on Dependabot's next weekly `uv`
+  pull request; it worked when that pull request shows a `github-actions[bot]` commit "Regenerate
+  requirements*.lock.txt from uv.lock (make lock)" with the seven required checks green on it. When a Dependabot pull
+  request falls behind `main`, comment `@dependabot recreate` on it (the extra commit stops Dependabot rebasing by itself).
+- **Open (P3):** set `persist-credentials: false` on the checkouts of `publish-core.yml` and `publish-images.yml` too
+  (zizmor `artipacked`), then prove it with the release dry run (`workflow_dispatch` on a branch) before the next tag.
+  `ci.yml` and `security.yml` were changed on 2026-11-04.
 
 ### T-010 — Add dependency review and static analysis to CI
 

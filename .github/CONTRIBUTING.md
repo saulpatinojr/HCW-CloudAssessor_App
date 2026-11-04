@@ -52,7 +52,8 @@ automated session.
 ## Rules that are easy to get wrong
 
 - **Dependencies are locked.** After you change `pyproject.toml`, run `make lock` and commit `uv.lock` and both
-  `requirements*.lock.txt` files together. Never edit them by hand.
+  `requirements*.lock.txt` files together. Never edit them by hand. On Dependabot's own pull requests the
+  `dependabot-lockfiles` workflow does the export for you; if one falls behind `main`, comment `@dependabot recreate`.
 - **Never weaken** the managed-identity-only rule, the `CA_PUBLIC_RESULTS` release gate, the content-free logs, the
   scope allow-list or the lab edition's inability to reach Azure. `CLAUDE.md` lists them with the tests that guard them.
 - **Evaluator kinds are only added, never renamed**, and `MODEL_VERSION` changes only when `Resource` changes.
