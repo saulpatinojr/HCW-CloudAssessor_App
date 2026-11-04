@@ -188,15 +188,17 @@ infrastructure inventory. Security controls should land before the first collect
   request, so `codeql-action/init` and `/analyze` can no longer arrive split. The decision and its alternatives are ADR
   0006 in `HCW-CloudCrawler_App`, which uses the same App. When a Dependabot pull request falls behind `main`, comment
   `@dependabot recreate` on it (the extra commit stops Dependabot rebasing by itself).
-- **Open (P2, owner, blocks the follow-up above):** set up the lockfile App, once for both App repositories:
-  1. Create it at <https://github.com/settings/apps/new>: name `HCW Lockfile Sync`; description "Pushes the
-     regenerated requirements lock export to Dependabot pull requests in the HCW App repositories."; homepage URL
-     `https://github.com/saulpatinojr/HCW-CloudAssessor_App`; untick **Webhook → Active**; **Repository permissions →
-     Contents: Read and write** and nothing else; **Only on this account**.
-  2. On the App's page, note the **Client ID**, then **Generate a private key** (a `.pem` file downloads).
-  3. **Install App → Only select repositories →** `HCW-CloudAssessor_App` and `HCW-CloudCrawler_App`.
+- **Open (P2, owner, blocks the follow-up above):** give the workflow the HCW Main Admin GitHub App, once for both App
+  repositories. The owner chose on 2026-11-04 to reuse it instead of creating a new "HCW Lockfile Sync" App
+  (HCW-CloudCrawler_App issue #70, which has the same steps):
+  1. Open HCW Main Admin from <https://github.com/settings/apps>, then **Permissions & events**: check that
+     **Repository permissions** include **Contents: Read and write**.
+  2. On its **General** page, copy the **Client ID** (the add-ons' `HCW_MAIN_ADMIN_CLIENT_ID` value), then **Generate a
+     private key** (a `.pem` file downloads): a new key used only by the two App repositories.
+  3. **Install App** → the gear next to your account → **Repository access** → add `HCW-CloudAssessor_App` and
+     `HCW-CloudCrawler_App` → **Save**.
   4. In each repository, **Settings → Secrets and variables → Dependabot → New repository secret**:
-     `LOCKFILES_APP_CLIENT_ID` = the Client ID; `LOCKFILES_APP_PRIVATE_KEY` = the whole `.pem` file. Then delete the
+     `HCW_MAIN_ADMIN_CLIENT_ID` = the Client ID; `HCW_MAIN_ADMIN_PRIVATE_KEY` = the whole `.pem` file. Then delete the
      `.pem`.
   **Not yet seen on GitHub:** it worked when Dependabot's next weekly `uv` pull request shows the commit "Regenerate
   requirements*.lock.txt from uv.lock (make lock)" and the seven required checks ran on it by themselves.
