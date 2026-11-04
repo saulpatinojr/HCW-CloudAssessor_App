@@ -59,8 +59,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - The ten `actions/checkout` steps in `ci.yml` and `security.yml` now set `persist-credentials: false`, so the job's
   `GITHUB_TOKEN` is not left in `.git/config` for later steps (zizmor `artipacked`, medium). No step in either workflow
   pushes with git. CloudCrawler already does this everywhere. A new test pins it for those two workflows and the new
-  one. Not yet changed: the checkouts in `publish-core.yml` and `publish-images.yml`, which run only on a release tag,
-  so a pull request cannot prove the change; recorded in TODO T-009's follow-up note.
+  one. The release workflows followed in the entry below.
+- The checkouts in `publish-core.yml` and `publish-images.yml` set `persist-credentials: false` as well (issue #85), so
+  no checkout in any workflow keeps the token. Nothing after them needs it: the release-version check runs only the local
+  `git merge-base` and `git rev-parse` on the full-history checkout, the builds use the checked-out files, and the
+  release upload passes `GH_TOKEN` to `gh`. The checkout test now covers every workflow, matching the action name without
+  regard to case. Proven by a manual run of both workflows on the branch, which publishes nothing.
 
 ## [0.3.1] - 2026-11-03
 

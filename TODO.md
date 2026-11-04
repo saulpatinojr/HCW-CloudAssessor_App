@@ -200,9 +200,10 @@ infrastructure inventory. Security controls should land before the first collect
      `.pem`.
   **Not yet seen on GitHub:** it worked when Dependabot's next weekly `uv` pull request shows the commit "Regenerate
   requirements*.lock.txt from uv.lock (make lock)" and the seven required checks ran on it by themselves.
-- **Open (P3):** set `persist-credentials: false` on the checkouts of `publish-core.yml` and `publish-images.yml` too
-  (zizmor `artipacked`), then prove it with the release dry run (`workflow_dispatch` on a branch) before the next tag.
-  `ci.yml` and `security.yml` were changed on 2026-11-04.
+- **Done (2026-11-04, issue #85):** the checkouts of `publish-core.yml` and `publish-images.yml` set
+  `persist-credentials: false` too, so no checkout in any workflow keeps the token (zizmor `artipacked`), and
+  `tests/unit/test_workflows.py` checks every workflow. Proven by a manual run of both workflows on the change's branch,
+  which builds, checks and scans but publishes nothing (every publishing step needs a `v*` tag).
 
 ### T-010 — Add dependency review and static analysis to CI
 

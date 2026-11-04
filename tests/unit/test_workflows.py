@@ -195,11 +195,15 @@ def test_dependabot_never_edits_the_generated_exports_and_groups_the_actions():
     assert by_ecosystem["github-actions"]["groups"]["github-actions"]["patterns"] == ["*"]
 
 
-def test_checkouts_on_pull_requests_do_not_leave_the_token_on_disk():
+def test_no_checkout_in_any_workflow_leaves_the_token_on_disk():
     """zizmor artipacked: a checkout keeps GITHUB_TOKEN in .git/config unless told not to. Nothing in these workflows
-    pushes with git, so none needs it (publish-core.yml and publish-images.yml are not covered yet: they run only on a
-    tag, so a pull request cannot prove a change to them)."""
-    for name in ("ci.yml", "security.yml", "dependabot-lockfiles.yml"):
-        for step in _steps(name):
-            if step.get("uses", "").startswith("actions/checkout@"):
-                assert step.get("with", {}).get("persist-credentials") is False, name
+    pushes with git or fetches with it after the checkout (the release workflows' version check runs only local
+    `git merge-base` and `git rev-parse`; `gh` gets GH_TOKEN), so none needs it. Every workflow is covered since issue
+    #85 added publish-core.yml and publish-images.yml. Owner and repository names are case-insensitive on GitHub."""
+    found = 0
+    for path in WORKFLOWS:
+        for step in _steps(path.name):
+            if str(step.get("uses", "")).lower().startswith("actions/checkout@"):
+                found += 1
+                assert (step.get("with") or {}).get("persist-credentials") is False, path.name
+    assert found >= 16, f"only {found} checkouts found; the workflow list or the YAML shape changed"
