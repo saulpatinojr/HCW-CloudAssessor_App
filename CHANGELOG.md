@@ -33,11 +33,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   excludes both exports from the `uv` entry (`exclude-paths`), so Dependabot edits `pyproject.toml` and `uv.lock` only.
   The new `.github/workflows/dependabot-lockfiles.yml` regenerates the exports on Dependabot's own pull requests
   (`uv export --frozen`: it reads `uv.lock` only, so no dependency code runs) and pushes them with a short-lived,
-  contents-only token of a dedicated GitHub App, so the required checks run on that commit as on any push. It cannot
+  contents-only token of the HCW Main Admin GitHub App (the add-ons' App, reused instead of a new one; HCW-CloudCrawler_App
+  issue #70), so the required checks run on that commit as on any push. It cannot
   use `GITHUB_TOKEN`: a push made with it starts no workflow, and checks from a `workflow_dispatch` run never count as a
   pull request's required checks ([GitHub documentation](https://docs.github.com/en/pull-requests/how-tos/merge-and-close-pull-requests/troubleshooting-required-status-checks#checks-from-some-workflow-jobs-are-not-evaluated)).
-  The job's own `GITHUB_TOKEN` is read-only. **Owner step:** create the App and add the Dependabot secrets
-  `LOCKFILES_APP_CLIENT_ID` and `LOCKFILES_APP_PRIVATE_KEY` (TODO T-009); until then the workflow stops with an error
+  The job's own `GITHUB_TOKEN` is read-only. **Owner step:** install HCW Main Admin here and add the Dependabot
+  secrets `HCW_MAIN_ADMIN_CLIENT_ID` and `HCW_MAIN_ADMIN_PRIVATE_KEY` (TODO T-009); until then the workflow stops with an error
   naming them. `scripts/export-lockfiles.sh` is now the one place the export flags live; `make lock` and
   `scripts/check-lockfiles.sh` call it (the check still runs `uv lock --check` first). `tests/unit/test_workflows.py`
   pins what the workflow may do.

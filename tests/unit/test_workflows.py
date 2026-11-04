@@ -168,9 +168,12 @@ def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency
     assert "github.actor" not in code, "github.actor is spoofable on a re-run (zizmor bot-conditions)"
     assert job["steps"][0]["with"]["persist-credentials"] is False
     app = next(step for step in job["steps"] if "create-github-app-token" in step.get("uses", ""))
+    # Exactly three inputs: no owner and no repositories, so the token covers this repository only, though the App
+    # (HCW Main Admin) is installed on several.
     assert app["with"]["permission-contents"] == "write" and len(app["with"]) == 3
-    assert app["with"]["client-id"] == "${{ secrets.LOCKFILES_APP_CLIENT_ID }}"
-    assert app["with"]["private-key"] == "${{ secrets.LOCKFILES_APP_PRIVATE_KEY }}"
+    assert app["with"]["client-id"] == "${{ secrets.HCW_MAIN_ADMIN_CLIENT_ID }}"
+    assert app["with"]["private-key"] == "${{ secrets.HCW_MAIN_ADMIN_PRIVATE_KEY }}"
+    assert "LOCKFILES_APP" not in text, "the old dedicated-App secret names are gone (issue #70)"
     push = next(step for step in job["steps"] if "push origin" in step.get("run", ""))
     assert push["env"]["APP_TOKEN"] == "${{ steps.app.outputs.token }}"
     assert "github.token" not in code and "secrets.GITHUB_TOKEN" not in code
