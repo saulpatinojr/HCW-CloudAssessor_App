@@ -22,6 +22,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Removed
+
+- **CodeRabbit, the review bot, is removed until further notice** (the owner's instruction of 2026-11-06). Its settings
+  file `.coderabbit.yaml` is deleted. The 0.3.0 entry that turned on its approvals stays as history. The `Protect main`
+  ruleset still requires one approving review, as `.github/workflows/repository-admin.yml` sets it; lowering it there
+  and in the live ruleset is the owner's step. Repository process only; nothing in the engine, the appliance or the
+  image changes.
+
 ## [0.3.2] - 2026-11-04
 
 A release of what was already on `main`, with the dry run fixed so it checks what the tag checks. **The `v0.3.1`
