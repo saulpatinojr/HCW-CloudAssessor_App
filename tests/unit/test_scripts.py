@@ -1,8 +1,11 @@
 """Each repository script exits non-zero on a deliberately broken input (REFACTOR_APP.md 7.15)."""
 
+import re
 import shutil
 import subprocess
 import sys
+
+import pytest
 
 from ..conftest import ROOT
 
@@ -80,6 +83,24 @@ def test_check_lockfiles_passes_here_and_fails_on_drift(tmp_path):
     (copy / "requirements.lock.txt").write_text("fastapi==0.0.1\n", encoding="utf-8")
     bad = _run("bash", str(copy / "scripts" / "check-lockfiles.sh"), cwd=copy)
     assert bad.returncode != 0
+
+
+@pytest.mark.parametrize("export", ["requirements.lock.txt", "requirements-azure.lock.txt"])
+def test_check_lockfiles_fails_when_one_export_lags_uv_lock(tmp_path, export):
+    """A bump that reaches uv.lock but not an export must fail and name that export (oauthlib 4.0.1 on PR #89)."""
+    if shutil.which("uv") is None:
+        pytest.skip("uv not on PATH")
+    copy = tmp_path / "repo"
+    shutil.copytree(ROOT, copy, ignore=shutil.ignore_patterns(".venv", ".git", "__pycache__", ".pytest_cache"))
+    path = copy / export
+    text = path.read_text(encoding="utf-8")
+    pin = re.search(r"^([A-Za-z0-9_.-]+)==(\S+) \\$", text, flags=re.MULTILINE)
+    assert pin, f"no pinned package found in {export}"
+    lagging = f"{pin.group(1)}==0.0.0 \\"
+    path.write_text(text.replace(pin.group(0), lagging, 1), encoding="utf-8")
+    bad = _run("bash", str(copy / "scripts" / "check-lockfiles.sh"), cwd=copy)
+    assert bad.returncode != 0
+    assert export in bad.stdout and lagging in bad.stdout
 
 
 def test_check_lockfiles_fails_on_a_stale_uv_lock_without_rewriting_it(tmp_path):
