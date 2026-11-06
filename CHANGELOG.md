@@ -30,6 +30,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and in the live ruleset is the owner's step. Repository process only; nothing in the engine, the appliance or the
   image changes.
 
+### Security
+
+- **The appliance image's lockfile now installs oauthlib 4.0.1, not 4.0.0 (CVE-2026-49272).** Dependabot's #89 moved
+  oauthlib to 4.0.1 in `uv.lock` but not in `requirements-azure.lock.txt`, the hash-pinned export the appliance image
+  installs, because the workflow that regenerates the exports on Dependabot's pull requests could not sign in as the
+  HCW Main Admin App. `lint` and `test` caught the gap on #89 and failed; the pull request was merged past them, so
+  `pip-audit` failed on `main`. `make lock` regenerated both exports from `uv.lock` (only the azure export changed; the
+  default set has no oauthlib). A new test, `test_check_lockfiles_fails_when_one_export_lags_uv_lock`, now proves
+  `scripts/check-lockfiles.sh` fails and names the file when either export lags `uv.lock`; the older test only broke the
+  default export. Nothing in the engine changes, so the lab edition is not affected.
+
 ## [0.3.2] - 2026-11-04
 
 A release of what was already on `main`, with the dry run fixed so it checks what the tag checks. **The `v0.3.1`
