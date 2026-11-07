@@ -24,6 +24,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- The container base image moves from `python:3.14.8-slim-trixie` to `python:3.14.10-slim-trixie` (CPython 3.14.10 on
+  Debian 13), pinned by its index digest `sha256:af8a5aa14780…` in `infrastructure/docker/versions.env` and in all four
+  `FROM` lines of `infrastructure/docker/Dockerfile` together, so `scripts/check-versions.sh` still agrees. 3.14.10 is
+  the newest Python 3.14 build on Docker Hub (read on 2026-11-07; `python:3.14-slim-trixie` points at the same digest
+  and no 3.14.11 exists). Both final stages keep their `apt-get upgrade` step for Debian security fixes published after
+  the base. `.python-version` and `make setup` stay on 3.14.6: that is the local and CI interpreter, the newest 3.14
+  build uv 0.11.32 can download, and it remains the floor of `requires-python`; the image's 3.14.10 is inside the same
+  range. `versions.env` and `REFACTOR_APP.md` no longer say the AddOn shares this pin: it moved to Python 3.15.2 with
+  the website.
 - `dependabot-lockfiles.yml` now says why the HCW Main Admin App's token could not be made when that step fails
   ([HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70), the same change as its
   [#74](https://github.com/saulpatinojr/HCW-CloudCrawler_App/pull/74)). On 2026-11-06 a 401 from a private key that
