@@ -22,6 +22,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `dependabot-lockfiles.yml` now says why the HCW Main Admin App's token could not be made when that step fails
+  ([HCW-CloudCrawler_App#70](https://github.com/saulpatinojr/HCW-CloudCrawler_App/issues/70), the same change as its
+  [#74](https://github.com/saulpatinojr/HCW-CloudCrawler_App/pull/74)). On 2026-11-06 a 401 from a private key that
+  belonged to another App was first read as "secrets not set", the only message there was. The new step runs only when
+  the token step fails, after the check that both secrets are present, and names the usual causes: a key or Client ID
+  that is not that App's, or the App not installed on this repository. `tests/unit/test_workflows.py` pins it.
+  Repository process only; nothing in the engine, the appliance or the lab edition changes.
+
 ### Removed
 
 - **CodeRabbit, the review bot, is removed until further notice** (the owner's instruction of 2026-11-06). Its settings
