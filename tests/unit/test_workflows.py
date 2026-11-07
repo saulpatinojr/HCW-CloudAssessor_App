@@ -179,6 +179,12 @@ def test_dependabot_lockfiles_only_acts_for_dependabot_and_never_runs_dependency
     assert app["with"]["client-id"] == "${{ secrets.HCW_MAIN_ADMIN_CLIENT_ID }}"
     assert app["with"]["private-key"] == "${{ secrets.HCW_MAIN_ADMIN_PRIVATE_KEY }}"
     assert "LOCKFILES_APP" not in text, "the old dedicated-App secret names are gone (issue #70)"
+    # A failed sign-in is explained as wrong secrets or a missing installation, not as missing secrets
+    # (HCW-CloudCrawler_App issue #70).
+    explain = next(step for step in job["steps"] if step.get("name") == "Say why the App's token could not be made")
+    assert explain["if"] == "failure() && steps.app.outcome == 'failure'"
+    for cause in ("not a key of that App", "not that App's Client ID", "not installed on this repository"):
+        assert cause in explain["run"], cause
     push = next(step for step in job["steps"] if "push origin" in step.get("run", ""))
     assert push["env"]["APP_TOKEN"] == "${{ steps.app.outputs.token }}"
     assert "github.token" not in code and "secrets.GITHUB_TOKEN" not in code
