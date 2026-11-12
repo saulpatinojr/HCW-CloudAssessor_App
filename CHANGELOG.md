@@ -24,6 +24,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Python 3.15 everywhere this repository chooses a Python**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Python 3.15 is the
+  HCW floor (the newest release line, at most two patches behind its newest, kept in `scripts/version-floors.json` in
+  HCW-HybridCloudWorks), and the website and the AddOn already run it. What moved:
+  - The container base image, from `python:3.14.10-slim-trixie` to `python:3.15.2-slim-trixie` by index digest
+    `sha256:65a65fc7b30b…`, the same pin as the website's `lab-image/versions.env` and the AddOn (read again from
+    Docker Hub on 2026-11-12; `python:3.15-slim-trixie` points at the same digest). `versions.env` and all four `FROM`
+    lines move together, and the Dockerfile's `python3.14` site-packages paths become `python3.15`.
+  - `requires-python` in both packages, from `>=3.14.6,<3.16` to `>=3.15.0,<3.16`. **This reaches the lab edition**: the
+    next engine wheel will not install on Python 3.14. The AddOn already requires `>=3.15.1` and runs 3.15.2, so it is
+    not affected, and no other consumer of the wheel is known. The engine moved with the appliance because nothing in
+    this repository tests 3.14 any more, so keeping 3.14 in the wheel's range would be a promise nobody checks.
+    `tests/packaging/test_core_wheel.py` now expects the new range.
+  - `.python-version` and `make setup` now name the line only, `3.15`, as the AddOn does. CI gets its interpreter from
+    `actions/setup-python` (the newest 3.15.x it has), and the pinned uv 0.11.32 cannot download a stable 3.15 itself
+    (it offers only `3.15.0b4`), so an exact patch there would fail whenever the two differ. Locally, `uv python install
+    3.15` needs uv 0.13.6 or newer to fetch 3.15.2 (`README.md` says so).
+  - Every workflow's `python-version` (`ci.yml`, `dependabot-lockfiles.yml`, `publish-core.yml`, `publish-images.yml`,
+    `release.yml`, `security.yml`) and ruff's `target-version` (`py315`).
+  - `uv.lock` re-locked with uv 0.11.32, and both `requirements*.lock.txt` exports regenerated: only Python 3.15
+    wheels remain. Every locked package has a 3.15 wheel (its own `cp315` wheel, an `abi3` one or a pure-Python one)
+    except PyYAML 6.0.3, a test-only dependency that is in neither image: its newest release publishes no 3.15 wheel
+    ([yaml/pyyaml#951](https://github.com/yaml/pyyaml/issues/951)), so `uv sync` builds it from its source archive,
+    which `uv.lock` pins by sha256. A comment in `pyproject.toml` says so.
+  - The `.github/dependabot.yml` comment on the base image, and the Python wording in `README.md`, `CONTRIBUTING.md`,
+    `REVIEW.md` and `REFACTOR_APP.md`.
+  Checked on CPython 3.15.2: `make lint`'s steps, the full test suite with the `azure` extra (417 passed, 1 skipped,
+  95 percent coverage), the security and packaging suites without it (38 passed), and `pip install --require-hashes
+  --no-deps --only-binary=:all:` of both exports. The images themselves were not built (no Docker in the session); the
+  `image` job of CI builds and checks both targets. No workflow runs `python` or `node` on the runner's own default:
+  every Python job already used `actions/setup-python`, and this repository has no Node.js code.
 - The container base image moves from `python:3.14.8-slim-trixie` to `python:3.14.10-slim-trixie` (CPython 3.14.10 on
   Debian 13), pinned by its index digest `sha256:af8a5aa14780…` in `infrastructure/docker/versions.env` and in all four
   `FROM` lines of `infrastructure/docker/Dockerfile` together, so `scripts/check-versions.sh` still agrees. 3.14.10 is

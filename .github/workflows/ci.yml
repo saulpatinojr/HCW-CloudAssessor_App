@@ -14,7 +14,9 @@ permissions:
   contents: read
 env:
   UV_VERSION: "0.11.32"
-  PYTHON_VERSION: "3.14"
+  # The line only, as .python-version and `make setup` name it: setup-python hands out the newest 3.15.x it has, and the
+  # pinned uv cannot download an exact 3.15 patch of its own, so an exact pin fails whenever the two differ.
+  PYTHON_VERSION: "3.15"
 jobs:
   lint:
     runs-on: ubuntu-26.04

@@ -38,7 +38,7 @@ Absent: source, dependency manifest, lockfile, tests, workflows, `LICENSE`, `COD
 
 ## 3 Target-state summary
 
-Python 3.14 line (floor 3.14.6), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
+Python 3.15 line (floor 3.15.0; 3.14 with floor 3.14.6 until HCW-HybridCloudWorks#1707), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
 
 ```
 HCW-CloudAssessor_App
@@ -502,7 +502,7 @@ Steps 1 to 7 are engineering; 8 needs the Docker Hub variables; 11 needs R-002. 
 - **AddOn compatibility is by exact tag pin.** The AddOn never floats on `main`; `core-update.yml` tests each release before adopting it and labels the PR `compatible` or `needs-adaptation`. A core change that breaks the lab is caught in the AddOn's CI, not on the lab host.
 - **Model version field.** `MODEL_VERSION = 1` in every `Resource`, `Assessment` and `report.json`; the catalog `version` beside it. Evaluator kinds are only added (`cost-evidence` is the first addition); ids are never reused; a changed criterion bumps its own `version`.
 - **One pane, two editions.** The pane branches on `edition` from `/api/health`; no field the lab relies on is removed. The health envelope stays flat and carries the standard's fields; the appliance adds `scope` and `lastRun` as extras the website proxy would ignore if it ever read them (it does not; the appliance is never framed by the site).
-- **Python line.** `requires-python = ">=3.14.6,<3.16"` in both packages (floor 3.14.6; widened from `<3.15` in 0.3.1 so the wheel installs on the Python 3.15.2 base the website moved to in HCW-HybridCloudWorks#1468 and that the AddOn's prepared branch `fix/python-315-base` targets). This repository's own image stays on Python 3.14, `python:3.14.10-slim-trixie` by digest since 2026-11-07 (`infrastructure/docker/versions.env`), and is moved by hand with its digest. The AddOn no longer shares that pin: it moved to `python:3.15.2-slim-trixie` with the website, so a `versions.env` bump here no longer has a twin there.
+- **Python line.** `requires-python = ">=3.15.0,<3.16"` in both packages since HCW-HybridCloudWorks#1707 (2026-11-12), the HCW floor in that repository's `scripts/version-floors.json` (newest line, at most two patches behind its newest). Before that it was `>=3.14.6,<3.16`, widened from `<3.15` in 0.3.1 so the wheel installed on the website's Python 3.15.2 base (HCW-HybridCloudWorks#1468). The engine's floor moved with the appliance's rather than staying at 3.14.6: nothing in this repository runs 3.14 any more, so a 3.14 claim in the published wheel would be untested, and its one consumer, the AddOn, already requires `>=3.15.1`. The image runs `python:3.15.2-slim-trixie` by digest (`infrastructure/docker/versions.env`), the same pin as the website and the AddOn, and is still moved by hand here. `.python-version` and `make setup` name the line only (`3.15`): CI's `actions/setup-python` hands out the newest 3.15.x it has, and the pinned uv 0.11.32 cannot download a stable 3.15 of its own (only `3.15.0b4`).
 - **Terraform pattern parity.** The root mirrors the AzMigrate appliance root's naming and provider constraints so an operator who knows one can read the other.
 
 ## 17 Rollback considerations
@@ -588,13 +588,13 @@ Run from the repository root after the skeleton lands. The commands are PowerShe
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.14; uv sync; uv run ruff check .; uv run pytest -q
+uv python install 3.15; uv sync; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.14 && uv sync && uv run ruff check . && uv run pytest -q
+uv python install 3.15 && uv sync && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging and catalog (PowerShell):

@@ -27,7 +27,7 @@ belong in [TODO.md](TODO.md).
 **Resolved by owner decision (2026-10-09, recorded 2026-10-10).** (a) The deliverable is a web pane plus a markdown
 report, JSON, CSV and a zip bundle, produced by the `cloud-assessor-core` engine; (b) consumers are client engineers;
 (c) the appliance edition (this repository) runs continuously on a timer against the client's own Azure scope, and the
-lab edition (`HCW-CloudAssessor_AddOn`) is point-in-time from an uploaded export. The stack follows: Python 3.14, `uv`,
+lab edition (`HCW-CloudAssessor_AddOn`) is point-in-time from an uploaded export. The stack follows: Python 3.15 (3.14 until HCW-HybridCloudWorks#1707), `uv`,
 FastAPI, pydantic, one Dockerfile with two targets, Terraform for Azure Container Apps (`REFACTOR_APP.md`, implemented).
 The text below is kept as the record of the question.
 
