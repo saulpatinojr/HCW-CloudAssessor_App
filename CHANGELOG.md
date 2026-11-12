@@ -60,6 +60,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     `actions/setup-node`, so the runner image's own, older interpreter cannot come back unnoticed. Exceptions go in an
     allow-list keyed by file, job, step and runtime, each with a reason; it is empty today, and a second test fails any
     entry that no longer matches. Ported from the website's `scripts/workflow-runtime-setup.test.mjs`.
+    A set-up step with its own `if:` covers only later steps under the same condition (or one of its top-level `||`
+    terms), a command in backticks counts like one in `$(...)`, and every set-up step must ask for Python 3.15 or
+    Node.js 26 or newer.
+  - `.qlty/qlty.toml` pins qlty's ruff to 0.17.4, the version in `uv.lock`: qlty's own default, 0.14.6, cannot read
+    `target-version = "py315"`.
   Checked on CPython 3.15.2: `make lint`'s steps, the full test suite with the `azure` extra (451 passed, 1 skipped,
   95 percent coverage), the security and packaging suites without it (38 passed), and `pip install --require-hashes
   --no-deps --only-binary=:all:` of both exports. The images themselves were not built (no Docker in the session); the
