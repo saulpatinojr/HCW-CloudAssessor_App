@@ -52,12 +52,14 @@ def test_wheel_imports_no_cloud_sdk_and_names_no_endpoint(wheel):
     assert requires == ["pydantic<3,>=2.14"]
 
 
-def test_wheel_installs_on_python_314_and_315(wheel):
-    """The wheel's Requires-Python admits 3.14.6 up to the last 3.15 and nothing from 3.16 on. The AddOn installs
-    the released wheel with `pip install --require-hashes --no-deps` on the website's Python 3.15 base; pip refuses a
-    wheel whose range excludes the interpreter, so a `<3.15` ceiling blocked that image before any code ran."""
+def test_wheel_requires_python_315(wheel):
+    """The wheel's Requires-Python admits every 3.15 release and nothing from 3.16 on. The AddOn installs the
+    released wheel with `pip install --require-hashes --no-deps` on the website's Python 3.15 base (its own floor is
+    3.15.1); pip refuses a wheel whose range excludes the interpreter, so a `<3.15` ceiling once blocked that image
+    before any code ran. The floor moved from 3.14.6 to 3.15.0, the HCW floor, in HCW-HybridCloudWorks#1707: this
+    repository's CI and image no longer run 3.14, so the wheel no longer claims it."""
     z = zipfile.ZipFile(wheel)
     metadata = next(n for n in z.namelist() if n.endswith("METADATA"))
     line = re.search(r"^Requires-Python: (.+)$", z.read(metadata).decode("utf-8"), re.MULTILINE)
     assert line is not None, "the wheel declares no Requires-Python"
-    assert {part.strip() for part in line.group(1).split(",")} == {">=3.14.6", "<3.16"}
+    assert {part.strip() for part in line.group(1).split(",")} == {">=3.15.0", "<3.16"}

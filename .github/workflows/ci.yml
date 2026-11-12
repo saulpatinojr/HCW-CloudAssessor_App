@@ -14,7 +14,9 @@ permissions:
   contents: read
 env:
   UV_VERSION: "0.11.32"
-  PYTHON_VERSION: "3.14"
+  # The line only, as .python-version and `make setup` name it: setup-python hands out the newest 3.15.x it has, and the
+  # pinned uv cannot download an exact 3.15 patch of its own, so an exact pin fails whenever the two differ.
+  PYTHON_VERSION: "3.15"
 jobs:
   lint:
     runs-on: ubuntu-26.04
@@ -32,7 +34,8 @@ jobs:
       - name: Every place that names the release version agrees (a v* tag can never be corrected)
         run: uv run python scripts/check-release-version.py
       - run: bash scripts/check-versions.sh
-      - run: bash scripts/check-lockfiles.sh
+      - name: uv.lock matches pyproject.toml and both requirements exports
+        run: bash scripts/check-lockfiles.sh
       - name: The appliance refuses to start without the azure extra (default set)
         run: |
           set +e

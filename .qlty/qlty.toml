@@ -68,6 +68,11 @@ name = "trufflehog"
 # and the engine. R-008 (the Cloud-side `qlty check` fault) is unaffected by this file and stays open.
 [[plugin]]
 name = "ruff"
+# Same ruff as uv.lock. Without a version qlty runs its own default (0.14.6),
+# which cannot parse target-version = "py315" in ruff.toml (the Python 3.15
+# move, HCW-HybridCloudWorks#1707) and then reports the whole qlty build as
+# "Build errored". Move this with uv.lock.
+version = "0.17.4"
 
 [[plugin]]
 name = "bandit"

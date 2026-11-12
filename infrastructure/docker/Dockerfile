@@ -23,43 +23,43 @@
 #         docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"          # exit non-zero
 #         docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"   # exit 0
 
-FROM python:3.14.10-slim-trixie@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS deps
+FROM python:3.15.2-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS deps
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 COPY requirements.lock.txt ./
 RUN pip install --require-hashes --no-deps --prefix /install -r requirements.lock.txt
-COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.14/site-packages/cloud_assessor_core
-COPY packages/cloud-assessor-core/catalog /install/lib/python3.14/site-packages/cloud_assessor_core/catalog_data
+COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.15/site-packages/cloud_assessor_core
+COPY packages/cloud-assessor-core/catalog /install/lib/python3.15/site-packages/cloud_assessor_core/catalog_data
 RUN find /install -name "__pycache__" -type d -prune -exec rm -rf {} + \
  && python - <<'PY'
 import importlib.util, sys
-sys.path.insert(0, "/install/lib/python3.14/site-packages")
+sys.path.insert(0, "/install/lib/python3.15/site-packages")
 for forbidden in ("azure", "msal", "boto3"):
     if importlib.util.find_spec(forbidden) is not None:
         raise SystemExit(f"edition boundary: {forbidden} is importable in the default set")
 print("edition boundary: no cloud SDK in the default set")
 PY
 
-FROM python:3.14.10-slim-trixie@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS deps-azure
+FROM python:3.15.2-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS deps-azure
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1 PIP_NO_CACHE_DIR=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /build
 COPY requirements-azure.lock.txt ./
 RUN pip install --require-hashes --no-deps --prefix /install -r requirements-azure.lock.txt
-COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.14/site-packages/cloud_assessor_core
-COPY packages/cloud-assessor-core/catalog /install/lib/python3.14/site-packages/cloud_assessor_core/catalog_data
-COPY src/cloud_assessor_appliance /install/lib/python3.14/site-packages/cloud_assessor_appliance
+COPY packages/cloud-assessor-core/src/cloud_assessor_core /install/lib/python3.15/site-packages/cloud_assessor_core
+COPY packages/cloud-assessor-core/catalog /install/lib/python3.15/site-packages/cloud_assessor_core/catalog_data
+COPY src/cloud_assessor_appliance /install/lib/python3.15/site-packages/cloud_assessor_appliance
 RUN find /install -name "__pycache__" -type d -prune -exec rm -rf {} +
 
 # ---- lab: boundary-proof build only (never pushed, never deployed) ----
-FROM python:3.14.10-slim-trixie@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS lab
+FROM python:3.15.2-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS lab
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true \
- && rm -rf /usr/local/lib/python3.14/ensurepip /usr/local/lib/python3.14/site-packages/pip* \
-           /usr/local/lib/python3.14/site-packages/setuptools* /usr/local/lib/python3.14/site-packages/wheel* \
+ && rm -rf /usr/local/lib/python3.15/ensurepip /usr/local/lib/python3.15/site-packages/pip* \
+           /usr/local/lib/python3.15/site-packages/setuptools* /usr/local/lib/python3.15/site-packages/wheel* \
            /usr/local/bin/pip* /usr/local/bin/wheel /root/.cache \
  && groupadd --gid 10001 app && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin app
 COPY --from=deps /install /usr/local
@@ -68,16 +68,16 @@ USER 10001:10001
 CMD ["python", "-c", "import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None; print('lab boundary proof: core', cloud_assessor_core.__version__, 'imports; azure absent')"]
 
 # ---- appliance: the deployed image ----
-FROM python:3.14.10-slim-trixie@sha256:af8a5aa14780025dbfbcfbc81bd8a91ebd87711dd5b0f48ed71090949dd7cb1d AS appliance
+FROM python:3.15.2-slim-trixie@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS appliance
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080 \
-    CA_STATIC_DIR=/usr/local/lib/python3.14/site-packages/cloud_assessor_appliance/web CA_FRAME_ANCESTORS="'none'"
+    CA_STATIC_DIR=/usr/local/lib/python3.15/site-packages/cloud_assessor_appliance/web CA_FRAME_ANCESTORS="'none'"
 RUN apt-get update \
  && apt-get upgrade -y --no-install-recommends \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* \
  && python -m pip uninstall -y pip setuptools wheel >/dev/null 2>&1 || true \
- && rm -rf /usr/local/lib/python3.14/ensurepip /usr/local/lib/python3.14/site-packages/pip* \
-           /usr/local/lib/python3.14/site-packages/setuptools* /usr/local/lib/python3.14/site-packages/wheel* \
+ && rm -rf /usr/local/lib/python3.15/ensurepip /usr/local/lib/python3.15/site-packages/pip* \
+           /usr/local/lib/python3.15/site-packages/setuptools* /usr/local/lib/python3.15/site-packages/wheel* \
            /usr/local/bin/pip* /usr/local/bin/wheel /root/.cache \
  && groupadd --gid 10001 app && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin app
 COPY --from=deps-azure /install /usr/local

@@ -7,7 +7,7 @@ paraphrased FinOps, Well-Architected cost and Zero Trust criteria.**
 [![ci](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/ci.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/ci.yml)
 [![security](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/security.yml/badge.svg)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/actions/workflows/security.yml)
 [![release](https://img.shields.io/github/v/release/saulpatinojr/HCW-CloudAssessor_App?label=release&include_prereleases)](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases)
-[![python](https://img.shields.io/badge/python-3.14-3776AB?logo=python&logoColor=white)](pyproject.toml)
+[![python](https://img.shields.io/badge/python-3.15-3776AB?logo=python&logoColor=white)](pyproject.toml)
 [![license](https://img.shields.io/github/license/saulpatinojr/HCW-CloudAssessor_App)](LICENSE)
 [![lab edition](https://img.shields.io/badge/lab%20edition-HCW--CloudAssessor__AddOn-6f42c1?logo=github)](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn)
 
@@ -80,19 +80,21 @@ note of what reaches it in its `docs/whats-new-upstream.md`.
 
 ## Quick start
 
-Requires Python 3.14.6 or newer and [`uv`](https://docs.astral.sh/uv/) 0.11.32 or newer. The commands are PowerShell
-unless the line above says bash.
+Requires Python 3.15 and [`uv`](https://docs.astral.sh/uv/). To let uv download Python 3.15 for you, use uv 0.13.6 or
+newer: the uv this repository pins for CI and the lockfiles, 0.11.32, can only download a 3.15 beta, which `requires-python`
+refuses (CI gets its 3.15 from `actions/setup-python` instead). The commands are PowerShell unless the line above says
+bash.
 
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.14; uv sync --all-packages --extra azure; uv run ruff check .; uv run pytest -q
+uv python install 3.15; uv sync --all-packages --extra azure; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.14 && uv sync --all-packages --extra azure && uv run ruff check . && uv run pytest -q
+uv python install 3.15 && uv sync --all-packages --extra azure && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging, catalog and governance (PowerShell):
@@ -144,14 +146,15 @@ states which applies; the plan is covered by `infrastructure/terraform/appliance
 floating tag. The plan refuses an internet-reachable appliance unless `auth_enabled = true` (Microsoft Entra ID sign-in, see Sign-in) or `external_enabled = false`. `terraform apply` is an owner step after human review.
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
-pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). It needs Python 3.14.6 or
-newer, and the command is the same in bash and PowerShell:
+pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). Release 0.3.2 installs on
+Python 3.14.6 or newer, 0.3.0 and earlier on Python 3.14 only (no 0.3.1 was published), and later releases need
+Python 3.15. The command is the same in bash and PowerShell:
 
 ```bash
-python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.2.1/cloud_assessor_core-0.2.1-py3-none-any.whl
+python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl
 ```
 
-Replace `v0.2.1` and `0.2.1` together to install another release; the list is on the
+Replace `v0.3.2` and `0.3.2` together to install another release; the list is on the
 [releases page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases).
 
 ## Releasing and versioning

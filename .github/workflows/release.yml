@@ -20,7 +20,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false, fetch-depth: 0 }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with: { python-version: "3.14" }
+        with: { python-version: "3.15" }
       - name: The tag, the versions and the changelog agree (before any release is created)
         env: { REF_NAME: "${{ github.ref_name }}" }
         run: python scripts/check-release-version.py --tag "$REF_NAME" --ancestor-of origin/main
@@ -33,7 +33,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with: { persist-credentials: false }
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7
-        with: { python-version: "3.14" }
+        with: { python-version: "3.15" }
       - name: Release notes from CHANGELOG.md
         env: { REF_NAME: "${{ github.ref_name }}" }
         run: python scripts/check-release-version.py --tag "$REF_NAME" --notes-out release-notes.md

@@ -34,7 +34,8 @@ overview, `TODO.md` is the work queue and `REVIEW.md` lists the decisions that n
 
 ## Set up and check your change
 
-Python 3.14.6 or newer and [uv](https://docs.astral.sh/uv/) are needed. From the repository root (bash or PowerShell):
+Python 3.15 and [uv](https://docs.astral.sh/uv/) are needed (uv 0.13.6 or newer if you want uv to download Python 3.15
+for you; see `README.md`). From the repository root (bash or PowerShell):
 
 ```bash
 make setup

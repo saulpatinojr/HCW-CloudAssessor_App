@@ -3,7 +3,7 @@
 .PHONY: setup lock lint test test-security run image-appliance image-lab clean
 
 setup:
-	uv python pin 3.14.6
+	uv python pin 3.15
 	uv sync --all-packages --extra azure
 
 lock:

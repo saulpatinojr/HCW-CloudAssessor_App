@@ -4,7 +4,7 @@ version = "0.3.2"
 description = "Hybrid Cloud Works Cloud Assessor, appliance edition: a continuous assessment of the client's own Azure scope (Resource Graph and Cost Management under a user-assigned managed identity) against paraphrased FinOps, Well-Architected cost and Zero Trust criteria."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.14.6,<3.16"
+requires-python = ">=3.15.0,<3.16"
 dependencies = [
   "cloud-assessor-core",
   "fastapi==0.162.0",
@@ -30,6 +30,10 @@ dev = [
   "ruff==0.17.4",
   "httpx==0.28.1",
   "pip-audit==2.10.1",
+  # PyYAML 6.0.3, its newest release, publishes no wheel for CPython 3.15 (checked 2026-11-12; upstream
+  # https://github.com/yaml/pyyaml/issues/951), so `uv sync` builds it from its source archive, which uv.lock pins by
+  # sha256, with the build tools pinned in [tool.uv] below. Only the tests read YAML (test_workflows.py,
+  # test_community_files.py and test_repository_admin_required_checks.py under tests/unit); neither image carries it.
   "pyyaml==6.0.3",
 ]
 
@@ -42,6 +46,11 @@ packages = ["src/cloud_assessor_appliance"]
 
 [tool.uv]
 workspace = { members = ["packages/cloud-assessor-core"] }
+# Exact versions of the tools uv uses to build PyYAML 6.0.3 from its source archive, which it must do on Python 3.15
+# because PyYAML has no 3.15 wheel yet (see the dev group above). Without these, each build fetched whatever setuptools
+# and Cython were newest that day. Added 2026-11-12; checked to build PyYAML 6.0.3 on CPython 3.15.2. Delete this line
+# once PyYAML publishes a cp315 wheel (https://github.com/yaml/pyyaml/issues/951; TODO.md T-035).
+build-constraint-dependencies = ["setuptools==84.2.1", "cython==3.3.1"]
 
 [tool.uv.sources]
 cloud-assessor-core = { workspace = true }

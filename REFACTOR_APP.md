@@ -38,7 +38,7 @@ Absent: source, dependency manifest, lockfile, tests, workflows, `LICENSE`, `COD
 
 ## 3 Target-state summary
 
-Python 3.14 line (floor 3.14.6), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
+Python 3.15 line (floor 3.15.0; 3.14 with floor 3.14.6 until HCW-HybridCloudWorks#1707), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
 
 ```
 HCW-CloudAssessor_App
@@ -73,7 +73,7 @@ Published artefacts per `v*` tag: the `cloud-assessor-core` wheel (GitHub Releas
 | The core is adopted verbatim at the AddOn tag; evaluator kinds are only added, never renamed; `MODEL_VERSION` and catalog `version` appear in every `report.json` | Target architecture 2.2 |
 | Managed identity only; no client secrets anywhere; no visitor credential path in either edition | Owner decision 2; T-011 |
 | The core must be installable with no Azure SDK, so the AddOn's lab image stays technically unable to construct an Azure credential; this repository's `lab` build target proves it on every CI run | Standard section 19 |
-| Python base image `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, recorded in `infrastructure/docker/versions.env` with a CI check | CONTRACT-DECISIONS item 20 |
+| Python base image `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, recorded in `infrastructure/docker/versions.env` with a CI check (the 2026-10-10 pin, historical; the current one is under "Python line" in [section 16](#16-compatibility-considerations)) | CONTRACT-DECISIONS item 20 |
 | Container hardening: digest-pinned non-root image everywhere; read-only root, `tmpfs /tmp`, `cap_drop ALL`, `no-new-privileges` where the runtime offers them (the lab host); probes, TLS and a fixed replica count on Container Apps | CONTRACT-DECISIONS item 19 |
 | Appliance: one Consumption Container App, `min_replicas 1`, `max_replicas 1`, image by digest; scale-to-zero is a documented owner option | CONTRACT-DECISIONS item 21 |
 | Workflows: `runs-on: ubuntu-26.04`, every `uses:` SHA-pinned with a version comment; no `astral-sh/setup-uv`; Docker Hub through the OIDC connection, no long-lived registry token | `conventions-actions.md`, `conventions-publishing.md` |
@@ -120,6 +120,8 @@ Each subsection carries the same labelled fields. "Current behavior" is the tree
 - **Priority:** P0. **Dependencies:** AddOn tag `v0.1.0` exists. **Rollback:** `git revert` of the adoption commit; the AddOn keeps its seed until the App releases.
 
 ### 7.2 `pyproject.toml`, `uv.lock`, `.python-version`, `ruff.toml`, `Makefile`, `.env.example`
+
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its Python 3.14 settings (`requires-python = ">=3.14.6,<3.15"` and `.python-version` = `3.14.7` below, and the 3.14.7 image the code comment names) are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** absent.
 - **Required behavior:** uv workspace with two members; appliance package `cloud-assessor-appliance` depending on `cloud-assessor-core` (workspace), `fastapi`, `uvicorn`, `pydantic`; optional extra `azure`; dev group `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit`. Both `pyproject.toml` files declare `requires-python = ">=3.14.6,<3.15"`; `.python-version` = `3.14.7`. `.env.example` lists every `CA_*` key with empty values.
@@ -303,6 +305,8 @@ def create_app(settings: Settings) -> FastAPI:
 
 ### 7.10 `infrastructure/docker/Dockerfile` and `versions.env`
 
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python:3.14.7-slim-trixie` base image and the `versions.env` values below are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+
 - **Current behavior:** absent.
 - **Required behavior:** one Dockerfile, three stages. `deps` installs `pip install --require-hashes --no-deps -r requirements.lock.txt --prefix /install` plus the two local wheels. `appliance` is the deployed image: adds `requirements-azure.lock.txt`, copies `src/cloud_assessor_appliance` and its `web/`, `CMD ["python","-m","cloud_assessor_appliance"]`, `HEALTHCHECK CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"`. `lab` is a boundary-proof build only: it installs the core wheel without the `azure` extra, copies no application, has no HEALTHCHECK, is never pushed and never deployed, and its `CMD` is `["python","-c","import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None"]`, so running the image at all is the proof. The deployed lab image is `docker.io/hybridcloudworks/hcw-addon-cloud-assessment`, built by `HCW-CloudAssessor_AddOn` from its own `src/cloud_assessment_lab` on the published core; this repository contains no `cloud_assessment_lab` package. Both final stages: base `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, `apt-get upgrade`, remove `pip`/`ensurepip`/`setuptools`, `USER 10001:10001`, `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080`. `versions.env` records `PYTHON_IMAGE=python:3.14.7-slim-trixie` and `PYTHON_IMAGE_DIGEST=sha256:51dafde8...`; `scripts/check-versions.sh` fails CI when the Dockerfile and `versions.env` disagree.
 - **Tests:** CI image job: build both targets; `docker run --rm hcw-cloud-assessor-lab:dev` must exit zero (the `CMD` assertion passed: the core imports, the SDK is absent); `docker run --rm hcw-cloud-assessor-lab:dev python -c "import azure"` must exit non-zero; `docker run --rm hcw-cloud-assessor-appliance:dev python -c "import azure.identity"` must exit zero; `pip` absent in both; `publish-images.yml` pushes only the `appliance` target.
@@ -327,6 +331,8 @@ def create_app(settings: Settings) -> FastAPI:
 - **Priority:** P0 for security and packaging, P1 for the rest. **Dependencies:** each module. **Rollback:** none needed.
 
 ### 7.13 `.github/workflows/` and repository files
+
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python-version: '3.14'` for `actions/setup-python` are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** no workflows; one issue template.
 - **Required behavior:** `ci.yml` (ruff, pytest with coverage, `check-catalog.py`, `check-versions.sh`, `check-docs-governance.py`, packaging test, terraform fmt and validate, image build with the two import checks); `security.yml` (dependency-review, CodeQL `python`, gitleaks, `pip-audit`); `publish-core.yml` (on `v*`: build the wheel, attach to the GitHub Release; PyPI trusted publishing gated on `vars.PYPI_ENABLED == 'true'` `[REVIEW REQUIRED]`); `publish-images.yml` (on `v*`: build both targets, Trivy before push, push the appliance image to Docker Hub through the OIDC connection, attest, print the digest); `release.yml` (creates the Release from the tag and the CHANGELOG section). Plus `dependabot.yml` (pip grouped `azure-*`, github-actions, docker), `CODEOWNERS`, `SECURITY.md`, `PULL_REQUEST_TEMPLATE.md`, `ISSUE_TEMPLATE/{bug_report.md,config.yml}`.
@@ -502,7 +508,7 @@ Steps 1 to 7 are engineering; 8 needs the Docker Hub variables; 11 needs R-002. 
 - **AddOn compatibility is by exact tag pin.** The AddOn never floats on `main`; `core-update.yml` tests each release before adopting it and labels the PR `compatible` or `needs-adaptation`. A core change that breaks the lab is caught in the AddOn's CI, not on the lab host.
 - **Model version field.** `MODEL_VERSION = 1` in every `Resource`, `Assessment` and `report.json`; the catalog `version` beside it. Evaluator kinds are only added (`cost-evidence` is the first addition); ids are never reused; a changed criterion bumps its own `version`.
 - **One pane, two editions.** The pane branches on `edition` from `/api/health`; no field the lab relies on is removed. The health envelope stays flat and carries the standard's fields; the appliance adds `scope` and `lastRun` as extras the website proxy would ignore if it ever read them (it does not; the appliance is never framed by the site).
-- **Python line.** `requires-python = ">=3.14.6,<3.16"` in both packages (floor 3.14.6; widened from `<3.15` in 0.3.1 so the wheel installs on the Python 3.15.2 base the website moved to in HCW-HybridCloudWorks#1468 and that the AddOn's prepared branch `fix/python-315-base` targets). This repository's own image stays on Python 3.14, `python:3.14.10-slim-trixie` by digest since 2026-11-07 (`infrastructure/docker/versions.env`), and is moved by hand with its digest. The AddOn no longer shares that pin: it moved to `python:3.15.2-slim-trixie` with the website, so a `versions.env` bump here no longer has a twin there.
+- **Python line.** `requires-python = ">=3.15.0,<3.16"` in both packages since HCW-HybridCloudWorks#1707 (2026-11-12), the HCW floor in that repository's `scripts/version-floors.json` (newest line, at most two patches behind its newest). Before that it was `>=3.14.6,<3.16`, widened from `<3.15` in 0.3.1 so the wheel installed on the website's Python 3.15.2 base (HCW-HybridCloudWorks#1468). The engine's floor moved with the appliance's rather than staying at 3.14.6: nothing in this repository runs 3.14 any more, so a 3.14 claim in the published wheel would be untested, and its one consumer, the AddOn, already requires `>=3.15.1`. The image runs `python:3.15.2-slim-trixie` by digest (`infrastructure/docker/versions.env`), the same pin as the website and the AddOn, and is still moved by hand here. `.python-version` and `make setup` name the line only (`3.15`): CI's `actions/setup-python` hands out the newest 3.15.x it has, and the pinned uv 0.11.32 cannot download a stable 3.15 of its own (only `3.15.0b4`).
 - **Terraform pattern parity.** The root mirrors the AzMigrate appliance root's naming and provider constraints so an operator who knows one can read the other.
 
 ## 17 Rollback considerations
@@ -588,13 +594,13 @@ Run from the repository root after the skeleton lands. The commands are PowerShe
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.14; uv sync; uv run ruff check .; uv run pytest -q
+uv python install 3.15; uv sync; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.14 && uv sync && uv run ruff check . && uv run pytest -q
+uv python install 3.15 && uv sync && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging and catalog (PowerShell):
@@ -669,7 +675,7 @@ Expected output: nothing. The authoring-session form, valid only before the comm
 | The shared pane UI | `web/{index.html,app.js,styles.css,theme.css}` with the `hcw-addon` bridge, HCW theme tokens copied with provenance, "Copy report" fallback and no vendor names; copied here at the same version (7.9) | AddOn `web/` |
 | The lab edition itself | `src/cloud_assessment_lab` (edition guard with `find_spec("azure"|"msal")` and `IDENTITY_ENDPOINT`/`MSI_ENDPOINT`/`AZURE_CLIENT_SECRET`/`AZURE_FEDERATED_TOKEN_FILE` refusal, store, security, routes) and the Dockerfile that builds `docker.io/hybridcloudworks/hcw-addon-cloud-assessment` on the published core; this repository ships no lab application, only the `lab` boundary-proof build target | AddOn `src/cloud_assessment_lab/`, `infrastructure/docker/Dockerfile` |
 | ADR copies | AddOn ADR-0001 (lab edition upload-only, engine seeded and handed upstream), ADR-0003 (lab on the VPS, appliance on Container Apps), ADR-0004 (upstream/downstream) are the written record this repository cannot hold under its governance until the wiki `Decision-Log` exists | AddOn `docs/adr/` |
-| Base image pin | `python:3.14.7-slim-trixie@sha256:51dafde8...` shared through each repository's `versions.env` | Website `lab-image/Dockerfile`, AddOn `infrastructure/docker/versions.env` |
+| Base image pin | `python:3.14.7-slim-trixie@sha256:51dafde8...` shared through each repository's `versions.env` (the 2026-10-10 pin, historical; the current one is under "Python line" in [section 16](#16-compatibility-considerations)) | Website `lab-image/Dockerfile`, AddOn `infrastructure/docker/versions.env` |
 
 The AddOn does not depend on anything here until step 9 of section 15; the website never depends on this repository.
 
