@@ -146,15 +146,15 @@ states which applies; the plan is covered by `infrastructure/terraform/appliance
 floating tag. The plan refuses an internet-reachable appliance unless `auth_enabled = true` (Microsoft Entra ID sign-in, see Sign-in) or `external_enabled = false`. `terraform apply` is an owner step after human review.
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
-pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). Releases up to 0.3.2 need
-Python 3.14.6 or newer (before 0.3.1 also older than 3.15); later releases need Python 3.15. The command is the same in
-bash and PowerShell:
+pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). Release 0.3.2 installs on
+Python 3.14.6 or newer, 0.3.0 and earlier on Python 3.14 only (no 0.3.1 was published), and later releases need
+Python 3.15. The command is the same in bash and PowerShell:
 
 ```bash
-python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.2.1/cloud_assessor_core-0.2.1-py3-none-any.whl
+python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl
 ```
 
-Replace `v0.2.1` and `0.2.1` together to install another release; the list is on the
+Replace `v0.3.2` and `0.3.2` together to install another release; the list is on the
 [releases page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases).
 
 ## Releasing and versioning

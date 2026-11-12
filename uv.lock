@@ -7,6 +7,10 @@ members = [
     "cloud-assessor-appliance",
     "cloud-assessor-core",
 ]
+build-constraints = [
+    { name = "cython", specifier = "==3.3.1" },
+    { name = "setuptools", specifier = "==84.2.1" },
+]
 
 [[package]]
 name = "annotated-doc"

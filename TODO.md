@@ -23,7 +23,7 @@ no item depends on an item in a later phase.
 | [Phase 4](#phase-4--technical-debt) | Technical debt | T-017 – T-019 |
 | [Phase 5](#phase-5--feature-enhancements) | Feature enhancements | T-020 – T-028 |
 | [Phase 6](#phase-6--documentation-improvements) | Documentation improvements | T-029 – T-031 |
-| [Phase 7](#phase-7--appliance-follow-ups) | Appliance follow-ups | T-032 – T-034 |
+| [Phase 7](#phase-7--appliance-follow-ups) | Appliance follow-ups | T-032 – T-035 |
 
 ---
 
@@ -633,3 +633,18 @@ Proposed by `REFACTOR_APP.md` (sections 13 and 18) at execution on 2026-10-10.
   terraform ecosystem proposes bumps.
 - **Status:** Done 2026-10-10: `.terraform.lock.hcl` committed (azurerm 4.81.0, `h1:` and `zh:` hashes for linux_amd64 and windows_amd64), generated with Terraform 1.9.8 downloaded and checksum-verified from releases.hashicorp.com; `terraform validate` and `fmt -check` pass on it.
 - **Notes for Future Engineers:** `.gitignore` deliberately does not ignore `.terraform.lock.hcl` (only `.terraform/`). Re-run the command above after any provider constraint change; Dependabot's terraform ecosystem proposes bumps against this file.
+
+### T-035 — Remove the PyYAML build-tool pins once PyYAML ships a Python 3.15 wheel
+
+- **Priority:** P3
+- **Description:** PyYAML 6.0.3, a test-only dependency, publishes no wheel for CPython 3.15
+  ([yaml/pyyaml#951](https://github.com/yaml/pyyaml/issues/951)), so `uv sync` builds it from its source archive. Since
+  2026-11-12 (HCW-HybridCloudWorks#1707) `[tool.uv] build-constraint-dependencies` in `pyproject.toml` pins the tools that
+  build it (`setuptools==84.2.1`, `cython==3.3.1`) so the build does not take whatever is newest that day.
+- **Dependencies:** A PyYAML release with a `cp315` wheel
+- **Recommended Action:** When that release exists, move the `pyyaml` pin in the `dev` group to it, delete the
+  `build-constraint-dependencies` line and its comment, run `make lock`, and check that `uv.lock` lists a `cp315` wheel for
+  PyYAML and no longer carries `build-constraints`.
+- **Status:** Not started
+- **Notes for Future Engineers:** Neither image installs PyYAML (it is not in either `requirements*.lock.txt`), so this
+  changes nothing that is deployed.

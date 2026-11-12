@@ -36,7 +36,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     next engine wheel will not install on Python 3.14. The AddOn already requires `>=3.15.1` and runs 3.15.2, so it is
     not affected, and no other consumer of the wheel is known. The engine moved with the appliance because nothing in
     this repository tests 3.14 any more, so keeping 3.14 in the wheel's range would be a promise nobody checks.
-    `tests/packaging/test_core_wheel.py` now expects the new range.
+    `tests/packaging/test_core_wheel.py` now expects the new range. Because the published wheel drops Python 3.14, the
+    next engine release should be a minor release, 0.4.0, not a patch.
   - `.python-version` and `make setup` now name the line only, `3.15`, as the AddOn does. CI gets its interpreter from
     `actions/setup-python` (the newest 3.15.x it has), and the pinned uv 0.11.32 cannot download a stable 3.15 itself
     (it offers only `3.15.0b4`), so an exact patch there would fail whenever the two differ. Locally, `uv python install
@@ -47,10 +48,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     wheels remain. Every locked package has a 3.15 wheel (its own `cp315` wheel, an `abi3` one or a pure-Python one)
     except PyYAML 6.0.3, a test-only dependency that is in neither image: its newest release publishes no 3.15 wheel
     ([yaml/pyyaml#951](https://github.com/yaml/pyyaml/issues/951)), so `uv sync` builds it from its source archive,
-    which `uv.lock` pins by sha256. A comment in `pyproject.toml` says so.
+    which `uv.lock` pins by sha256. The tools that build it are pinned too, `setuptools==84.2.1` and `cython==3.3.1`
+    (`[tool.uv] build-constraint-dependencies` in `pyproject.toml`, recorded in `uv.lock`), so the build no longer takes
+    whatever is newest that day; uv 0.11.32 honours the setting (its build log shows both pins). `TODO.md` T-035 removes
+    them once PyYAML ships a 3.15 wheel.
   - The `.github/dependabot.yml` comment on the base image, and the Python wording in `README.md`, `CONTRIBUTING.md`,
-    `REVIEW.md` and `REFACTOR_APP.md`.
-  Checked on CPython 3.15.2: `make lint`'s steps, the full test suite with the `azure` extra (417 passed, 1 skipped,
+    `REVIEW.md` and `REFACTOR_APP.md`. The README's engine-install example now installs the `v0.3.2` wheel: the
+    `v0.2.1` one it named declares `<3.15` and cannot install on Python 3.15.
+  - New `tests/unit/test_workflow_runtime_setup.py` fails any workflow step (and any composite action step) that runs
+    `python`, `pip`, `uv`, `node`, `npm` or `npx` before its job has used `actions/setup-python` or
+    `actions/setup-node`, so the runner image's own, older interpreter cannot come back unnoticed. Exceptions go in an
+    allow-list keyed by file, job, step and runtime, each with a reason; it is empty today, and a second test fails any
+    entry that no longer matches. Ported from the website's `scripts/workflow-runtime-setup.test.mjs`.
+  Checked on CPython 3.15.2: `make lint`'s steps, the full test suite with the `azure` extra (451 passed, 1 skipped,
   95 percent coverage), the security and packaging suites without it (38 passed), and `pip install --require-hashes
   --no-deps --only-binary=:all:` of both exports. The images themselves were not built (no Docker in the session); the
   `image` job of CI builds and checks both targets. No workflow runs `python` or `node` on the runner's own default:
