@@ -24,6 +24,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **uv 0.11.32 to 0.13.7 in every workflow**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
+  installs this repository's Python packages and keeps `uv.lock` (the file that records the exact versions installed).
+  The old version could download only a beta of Python 3.15, so CI depended entirely on `actions/setup-python` for the
+  interpreter; 0.13.0 is the first uv that can fetch a finished 3.15 (3.15.0) and 0.13.6 the first to offer 3.15.2,
+  and 0.13.7 is the version `saulpatinojr/HCW-NetworkEyes_App` already uses, so the App repositories now share one uv.
+  The pin moved in `ci.yml` and `dependabot-lockfiles.yml` (`UV_VERSION`), `security.yml` and `publish-core.yml`, with
+  the uv wording in `README.md`, `.github/CONTRIBUTING.md` and `REFACTOR_APP.md`. Nothing else changed with it: `uv
+  lock --check` passes with uv 0.13.7, and `make lock` run with it leaves `uv.lock` and both `requirements*.lock.txt`
+  files exactly as they were. No Dockerfile copies uv (the images install from the exported lock files with pip), so
+  no image changes.
+- **The pre-commit ruff hook now matches the ruff the project pins.** `.pre-commit-config.yaml` (the optional local
+  checks that run before each commit) pinned `ruff-pre-commit` at `v0.17.1` and its comment claimed that mirrored
+  `pyproject.toml`, but `pyproject.toml` pins `ruff==0.17.4`. Both now say 0.17.4, so the hook and CI format and lint
+  the same way.
 - **Python 3.15 everywhere this repository chooses a Python**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). Python 3.15 is the
   HCW floor (the newest release line, at most two patches behind its newest, kept in `scripts/version-floors.json` in
