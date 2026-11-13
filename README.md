@@ -80,9 +80,10 @@ note of what reaches it in its `docs/whats-new-upstream.md`.
 
 ## Quick start
 
-Requires Python 3.15 and [`uv`](https://docs.astral.sh/uv/). To let uv download Python 3.15 for you, use uv 0.13.6 or
-newer (older versions offer only a 3.15 beta, which `requires-python` refuses). CI and the lockfiles use uv 0.13.7, and
-CI gets its 3.15 from `actions/setup-python`. The commands are PowerShell unless the line above says bash.
+Requires Python 3.15 and [`uv`](https://docs.astral.sh/uv/). To let uv download Python 3.15 for you, use uv 0.13.0 or
+newer, which offers the finished 3.15.0; 0.13.6 or newer also offers 3.15.2, the version the image runs. uv releases
+before 0.13.0 offer only 3.15 pre-releases, which `requires-python` refuses. CI and the lockfiles use uv 0.13.7, and CI
+gets its 3.15 from `actions/setup-python`. The commands are PowerShell unless the line above says bash.
 
 Toolchain and tests (PowerShell):
 
