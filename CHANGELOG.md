@@ -24,6 +24,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The workflows read the uv version as a shell variable** ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). In the four `uv` install steps of `ci.yml` and the one in `dependabot-lockfiles.yml`, `python -m pip install "uv==${{ env.UV_VERSION }}"` becomes `python -m pip install "uv==${UV_VERSION}"`. `UV_VERSION` is set once in the workflow's own `env:` block, so the version installed is the same; the difference is that GitHub no longer pastes the value into the script text before the shell runs it (a `${{ }}` expression is filled in first, which zizmor, the workflow security checker, reports as a possible template injection at its strictest setting). The other steps of the same file already wrote it this way. No job name changes.
 - **The workflow runtime check is refreshed to round two**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
   `tests/unit/test_workflow_runtime_setup.py` is the test that fails when a workflow step runs Node.js or Python before
