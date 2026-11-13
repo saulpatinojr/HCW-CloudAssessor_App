@@ -30,7 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   builds the engine wheel. 0.13.8 is a patch release of uv (released 2026-11-12,
   [release notes](https://github.com/astral-sh/uv/blob/0.13.8/CHANGELOG.md)) with no change to the lock format. The pin
   moved in `ci.yml` and `dependabot-lockfiles.yml` (`UV_VERSION`), `security.yml` and `publish-core.yml`, with the uv
-  wording in `README.md`, `.github/CONTRIBUTING.md` and `REFACTOR_APP.md`. Nothing else changed with it: with uv 0.13.8,
+  wording in `README.md`, `.github/CONTRIBUTING.md` and `REFACTOR_APP.md`. In `REFACTOR_APP.md`, the note on section
+  7.13 said the section was "kept as written", but its Python version and uv pin had been updated in place; the note
+  now says those two are kept current, and the uv pin there moves too. Nothing else changed with it: with uv 0.13.8,
   `uv lock --check` passes and `make lock` leaves `uv.lock` and both `requirements*.lock.txt` files exactly as they
   were. **This reaches the lab edition** through `publish-core.yml`, which builds the engine wheel the AddOn installs:
   the wheel and the source archive built from the same commit with uv 0.13.7 and with uv 0.13.8 are byte for byte the
