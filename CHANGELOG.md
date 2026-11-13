@@ -24,6 +24,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **uv 0.13.7 to 0.13.8 in every workflow**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
+  installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
+  builds the engine wheel. 0.13.8 is a patch release of uv (released 2026-11-12,
+  [release notes](https://github.com/astral-sh/uv/blob/0.13.8/CHANGELOG.md)) with no change to the lock format. The pin
+  moved in `ci.yml` and `dependabot-lockfiles.yml` (`UV_VERSION`), `security.yml` and `publish-core.yml`, with the uv
+  wording in `README.md`, `.github/CONTRIBUTING.md` and `REFACTOR_APP.md`. Nothing else changed with it: with uv 0.13.8,
+  `uv lock --check` passes and `make lock` leaves `uv.lock` and both `requirements*.lock.txt` files exactly as they
+  were. **This reaches the lab edition** through `publish-core.yml`, which builds the engine wheel the AddOn installs:
+  the wheel and the source archive built from the same commit with uv 0.13.7 and with uv 0.13.8 are byte for byte the
+  same (wheel sha256 `2e763e7a…12be`, source archive `196e36f3…43cb4`, both built locally on 2026-11-13), so the next
+  release's wheel does not differ because of uv. The AddOn's `docs/whats-new-upstream.md` says so in its own pull
+  request. No Dockerfile here copies uv, so no image changes. Checked here with uv 0.13.8: `make setup`, `make lint`,
+  `make test` (1116 passed, 1 skipped; 95 percent coverage), `make test-security` (38 passed), `uv lock --check`, and
+  actionlint and zizmor on the four changed workflows (no findings; actionlint 1.7.12 does not yet know the
+  `ubuntu-26.04` runner label, so that one message was set aside).
 - **The workflows read the uv version as a shell variable** ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). In the four `uv` install steps of `ci.yml` and the one in `dependabot-lockfiles.yml`, `python -m pip install "uv==${{ env.UV_VERSION }}"` becomes `python -m pip install "uv==${UV_VERSION}"`. `UV_VERSION` is set once in the workflow's own `env:` block, so the version installed is the same; the difference is that GitHub no longer pastes the value into the script text before the shell runs it (a `${{ }}` expression is filled in first, which zizmor, the workflow security checker, reports as a possible template injection at its strictest setting). The other steps of the same file already wrote it this way. No job name changes.
 - **The workflow runtime check is refreshed to round two**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
