@@ -49,10 +49,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `actions/self-merging-pr/action.yml > (composite) > ...`; no exception used the old key). Nothing new was found here:
   the composite action runs only `gh`, and no workflow runs pipx. The two steps that start uv through a script (the
   lockfile check in `ci.yml` and the export in `dependabot-lockfiles.yml`) stay in `INDIRECT_RUNTIME`, the list of steps
-  that start a runtime the check cannot see: the check still does not read the runtime in their own `run:` text. No
-  workflow changed. Checked here: `make setup`, `make lint`, `make test` (1068 passed, 1 skipped; 95 percent coverage,
-  651 of the tests in this file, 356 before) and `make test-security` (38 passed). The AddOn (HCW-CloudAssessor_AddOn)
-  gets the same change in its own pull request, with its own `docs/whats-new-upstream.md` entry.
+  that start a runtime the check cannot see: the check still does not read the runtime in their own `run:` text. It also
+  carries the fourth review round's fixes (Copilot on
+  [HCW-NetworkEyes_AddOn#109](https://github.com/saulpatinojr/HCW-NetworkEyes_AddOn/pull/109),
+  [HCW-MigrateOrchestrator_AddOn#75](https://github.com/saulpatinojr/HCW-MigrateOrchestrator_AddOn/pull/75) and
+  [HCW-MigrateOrchestrator_App#118](https://github.com/saulpatinojr/HCW-MigrateOrchestrator_App/pull/118)): a comment
+  after a block value in `env:` or `with:` (a value written over several lines after `|`) ends the value instead of
+  being read into it; a GitHub expression given to pipx chooses its Python only when it is setup-python's `python-path`
+  output, `env.pythonLocation`, or an `env.X` or `matrix.X` whose value does, and `$pythonLocation` counts only after a
+  set-up step; a runner path written with `.` or `..` (`/usr/bin/../bin/python3`) is still the runner's; and a set-up
+  step under `(a || b) && c` now covers a later step under `a && c`. No workflow changed. Checked here: `make setup`,
+  `make lint`, `make test` (1116 passed, 1 skipped; 95 percent coverage, 699 of the tests in this file, 356 before) and
+  `make test-security` (38 passed). The AddOn (HCW-CloudAssessor_AddOn) gets the same change in its own pull request,
+  with its own `docs/whats-new-upstream.md` entry.
 - **The workflow runtime check is now the finished copy every HCW repository runs**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
   `tests/unit/test_workflow_runtime_setup.py` is the test that fails when a workflow step runs Node.js or Python before
