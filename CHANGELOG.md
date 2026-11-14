@@ -118,7 +118,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the note above them now also names `scripts/check_uv_pins.py`, added to the `lint` job after the note was written,
   which is run with `python` (read by the check) and starts nothing. Checked here with uv 0.13.8: `make setup`,
   `make lint`, `make test` (1391 passed, 1 skipped; 95 percent coverage, 901 of the tests in this file, 699 before) and
-  `make test-security` (38 passed). The Python syntax tree of this file matches the canonical copy at `9b96396` once the
+  `make test-security` (38 passed). The Python syntax tree (the code's structure as Python reads it) of this file matches the canonical copy at `9b96396` once the
   docstrings and this repository's lists are set aside, and the 12,975 round-three cases, the reviewer's 348 and the
   66,583 earlier ones give 0 disagreements with the canonical copy. The AddOn (HCW-CloudAssessor_AddOn) gets the same
   change in its own pull request, with its own `docs/whats-new-upstream.md` entry; nothing it adopts from this
