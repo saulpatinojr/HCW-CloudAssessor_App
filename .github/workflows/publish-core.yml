@@ -4,8 +4,9 @@
 # a manual run, the dry run before a tag, runs the SAME checks with --rehearse: the tag is taken to be v + the package
 # version, so a dry run is red for everything a tag would be refused for, including entries left under [Unreleased];
 # the v0.3.1 tag was refused for exactly that after a green dry run that never read the changelog), then build the
-# cloud-assessor-core wheel and sdist, verify the wheel carries no cloud SDK and no Azure endpoint, attach both to the
-# GitHub Release (release.yml creates it), attest provenance. PyPI trusted publishing is
+# cloud-assessor-core wheel and sdist, verify the wheel carries the catalog and the MIT licence text (byte for byte the
+# root LICENSE) and no cloud SDK and no Azure endpoint, attach both to the GitHub Release (release.yml creates it), attest
+# provenance. PyPI trusted publishing is
 # gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
 # exchanges the job's OIDC token with PyPI; no registry token exists anywhere (docs: REFACTOR_APP.md 7.13, 11).
 # The AddOn pins the wheel this job attaches to the release, by URL and sha256
@@ -45,7 +46,7 @@ jobs:
           set -euo pipefail
           if [ "$REF_TYPE" = "tag" ]; then mode=(--tag "$REF_NAME"); else mode=(--rehearse); fi
           python scripts/check-release-version.py "${mode[@]}" --dist dist
-      - name: The wheel carries the catalog, no cloud SDK import and no Azure endpoint
+      - name: The wheel carries the catalog and the licence text, no cloud SDK import and no Azure endpoint
         run: |
           set -euo pipefail
           python - <<'PY'
@@ -54,6 +55,15 @@ jobs:
           z = zipfile.ZipFile(wheel)
           names = z.namelist()
           assert any(n.endswith("catalog_data/criteria.json") for n in names), "catalog missing from the wheel"
+          # MIT asks that the licence travel with every copy: PEP 639 puts it under .dist-info/licenses/, named in METADATA
+          dist_info = next(n.split("/", 1)[0] for n in names if n.endswith(".dist-info/METADATA"))
+          metadata = z.read(f"{dist_info}/METADATA").decode("utf-8").splitlines()
+          licence = f"{dist_info}/licenses/LICENSE"
+          assert licence in names, f"{licence} missing from the wheel"
+          assert "License-File: LICENSE" in metadata, "METADATA has no License-File: LICENSE line"
+          assert "License-Expression: MIT" in metadata, "METADATA does not declare License-Expression: MIT"
+          with open("LICENSE", "rb") as root_licence:
+              assert z.read(licence) == root_licence.read(), f"{licence} is not the repository's LICENSE"
           for n in names:
               if n.endswith(".py"):
                   text = z.read(n).decode()

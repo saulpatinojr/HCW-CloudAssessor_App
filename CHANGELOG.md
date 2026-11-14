@@ -377,8 +377,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   keeps a copy of the root `LICENSE`, `packages/cloud-assessor-core/pyproject.toml` lists it under `license-files`
   (the standard way, [PEP 639](https://peps.python.org/pep-0639/)), and the wheel names it in a `License-File` line.
   `tests/packaging/test_core_wheel.py` now builds the way `publish-core.yml` does and fails if the copy differs from the
-  root `LICENSE` or is missing from either archive. The licence and the version are unchanged; the lab edition gets the
-  file with the next release it adopts.
+  root `LICENSE` or is missing from either archive, and the release itself (`publish-core.yml`) now refuses a wheel
+  without the licence file, its `License-File` and `License-Expression: MIT` lines, or with a copy that differs from the
+  root `LICENSE`. The licence and the version are unchanged; the lab edition gets the file with the next release it
+  adopts.
 
 ### Security
 
