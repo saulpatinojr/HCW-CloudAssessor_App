@@ -38,7 +38,7 @@ Absent: source, dependency manifest, lockfile, tests, workflows, `LICENSE`, `COD
 
 ## 3 Target-state summary
 
-Python 3.15 line (floor 3.15.0; 3.14 with floor 3.14.6 until HCW-HybridCloudWorks#1707), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
+Python 3.15 line (floor 3.15.2 since 2026-11-14; 3.15.0 from HCW-HybridCloudWorks#1707, and 3.14 with floor 3.14.6 before that), `uv`, FastAPI + uvicorn (no extras) + pydantic, hash-pinned `uv.lock`; the engine in a separate installable package; the appliance as a thin FastAPI layer over live collectors; one Dockerfile with two targets.
 
 ```
 HCW-CloudAssessor_App
@@ -121,7 +121,7 @@ Each subsection carries the same labelled fields. "Current behavior" is the tree
 
 ### 7.2 `pyproject.toml`, `uv.lock`, `.python-version`, `ruff.toml`, `Makefile`, `.env.example`
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its Python 3.14 settings (`requires-python = ">=3.14.6,<3.15"` and `.python-version` = `3.14.7` below, and the 3.14.7 image the code comment names) are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its Python 3.14 settings (`requires-python = ">=3.14.6,<3.15"` and `.python-version` = `3.14.7` below, and the 3.14.7 image the code comment names) are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** absent.
 - **Required behavior:** uv workspace with two members; appliance package `cloud-assessor-appliance` depending on `cloud-assessor-core` (workspace), `fastapi`, `uvicorn`, `pydantic`; optional extra `azure`; dev group `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit`. Both `pyproject.toml` files declare `requires-python = ">=3.14.6,<3.15"`; `.python-version` = `3.14.7`. `.env.example` lists every `CA_*` key with empty values.
@@ -305,7 +305,7 @@ def create_app(settings: Settings) -> FastAPI:
 
 ### 7.10 `infrastructure/docker/Dockerfile` and `versions.env`
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python:3.14.7-slim-trixie` base image and the `versions.env` values below are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python:3.14.7-slim-trixie` base image and the `versions.env` values below are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** absent.
 - **Required behavior:** one Dockerfile, three stages. `deps` installs `pip install --require-hashes --no-deps -r requirements.lock.txt --prefix /install` plus the two local wheels. `appliance` is the deployed image: adds `requirements-azure.lock.txt`, copies `src/cloud_assessor_appliance` and its `web/`, `CMD ["python","-m","cloud_assessor_appliance"]`, `HEALTHCHECK CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"`. `lab` is a boundary-proof build only: it installs the core wheel without the `azure` extra, copies no application, has no HEALTHCHECK, is never pushed and never deployed, and its `CMD` is `["python","-c","import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None"]`, so running the image at all is the proof. The deployed lab image is `docker.io/hybridcloudworks/hcw-addon-cloud-assessment`, built by `HCW-CloudAssessor_AddOn` from its own `src/cloud_assessment_lab` on the published core; this repository contains no `cloud_assessment_lab` package. Both final stages: base `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, `apt-get upgrade`, remove `pip`/`ensurepip`/`setuptools`, `USER 10001:10001`, `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080`. `versions.env` records `PYTHON_IMAGE=python:3.14.7-slim-trixie` and `PYTHON_IMAGE_DIGEST=sha256:51dafde8...`; `scripts/check-versions.sh` fails CI when the Dockerfile and `versions.env` disagree.
@@ -332,7 +332,7 @@ def create_app(settings: Settings) -> FastAPI:
 
 ### 7.13 `.github/workflows/` and repository files
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written except for its version numbers: the Python version and the uv pin in "Exact code-level change" below are kept current (they read `'3.14'` and `uv==0.11.32` in the original plan). The original `python-version: '3.14'` is no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written except for its version numbers: the Python version and the uv pin in "Exact code-level change" below are kept current (they read `'3.14'` and `uv==0.11.32` in the original plan). The original `python-version: '3.14'` is no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** no workflows; one issue template.
 - **Required behavior:** `ci.yml` (ruff, pytest with coverage, `check-catalog.py`, `check-versions.sh`, `check-docs-governance.py`, packaging test, terraform fmt and validate, image build with the two import checks); `security.yml` (dependency-review, CodeQL `python`, gitleaks, `pip-audit`); `publish-core.yml` (on `v*`: build the wheel, attach to the GitHub Release; PyPI trusted publishing gated on `vars.PYPI_ENABLED == 'true'` `[REVIEW REQUIRED]`); `publish-images.yml` (on `v*`: build both targets, Trivy before push, push the appliance image to Docker Hub through the OIDC connection, attest, print the digest); `release.yml` (creates the Release from the tag and the CHANGELOG section). Plus `dependabot.yml` (pip grouped `azure-*`, github-actions, docker), `CODEOWNERS`, `SECURITY.md`, `PULL_REQUEST_TEMPLATE.md`, `ISSUE_TEMPLATE/{bug_report.md,config.yml}`.
@@ -508,7 +508,7 @@ Steps 1 to 7 are engineering; 8 needs the Docker Hub variables; 11 needs R-002. 
 - **AddOn compatibility is by exact tag pin.** The AddOn never floats on `main`; `core-update.yml` tests each release before adopting it and labels the PR `compatible` or `needs-adaptation`. A core change that breaks the lab is caught in the AddOn's CI, not on the lab host.
 - **Model version field.** `MODEL_VERSION = 1` in every `Resource`, `Assessment` and `report.json`; the catalog `version` beside it. Evaluator kinds are only added (`cost-evidence` is the first addition); ids are never reused; a changed criterion bumps its own `version`.
 - **One pane, two editions.** The pane branches on `edition` from `/api/health`; no field the lab relies on is removed. The health envelope stays flat and carries the standard's fields; the appliance adds `scope` and `lastRun` as extras the website proxy would ignore if it ever read them (it does not; the appliance is never framed by the site).
-- **Python line.** `requires-python = ">=3.15.0,<3.16"` in both packages since HCW-HybridCloudWorks#1707 (2026-11-12), the HCW floor in that repository's `scripts/version-floors.json` (newest line, at most two patches behind its newest). Before that it was `>=3.14.6,<3.16`, widened from `<3.15` in 0.3.1 so the wheel installed on the website's Python 3.15.2 base (HCW-HybridCloudWorks#1468). The engine's floor moved with the appliance's rather than staying at 3.14.6: nothing in this repository runs 3.14 any more, so a 3.14 claim in the published wheel would be untested, and its one consumer, the AddOn, already requires `>=3.15.1`. The image runs `python:3.15.2-slim-trixie` by digest (`infrastructure/docker/versions.env`), the same pin as the website and the AddOn, and is still moved by hand here. `.python-version` and `make setup` name the line only (`3.15`): CI's `actions/setup-python` hands out the newest 3.15.x it has, so an exact patch would fail whenever the two differ. The pinned uv is 0.13.8 (it was 0.13.7, and before that 0.11.32, which could download only the `3.15.0b4` beta; 0.13.0 is the first uv that can download a finished 3.15, and 0.13.6 the first to offer 3.15.2).
+- **Python line.** `requires-python = ">=3.15.2,<3.16"` in both packages since 2026-11-14: the owner decided that every HCW Python repository requires the latest stable 3.15 release, 3.15.2 (released 2026-10-25). From HCW-HybridCloudWorks#1707 (2026-11-12) until then it was `>=3.15.0,<3.16`, the HCW floor in that repository's `scripts/version-floors.json` (newest line, at most two patches behind its newest), and before that `>=3.14.6,<3.16`, widened from `<3.15` in 0.3.1 so the wheel installed on the website's Python 3.15.2 base (HCW-HybridCloudWorks#1468). The engine's floor moved with the appliance's rather than staying at 3.14.6: nothing in this repository runs 3.14 any more, so a 3.14 claim in the published wheel would be untested, and its one consumer, the AddOn, now requires `>=3.15.2` as well. The image runs `python:3.15.2-slim-trixie` by digest (`infrastructure/docker/versions.env`), the same pin as the website and the AddOn, and is still moved by hand here. `.python-version` and `make setup` name the line only (`3.15`): CI's `actions/setup-python` hands out the newest 3.15.x it has, so an exact patch would fail whenever the two differ. The pinned uv is 0.13.8 (it was 0.13.7, and before that 0.11.32, which could download only the `3.15.0b4` beta; 0.13.0 is the first uv that can download a finished 3.15, and 0.13.6 the first to offer 3.15.2).
 - **Terraform pattern parity.** The root mirrors the AzMigrate appliance root's naming and provider constraints so an operator who knows one can read the other.
 
 ## 17 Rollback considerations
@@ -594,13 +594,13 @@ Run from the repository root after the skeleton lands. The commands are PowerShe
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.15; uv sync; uv run ruff check .; uv run pytest -q
+uv python install 3.15.2; uv sync; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.15 && uv sync && uv run ruff check . && uv run pytest -q
+uv python install 3.15.2 && uv sync && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging and catalog (PowerShell):

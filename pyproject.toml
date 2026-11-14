@@ -4,7 +4,7 @@ version = "0.3.2"
 description = "Hybrid Cloud Works Cloud Assessor, appliance edition: a continuous assessment of the client's own Azure scope (Resource Graph and Cost Management under a user-assigned managed identity) against paraphrased FinOps, Well-Architected cost and Zero Trust criteria."
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.15.0,<3.16"
+requires-python = ">=3.15.2,<3.16"
 dependencies = [
   "cloud-assessor-core",
   "fastapi==0.162.2",
