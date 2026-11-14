@@ -5,7 +5,7 @@
 # version, so a dry run is red for everything a tag would be refused for, including entries left under [Unreleased];
 # the v0.3.1 tag was refused for exactly that after a green dry run that never read the changelog), then build the
 # cloud-assessor-core wheel and sdist, verify the wheel carries the catalog and the MIT licence text (byte for byte the
-# root LICENSE) and no cloud SDK and no Azure endpoint, attach both to the GitHub Release (release.yml creates it), attest
+# root LICENSE) and no cloud SDK and no Azure endpoint, verify the sdist carries the same licence text, attach both to the GitHub Release (release.yml creates it), attest
 # provenance. PyPI trusted publishing is
 # gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
 # exchanges the job's OIDC token with PyPI; no registry token exists anywhere (docs: REFACTOR_APP.md 7.13, 11).
@@ -71,6 +71,27 @@ jobs:
                   for ep in ("management.azure.com", "login.microsoftonline.com", "graph.microsoft.com"):
                       assert ep not in text, f"{n} references {ep}"
           print("wheel verified:", wheel, len(names), "files")
+          PY
+      - name: The sdist carries the licence text, named in PKG-INFO
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import glob, tarfile
+          # The release attaches the sdist beside the wheel, so it is a copy that MIT asks to carry the licence too.
+          # The tests build their own sdist; this reads the one that is attached. Members are read, never extracted.
+          (sdist,) = glob.glob("dist/cloud_assessor_core-*.tar.gz")
+          with tarfile.open(sdist, "r:gz") as tf:
+              top = tf.getnames()[0].split("/", 1)[0]
+              members = {m.name: m for m in tf.getmembers()}
+              for name in (f"{top}/PKG-INFO", f"{top}/LICENSE"):
+                  assert name in members and members[name].isfile(), f"{name} missing from the sdist, or not a plain file"
+              pkg_info = tf.extractfile(members[f"{top}/PKG-INFO"]).read().decode("utf-8").splitlines()
+              shipped = tf.extractfile(members[f"{top}/LICENSE"]).read()
+          assert "License-File: LICENSE" in pkg_info, "PKG-INFO has no License-File: LICENSE line"
+          assert "License-Expression: MIT" in pkg_info, "PKG-INFO does not declare License-Expression: MIT"
+          with open("LICENSE", "rb") as root_licence:
+              assert shipped == root_licence.read(), f"{top}/LICENSE is not the repository's LICENSE"
+          print("sdist verified:", sdist)
           PY
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         if: startsWith(github.ref, 'refs/tags/v')
