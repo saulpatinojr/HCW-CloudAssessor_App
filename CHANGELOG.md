@@ -101,10 +101,73 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     `uv sync` still picks an interpreter inside `>=3.15.2,<3.16`.
   - **This reaches the lab edition at the next release.** The engine wheel published from the next `v*` tag will
     declare `Requires-Python: <3.16,>=3.15.2`, so it will not install on 3.15.0 or 3.15.1. The AddOn moves its own
-    floor to 3.15.2 in a matching change and its image already runs 3.15.2, so `core-update.yml` adopts that release
-    as usual; the wheel the AddOn pins today (`v0.3.2`) is not affected. The container image already ran
-    `python:3.15.2-slim-trixie`, so it does not change.
-
+    floor to 3.15.2 in a matching change (already merged there as
+    [HCW-CloudAssessor_AddOn#102](https://github.com/saulpatinojr/HCW-CloudAssessor_AddOn/pull/102)) and its image
+    already runs 3.15.2, so `core-update.yml` adopts that release as usual; the wheel the AddOn pins today (`v0.3.2`)
+    is not affected. The container image already ran `python:3.15.2-slim-trixie`, so it does not change.
+- **The workflow runtime check is refreshed to round three**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
+  `tests/unit/test_workflow_runtime_setup.py` is the test that fails when a workflow step runs Node.js or Python before
+  its job has set up the version HCW requires (Node.js 26.11.0, Python 3.15.0 when this round was written), so the
+  runner's own older versions cannot slip back in unnoticed. The Python floor HCW requires has since moved to 3.15.2
+  (the entry above); this round's check still compares against 3.15.0, and moving it to 3.15.2 is a later round of the
+  same check, not part of this one. Round three closes the gaps a third review of the check found. Its logic and test
+  cases are taken unchanged from the canonical Python copy in HCW-NetworkEyes_App
+  ([HCW-NetworkEyes_App#399](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/399)), which gives the same
+  answers as the website's JavaScript copy
+  ([HCW-HybridCloudWorks#1722](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1722)); only the lists of this
+  repository's own steps are its own, and long lines are rewrapped to this repository's 120 columns (each made-up test
+  workflow, one long line in the canonical copy, is split into pieces that Python joins back into the same text). What
+  it now catches: a command written in quotes (`'node' x.js`) or with a backslash in it, or run through `eval` or
+  `builtin`; a command run with `sudo`, which looks programs up in its own fixed list of folders and so gets the
+  runner's own version (`sudo env "PATH=$PATH" ...` hands it the job's list instead); a step whose `shell:` is `python`
+  or `node {0}`, or that takes it from `defaults.run.shell`. For pipx (a tool that installs and runs Python programs)
+  the setting that chooses its Python is followed through `unset`, `export -n` and `declare +x` (which remove a setting,
+  or keep it from the programs a script starts), the last change in a shell winning; a bare `python3` no longer counts
+  as the set-up Python (only `python3.15` does), and neither does a value over two lines, a path under `/usr/local/bin`,
+  one that climbs out of setup-python's folder with `..`, or a pattern the shell would still expand (`python*`,
+  `~/...`); and `${{ env.X }}` is worked out one level at a time, as GitHub does. The test's small YAML reader (it reads
+  the workflow files without a YAML library) now reads quoted values, comments and block values the way YAML does, reads
+  `3.10` as `3.1` as GitHub hands it to an action, and stops with an error on a form it cannot read (an anchor, alias or
+  tag, or a matrix item continued on the next line) instead of guessing. Nothing new is found here and no workflow
+  changed. The new steps of the `lint` job still pass, because its `setup-python` step runs whenever they do
+  (`if: ${{ !cancelled() }}`); with that `if:` taken out of a scratch copy of `ci.yml`, the check names the linter
+  install step (it makes zizmor's environment with `python3 -m venv`) and the uv pin check
+  (`python scripts/check_uv_pins.py`). The `INDIRECT_RUNTIME` entries (steps that start uv through a script, which the
+  check cannot see in their own `run:` text) all stay, because the check still does not read the runtime in those steps;
+  the note above them now also names `scripts/check_uv_pins.py`, added to the `lint` job after the note was written,
+  which is run with `python` (read by the check) and starts nothing. Checked here with uv 0.13.8: `make setup`,
+  `make lint`, `make test` (1391 passed, 1 skipped; 95 percent coverage, 901 of the tests in this file, 699 before; at
+  this pull request's first push; after the fixes below, 1539 passed and 1049 in that file) and
+  `make test-security` (38 passed). The Python syntax tree (the code's structure as Python reads it) of this file matches the canonical copy at `9b96396` once the
+  docstrings and this repository's lists are set aside, and the 12,975 round-three cases, the reviewer's 348 and the
+  66,583 earlier ones give 0 disagreements with the canonical copy. The AddOn (HCW-CloudAssessor_AddOn) gets the same
+  change in its own pull request, with its own `docs/whats-new-upstream.md` entry; nothing it adopts from this
+  repository (the engine wheel, the catalog) changes, so this change adds no entry there.
+  Copilot's review of this pull request and of its sister pull requests then found six more ways past the check, and a
+  review of those fixes one more, all closed first in the two canonical copies (the website's JavaScript and
+  HCW-NetworkEyes_App's Python) and copied here unchanged: a `sudo` inside a script that `sudo` already runs (there
+  `$PATH` is already sudo's own list of folders, so `sudo bash -c 'sudo env PATH=$PATH node x'` still gets the
+  runner's Node.js); a PATH replaced or removed for one command (`env PATH=/usr/bin python3 x`, `env -u PATH node x`,
+  `command -p python3 x`, which fall back to the system's default folders); the runner's interpreter named by its
+  folder or by an older version (`/usr/bin/python3`, `/usr/local/bin/node`, `python3.14`); one-line `case` clauses
+  (`case "$k" in a) node x ;; esac`); a `${{ matrix.* }}` in the workflow-level `env:`, which GitHub does not fill in
+  there; pipx under a step's `shell:` that clears or changes `PIPX_DEFAULT_PYTHON` (`shell: env -u PIPX_DEFAULT_PYTHON
+  bash -e {0}`); and free-threaded Python names (`python3.14t`), which were not read as Python at all and now are,
+  against the same floor. Copilot's second round on these pull requests found six more, closed first in both canonical
+  copies the same way: a bare `python3t`, which is whatever free-threaded Python PATH finds; `env -i`
+  (`--ignore-environment`, `env -`), which clears PATH so the runner's own runtime is found; the last `PATH=` given to
+  env wins, so `env -i PATH=$PATH node x` keeps the set-up one; a step listed in `INDIRECT_RUNTIME` whose `shell:`
+  runs through sudo or replaces PATH; pipx given a bare name other than `python3.15` itself (`--python python3.15t`);
+  and a `defaults:` written as a one-line mapping, nested ones included (`defaults: {run: {shell: "python {0}"}}`),
+  which the workflow reader now reads whole, stopping only on one YAML refuses (a plain value holding a brace, or
+  braces and quotes that do not balance or do not match). None of these forms is used in this repository's workflows,
+  so the check reports exactly what it did before, and the test file grows to 1049 cases. Checked again after these
+  changes: `make lint`, `make test` (1539 passed, 1 skipped; 95 percent coverage) and `make test-security` (38
+  passed); the file still matches the canonical copy (now at `85fe01c`) once the docstrings and this repository's
+  lists are set aside, and the 49,200 generated cases of these changes, the 4,844 nested-sudo cases and the 348 inputs
+  of the round-three review give 0 disagreements with it; of the 348, one answer moved with the pre-PR review's fix
+  and moved back with Copilot's second round (`pipx run --python python3.15t x` is reported again).
 - **uv 0.13.7 to 0.13.8 in every workflow**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
   installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
