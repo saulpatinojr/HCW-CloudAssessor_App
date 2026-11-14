@@ -7,7 +7,7 @@ license = "MIT"
 requires-python = ">=3.15.2,<3.16"
 dependencies = [
   "cloud-assessor-core",
-  "fastapi==0.162.2",
+  "fastapi==0.162.4",
   "uvicorn==0.54.0",
   "pydantic==2.14.3",
 ]
