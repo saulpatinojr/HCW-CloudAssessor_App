@@ -65,7 +65,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     These are reported wherever they are written, comments included. Other packages are left alone (`pyuv`, `uvicorn`, `uv-dynamic-versioning`), and so is `uv_==…`, which pip refuses
     as a name. What it cannot see: a version worked out while a job runs, or an install written in a way these
     patterns do not describe. `tests/unit/test_check_uv_pins.py` (also the same file in both repositories) builds a
-    small made-up repository for each of 49 changes that must fail and 19 that must pass, and runs the script on
+    small made-up repository for each of 50 changes that must fail and 21 that must pass, and runs the script on
     this repository with the file list `ci.yml` gives it. Uneven uv pins are how the versions drifted apart
     before.
 
@@ -82,7 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner); the uv check passes on
   this repository; its tests fail when the script is broken on purpose (without its case folding, three cases fail;
   reading `.github/actions` one level deep only, the nested-action case fails); `make setup`, `make lint`, `make
-  test` (1186 passed, 1 skipped; 95 percent coverage, 70 of the tests in `tests/unit/test_check_uv_pins.py`) and
+  test` (1189 passed, 1 skipped; 95 percent coverage, 73 of the tests in `tests/unit/test_check_uv_pins.py`) and
   `make test-security` (38 passed).
 
 ### Changed
