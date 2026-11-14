@@ -60,6 +60,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   makes a Python environment with `python3 -m venv` to install zizmor from PyPI, and runs then too, as in the lab
   edition), and the retry loop in `publish-core.yml` that waits for the GitHub Release names its unused counter `_`
   instead of `i` (shellcheck warning SC2034; no change in behaviour).
+  The uv check and the three linters run first in the `lint` job, straight after setting up Python and before uv is
+  installed (from Copilot's review of the same change in MigrateOrchestrator_App): before, they ran after `uv sync`
+  and the repository's own scripts, so code in a pull request could have rewritten `.github` on disk before it was
+  read.
   Nothing here reaches the lab edition: it already runs these steps, and no engine, catalog or release asset changed,
   so its `docs/whats-new-upstream.md` needs no entry. Checked locally with uv 0.13.8: the three linters run exactly as
   the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner; shellcheck also passes
