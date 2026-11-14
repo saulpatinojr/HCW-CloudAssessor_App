@@ -50,7 +50,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     It uses only Python's standard library, because it runs before uv is installed, and it is the same file in
     HCW-CloudCrawler_App. `UV_VERSION` in `ci.yml` is the one uv version. The step names the workflows that must
     install it (`publish-core.yml`, `security.yml` and `dependabot-lockfiles.yml`); the script fails if one of them is
-    missing or does not install that uv. It then reads every `.yml` and `.yaml` file under `.github/workflows` and
+    missing or does not install that uv. An install counts only as an argument of a `pip`, `pipx`, `uv pip` or
+    `uv tool` install command in a `run:` script, outside a comment, so `echo "uv==…"` or a commented-out line does
+    not count; and `uv==${UV_VERSION}` counts only in a file that sets `UV_VERSION` outside a comment (a YAML key or
+    a shell assignment). It then reads every `.yml` and `.yaml` file under `.github/workflows` and
     every `action.yml` and `action.yaml` under `.github/actions`, at any depth, and fails on:
     - uv pinned to anything but `==` and that exact version: any operator (`===`, `~=`, `!=`, `>=`, `uv@…`), any
       spacing, any extras, and the name in any case or spelling pip reads as uv (`UV`, `Uv[foo.bar]`);
@@ -59,10 +62,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     - `UV_VERSION` given another value in any YAML or shell form;
     - `${UV_VERSION}`, `$UV_VERSION` or `env.UV_VERSION` in a file that never sets it.
 
-    Other packages are left alone (`pyuv`, `uvicorn`, `uv-dynamic-versioning`), and so is `uv_==…`, which pip refuses
+    These are reported wherever they are written, comments included. Other packages are left alone (`pyuv`, `uvicorn`, `uv-dynamic-versioning`), and so is `uv_==…`, which pip refuses
     as a name. What it cannot see: a version worked out while a job runs, or an install written in a way these
     patterns do not describe. `tests/unit/test_check_uv_pins.py` (also the same file in both repositories) builds a
-    small made-up repository for each of 41 changes that must fail and 13 that must pass, and runs the script on
+    small made-up repository for each of 49 changes that must fail and 19 that must pass, and runs the script on
     this repository with the file list `ci.yml` gives it. Uneven uv pins are how the versions drifted apart
     before.
 
@@ -79,7 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner); the uv check passes on
   this repository; its tests fail when the script is broken on purpose (without its case folding, three cases fail;
   reading `.github/actions` one level deep only, the nested-action case fails); `make setup`, `make lint`, `make
-  test` (1172 passed, 1 skipped; 95 percent coverage, 56 of the tests in `tests/unit/test_check_uv_pins.py`) and
+  test` (1186 passed, 1 skipped; 95 percent coverage, 70 of the tests in `tests/unit/test_check_uv_pins.py`) and
   `make test-security` (38 passed).
 
 ### Changed
