@@ -123,19 +123,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   66,583 earlier ones give 0 disagreements with the canonical copy. The AddOn (HCW-CloudAssessor_AddOn) gets the same
   change in its own pull request, with its own `docs/whats-new-upstream.md` entry; nothing it adopts from this
   repository (the engine wheel, the catalog) changes, so this change adds no entry there.
-  Copilot's review of this pull request and of its sister pull requests then found six more ways past the check,
-  closed first in the two canonical copies (the website's JavaScript and HCW-NetworkEyes_App's Python) and copied here
-  unchanged: a `sudo` inside a script that `sudo` already runs (there `$PATH` is already sudo's own list of folders,
-  so `sudo bash -c 'sudo env PATH=$PATH node x'` still gets the runner's Node.js); a PATH replaced for one command
-  (`env PATH=/usr/bin python3 x`); the runner's interpreter named by its folder or by an older version
-  (`/usr/bin/python3`, `/usr/local/bin/node`, `python3.14`); one-line `case` clauses (`case "$k" in a) node x ;;
-  esac`); a `${{ matrix.* }}` in the workflow-level `env:`, which GitHub does not fill in there; and pipx under a
-  step's `shell:` that clears or changes `PIPX_DEFAULT_PYTHON` (`shell: env -u PIPX_DEFAULT_PYTHON bash -e {0}`). None
-  of these forms is used in this repository's workflows, so the check reports exactly what it did before, and the test
-  file grows to 977 cases. Checked again after this change: `make lint`, `make test` (1467 passed, 1 skipped; 95
-  percent coverage) and `make test-security` (38 passed); the file still matches the canonical copy (now at `82b9258`)
-  once the docstrings and this repository's lists are set aside, and the 19,584 generated cases of this change, the
-  4,844 nested-sudo cases and the review's 348 inputs give 0 disagreements with it.
+  Copilot's review of this pull request and of its sister pull requests then found six more ways past the check, and a
+  review of those fixes one more, all closed first in the two canonical copies (the website's JavaScript and
+  HCW-NetworkEyes_App's Python) and copied here unchanged: a `sudo` inside a script that `sudo` already runs (there
+  `$PATH` is already sudo's own list of folders, so `sudo bash -c 'sudo env PATH=$PATH node x'` still gets the
+  runner's Node.js); a PATH replaced or removed for one command (`env PATH=/usr/bin python3 x`, `env -u PATH node x`,
+  `command -p python3 x`, which fall back to the system's default folders); the runner's interpreter named by its
+  folder or by an older version (`/usr/bin/python3`, `/usr/local/bin/node`, `python3.14`); one-line `case` clauses
+  (`case "$k" in a) node x ;; esac`); a `${{ matrix.* }}` in the workflow-level `env:`, which GitHub does not fill in
+  there; pipx under a step's `shell:` that clears or changes `PIPX_DEFAULT_PYTHON` (`shell: env -u PIPX_DEFAULT_PYTHON
+  bash -e {0}`); and free-threaded Python names (`python3.14t`), which were not read as Python at all and now are,
+  against the same floor. None of these forms is used in this repository's workflows, so the check reports exactly
+  what it did before, and the test file grows to 1017 cases. Checked again after this change: `make lint`, `make test`
+  (1507 passed, 1 skipped; 95 percent coverage) and `make test-security` (38 passed); the file still matches the
+  canonical copy (now at `2de76af`) once the docstrings and this repository's lists are set aside, and the 37,692
+  generated cases of this change, the 4,844 nested-sudo cases and the review's 348 inputs give 0 disagreements with
+  it.
 - **uv 0.13.7 to 0.13.8 in every workflow**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
   installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
