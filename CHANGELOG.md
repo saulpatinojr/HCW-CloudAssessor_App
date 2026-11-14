@@ -370,7 +370,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Fixed
 
 - **The engine wheel and its source archive now carry the MIT licence text**
-  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). A wheel is the
+  (found in the licensing review of the App repositories, 2026-11-14). A wheel is the
   ready-to-install file that a Python package is shipped as, and the sdist is its source archive; both are attached to
   each release, and the lab edition installs the wheel. Until now their metadata said `License-Expression: MIT`, but
   neither file held the licence itself, which the MIT licence asks to travel with every copy. The package folder now
