@@ -46,32 +46,41 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   - **hadolint 2.14.0** checks `infrastructure/docker/Dockerfile`. It found nothing.
   - Each tool is downloaded at its pinned version and its SHA-256 (a fingerprint of the file) is checked before it
     runs; the three values were checked again against the publishers' own checksum files and PyPI on 2026-11-14.
-  - **Every workflow uses the uv this workflow uses:** `UV_VERSION` in `ci.yml` is the one uv version. The step fails
-    when `publish-core.yml` or `security.yml` is missing or does not install that uv, or when
-    `dependabot-lockfiles.yml` is missing or its own `UV_VERSION` differs. It then reads every workflow (`.yml` and
-    `.yaml`) and every composite action under `.github/actions`, and fails on a line that pins uv to another version
-    or with another operator, spacing or extra (`uv>=0.13`, `uv == 0.13.7`, `uv[x]==…`); installs uv with pip, pipx
-    or `uv tool` and no version; uses `astral-sh/setup-uv`; gives `UV_VERSION` another value in any YAML or shell
-    form; or uses the shell's `${UV_VERSION}` in a file that does not set it. What it cannot see: a version worked
-    out while a job runs, or an install written in a way these patterns do not describe. Uneven uv pins are how the
-    versions drifted apart before.
+  - **Every workflow uses the uv this workflow uses:** a new script, `scripts/check_uv_pins.py`, run by this step.
+    It uses only Python's standard library, because it runs before uv is installed, and it is the same file in
+    HCW-CloudCrawler_App. `UV_VERSION` in `ci.yml` is the one uv version. The step names the workflows that must
+    install it (`publish-core.yml`, `security.yml` and `dependabot-lockfiles.yml`); the script fails if one of them is
+    missing or does not install that uv. It then reads every `.yml` and `.yaml` file under `.github/workflows` and
+    every `action.yml` and `action.yaml` under `.github/actions`, at any depth, and fails on:
+    - uv pinned to anything but `==` and that exact version: any operator (`===`, `~=`, `!=`, `>=`, `uv@…`), any
+      spacing, any extras, and the name in any case or spelling pip reads as uv (`UV`, `Uv[foo.bar]`);
+    - pip, pipx, `uv pip` or `uv tool` installing uv with no version;
+    - `uses: astral-sh/setup-uv`, or the `ghcr.io/astral-sh/uv` image at another tag;
+    - `UV_VERSION` given another value in any YAML or shell form;
+    - `${UV_VERSION}`, `$UV_VERSION` or `env.UV_VERSION` in a file that never sets it.
+
+    Other packages are left alone (`pyuv`, `uvicorn`, `uv-dynamic-versioning`), and so is `uv_==…`, which pip refuses
+    as a name. What it cannot see: a version worked out while a job runs, or an install written in a way these
+    patterns do not describe. `tests/unit/test_check_uv_pins.py` (also the same file in both repositories) builds a
+    small made-up repository for each of 41 changes that must fail and 13 that must pass, and runs the script on
+    this repository with the file list `ci.yml` gives it. Uneven uv pins are how the versions drifted apart
+    before.
 
   To make the linters pass, `setup-python` in the `lint` job now also runs after an earlier failure (the zizmor install
   makes a Python environment with `python3 -m venv` to install zizmor from PyPI, and runs then too, as in the lab
   edition), and the retry loop in `publish-core.yml` that waits for the GitHub Release names its unused counter `_`
   instead of `i` (shellcheck warning SC2034; no change in behaviour).
-  The uv check and the three linters run first in the `lint` job, straight after setting up Python and before uv is
+  The three linters and then the uv check run first in the `lint` job, straight after setting up Python and before uv is
   installed (from Copilot's review of the same change in MigrateOrchestrator_App): before, they ran after `uv sync`
   and the repository's own scripts, so code in a pull request could have rewritten `.github` on disk before it was
   read.
   Nothing here reaches the lab edition: it already runs these steps, and no engine, catalog or release asset changed,
   so its `docs/whats-new-upstream.md` needs no entry. Checked locally with uv 0.13.8: the three linters run exactly as
-  the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner; shellcheck also passes
-  on the uv step's script); the uv step passes on this tree, and fails on each of 23 one-at-a-time changes made in a
-  copy of `.github` (every form listed above, a deleted listed file, a new `.yaml` workflow and a pin in the
-  composite action), while a second correct `uv==` line or a correctly set `${UV_VERSION}` still passes; `make
-  setup`, `make lint`, `make test` (1116 passed, 1 skipped; 95 percent coverage) and `make test-security` (38
-  passed).
+  the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner); the uv check passes on
+  this repository; its tests fail when the script is broken on purpose (without its case folding, three cases fail;
+  reading `.github/actions` one level deep only, the nested-action case fails); `make setup`, `make lint`, `make
+  test` (1172 passed, 1 skipped; 95 percent coverage, 56 of the tests in `tests/unit/test_check_uv_pins.py`) and
+  `make test-security` (38 passed).
 
 ### Changed
 
