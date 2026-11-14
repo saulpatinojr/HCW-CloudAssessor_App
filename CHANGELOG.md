@@ -117,7 +117,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   check cannot see in their own `run:` text) all stay, because the check still does not read the runtime in those steps;
   the note above them now also names `scripts/check_uv_pins.py`, added to the `lint` job after the note was written,
   which is run with `python` (read by the check) and starts nothing. Checked here with uv 0.13.8: `make setup`,
-  `make lint`, `make test` (1391 passed, 1 skipped; 95 percent coverage, 901 of the tests in this file, 699 before) and
+  `make lint`, `make test` (1391 passed, 1 skipped; 95 percent coverage, 901 of the tests in this file, 699 before; at
+  this pull request's first push; after the fixes below, 1539 passed and 1049 in that file) and
   `make test-security` (38 passed). The Python syntax tree (the code's structure as Python reads it) of this file matches the canonical copy at `9b96396` once the
   docstrings and this repository's lists are set aside, and the 12,975 round-three cases, the reviewer's 348 and the
   66,583 earlier ones give 0 disagreements with the canonical copy. The AddOn (HCW-CloudAssessor_AddOn) gets the same
@@ -133,12 +134,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`case "$k" in a) node x ;; esac`); a `${{ matrix.* }}` in the workflow-level `env:`, which GitHub does not fill in
   there; pipx under a step's `shell:` that clears or changes `PIPX_DEFAULT_PYTHON` (`shell: env -u PIPX_DEFAULT_PYTHON
   bash -e {0}`); and free-threaded Python names (`python3.14t`), which were not read as Python at all and now are,
-  against the same floor. None of these forms is used in this repository's workflows, so the check reports exactly
-  what it did before, and the test file grows to 1017 cases. Checked again after this change: `make lint`, `make test`
-  (1507 passed, 1 skipped; 95 percent coverage) and `make test-security` (38 passed); the file still matches the
-  canonical copy (now at `2de76af`) once the docstrings and this repository's lists are set aside, and the 37,692
-  generated cases of this change, the 4,844 nested-sudo cases and the review's 348 inputs give 0 disagreements with
-  it.
+  against the same floor. Copilot's second round on these pull requests found six more, closed first in both canonical
+  copies the same way: a bare `python3t`, which is whatever free-threaded Python PATH finds; `env -i`
+  (`--ignore-environment`, `env -`), which clears PATH so the runner's own runtime is found; the last `PATH=` given to
+  env wins, so `env -i PATH=$PATH node x` keeps the set-up one; a step listed in `INDIRECT_RUNTIME` whose `shell:`
+  runs through sudo or replaces PATH; pipx given a bare name other than `python3.15` itself (`--python python3.15t`);
+  and a `defaults:` written as a one-line mapping, nested ones included (`defaults: {run: {shell: "python {0}"}}`),
+  which the workflow reader now reads whole, stopping only on one YAML refuses (a plain value holding a brace, or
+  braces and quotes that do not balance or do not match). None of these forms is used in this repository's workflows,
+  so the check reports exactly what it did before, and the test file grows to 1049 cases. Checked again after these
+  changes: `make lint`, `make test` (1539 passed, 1 skipped; 95 percent coverage) and `make test-security` (38
+  passed); the file still matches the canonical copy (now at `85fe01c`) once the docstrings and this repository's
+  lists are set aside, and the 49,200 generated cases of these changes, the 4,844 nested-sudo cases and the 348 inputs
+  of the round-three review give 0 disagreements with it; of the 348, one answer moved with the pre-PR review's fix
+  and moved back with Copilot's second round (`pipx run --python python3.15t x` is reported again).
 - **uv 0.13.7 to 0.13.8 in every workflow**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
   installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
