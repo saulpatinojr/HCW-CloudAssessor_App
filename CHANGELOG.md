@@ -22,6 +22,69 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **CI now checks the workflow files and the Dockerfile with the same three linters as the lab edition, and checks that
+  every workflow installs the same uv**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707), following
+  [HCW-HybridCloudWorks#1575](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1575)). A linter is a tool
+  that reads a file and reports mistakes without running it. The `lint` job in `ci.yml` (already a required check; no
+  job is added or renamed) gains these steps, copied from the lab edition's `ci.yml` with the same versions and
+  digests:
+  - **actionlint 1.7.12** checks the workflow files for mistakes, and runs shellcheck (a shell script checker) on
+    their scripts. `.github/actionlint.yaml` tells it that `ubuntu-26.04` is a GitHub-hosted runner, which this
+    release does not know yet; the file is the same as the lab edition's.
+  - **zizmor 1.31.1** checks the workflow files, and the composite action in `.github/actions` (it is handed the App
+    key), for security problems. It reported one: `rehearse-self-merging-pr.yml`
+    runs this repository's own action with `uses: ./...`, where GitHub now offers a safer `uses: $/...` form
+    ([GitHub's announcement](https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/),
+    [zizmor's explanation](https://docs.zizmor.sh/audits/#self-repository)). The pinned actionlint does not understand
+    `$/` and fails on it, so that one line is ignored in the new `.github/zizmor.yml`, with the reason written there
+    (only a `printf` runs between the checkout and that line) and the step to undo it once actionlint accepts `$/`.
+    zizmor matches the ignore against the whole step, so moving the step down by a line can keep it ignored; the
+    file says to check the line number whenever the workflow changes.
+  - **hadolint 2.14.0** checks `infrastructure/docker/Dockerfile`. It found nothing.
+  - Each tool is downloaded at its pinned version and its SHA-256 (a fingerprint of the file) is checked before it
+    runs; the three values were checked again against the publishers' own checksum files and PyPI on 2026-11-14.
+  - **Every workflow uses the uv this workflow uses:** a new script, `scripts/check_uv_pins.py`, run by this step.
+    It uses only Python's standard library, because it runs before uv is installed, and it is the same file in
+    HCW-CloudCrawler_App. `UV_VERSION` in `ci.yml` is the one uv version. The step names the workflows that must
+    install it (`publish-core.yml`, `security.yml` and `dependabot-lockfiles.yml`); the script fails if one of them is
+    missing or does not install that uv. An install counts only as an argument of a `pip`, `pipx`, `uv pip` or
+    `uv tool` install command in a `run:` script, outside a comment, so `echo "uv==…"` or a commented-out line does
+    not count; and `uv==${UV_VERSION}` counts only in a file that sets `UV_VERSION` outside a comment (a YAML key or
+    a shell assignment). It then reads every `.yml` and `.yaml` file under `.github/workflows` and
+    every `action.yml` and `action.yaml` under `.github/actions`, at any depth, and fails on:
+    - uv pinned to anything but `==` and that exact version: any operator (`===`, `~=`, `!=`, `>=`, `uv@…`), any
+      spacing, any extras, and the name in any case or spelling pip reads as uv (`UV`, `Uv[foo.bar]`);
+    - pip, pipx, `uv pip` or `uv tool` installing uv with no version;
+    - `uses: astral-sh/setup-uv`, or the `ghcr.io/astral-sh/uv` image at another tag;
+    - `UV_VERSION` given another value in any YAML or shell form;
+    - `${UV_VERSION}`, `$UV_VERSION` or `env.UV_VERSION` in a file that never sets it.
+
+    These are reported wherever they are written, comments included. Other packages are left alone (`pyuv`, `uvicorn`, `uv-dynamic-versioning`), and so is `uv_==…`, which pip refuses
+    as a name. What it cannot see: a version worked out while a job runs, or an install written in a way these
+    patterns do not describe. `tests/unit/test_check_uv_pins.py` (also the same file in both repositories) builds a
+    small made-up repository for each of 50 changes that must fail and 21 that must pass, and runs the script on
+    this repository with the file list `ci.yml` gives it. Uneven uv pins are how the versions drifted apart
+    before.
+
+  To make the linters pass, `setup-python` in the `lint` job now also runs after an earlier failure (the zizmor install
+  makes a Python environment with `python3 -m venv` to install zizmor from PyPI, and runs then too, as in the lab
+  edition), and the retry loop in `publish-core.yml` that waits for the GitHub Release names its unused counter `_`
+  instead of `i` (shellcheck warning SC2034; no change in behaviour).
+  The three linters and then the uv check run first in the `lint` job, straight after setting up Python and before uv is
+  installed (from Copilot's review of the same change in MigrateOrchestrator_App): before, they ran after `uv sync`
+  and the repository's own scripts, so code in a pull request could have rewritten `.github` on disk before it was
+  read.
+  Nothing here reaches the lab edition: it already runs these steps, and no engine, catalog or release asset changed,
+  so its `docs/whats-new-upstream.md` needs no entry. Checked locally with uv 0.13.8: the three linters run exactly as
+  the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner); the uv check passes on
+  this repository; its tests fail when the script is broken on purpose (without its case folding, three cases fail;
+  reading `.github/actions` one level deep only, the nested-action case fails); `make setup`, `make lint`, `make
+  test` (1189 passed, 1 skipped; 95 percent coverage, 73 of the tests in `tests/unit/test_check_uv_pins.py`) and
+  `make test-security` (38 passed).
+
 ### Changed
 
 - **uv 0.13.7 to 0.13.8 in every workflow**
