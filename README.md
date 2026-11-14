@@ -88,13 +88,13 @@ uv 0.13.8, and CI gets its 3.15 from `actions/setup-python`. The commands are Po
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.15; uv sync --all-packages --extra azure; uv run ruff check .; uv run pytest -q
+uv python install 3.15.2; uv sync --all-packages --extra azure; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.15 && uv sync --all-packages --extra azure && uv run ruff check . && uv run pytest -q
+uv python install 3.15.2 && uv sync --all-packages --extra azure && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging, catalog and governance (PowerShell):

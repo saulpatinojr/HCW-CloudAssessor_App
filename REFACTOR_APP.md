@@ -121,7 +121,7 @@ Each subsection carries the same labelled fields. "Current behavior" is the tree
 
 ### 7.2 `pyproject.toml`, `uv.lock`, `.python-version`, `ruff.toml`, `Makefile`, `.env.example`
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its Python 3.14 settings (`requires-python = ">=3.14.6,<3.15"` and `.python-version` = `3.14.7` below, and the 3.14.7 image the code comment names) are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its Python 3.14 settings (`requires-python = ">=3.14.6,<3.15"` and `.python-version` = `3.14.7` below, and the 3.14.7 image the code comment names) are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** absent.
 - **Required behavior:** uv workspace with two members; appliance package `cloud-assessor-appliance` depending on `cloud-assessor-core` (workspace), `fastapi`, `uvicorn`, `pydantic`; optional extra `azure`; dev group `pytest`, `pytest-cov`, `ruff`, `httpx`, `pip-audit`. Both `pyproject.toml` files declare `requires-python = ">=3.14.6,<3.15"`; `.python-version` = `3.14.7`. `.env.example` lists every `CA_*` key with empty values.
@@ -305,7 +305,7 @@ def create_app(settings: Settings) -> FastAPI:
 
 ### 7.10 `infrastructure/docker/Dockerfile` and `versions.env`
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python:3.14.7-slim-trixie` base image and the `versions.env` values below are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written. Its `python:3.14.7-slim-trixie` base image and the `versions.env` values below are no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** absent.
 - **Required behavior:** one Dockerfile, three stages. `deps` installs `pip install --require-hashes --no-deps -r requirements.lock.txt --prefix /install` plus the two local wheels. `appliance` is the deployed image: adds `requirements-azure.lock.txt`, copies `src/cloud_assessor_appliance` and its `web/`, `CMD ["python","-m","cloud_assessor_appliance"]`, `HEALTHCHECK CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8080/api/health', timeout=3).status==200 else 1)"`. `lab` is a boundary-proof build only: it installs the core wheel without the `azure` extra, copies no application, has no HEALTHCHECK, is never pushed and never deployed, and its `CMD` is `["python","-c","import cloud_assessor_core; import importlib.util as u; assert u.find_spec('azure') is None"]`, so running the image at all is the proof. The deployed lab image is `docker.io/hybridcloudworks/hcw-addon-cloud-assessment`, built by `HCW-CloudAssessor_AddOn` from its own `src/cloud_assessment_lab` on the published core; this repository contains no `cloud_assessment_lab` package. Both final stages: base `python:3.14.7-slim-trixie@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d`, `apt-get upgrade`, remove `pip`/`ensurepip`/`setuptools`, `USER 10001:10001`, `ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PORT=8080`. `versions.env` records `PYTHON_IMAGE=python:3.14.7-slim-trixie` and `PYTHON_IMAGE_DIGEST=sha256:51dafde8...`; `scripts/check-versions.sh` fails CI when the Dockerfile and `versions.env` disagree.
@@ -332,7 +332,7 @@ def create_app(settings: Settings) -> FastAPI:
 
 ### 7.13 `.github/workflows/` and repository files
 
-**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written except for its version numbers: the Python version and the uv pin in "Exact code-level change" below are kept current (they read `'3.14'` and `uv==0.11.32` in the original plan). The original `python-version: '3.14'` is no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.0,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
+**Historical plan (note added 2026-11-12).** This section is the plan of 2026-10-10, kept as written except for its version numbers: the Python version and the uv pin in "Exact code-level change" below are kept current (they read `'3.14'` and `uv==0.11.32` in the original plan). The original `python-version: '3.14'` is no longer the requirement: since HCW-HybridCloudWorks#1707 the current settings are in "Python line" under [16 Compatibility considerations](#16-compatibility-considerations) (`requires-python = ">=3.15.2,<3.16"`, `.python-version` = `3.15`, the `python:3.15.2-slim-trixie` image by digest).
 
 - **Current behavior:** no workflows; one issue template.
 - **Required behavior:** `ci.yml` (ruff, pytest with coverage, `check-catalog.py`, `check-versions.sh`, `check-docs-governance.py`, packaging test, terraform fmt and validate, image build with the two import checks); `security.yml` (dependency-review, CodeQL `python`, gitleaks, `pip-audit`); `publish-core.yml` (on `v*`: build the wheel, attach to the GitHub Release; PyPI trusted publishing gated on `vars.PYPI_ENABLED == 'true'` `[REVIEW REQUIRED]`); `publish-images.yml` (on `v*`: build both targets, Trivy before push, push the appliance image to Docker Hub through the OIDC connection, attest, print the digest); `release.yml` (creates the Release from the tag and the CHANGELOG section). Plus `dependabot.yml` (pip grouped `azure-*`, github-actions, docker), `CODEOWNERS`, `SECURITY.md`, `PULL_REQUEST_TEMPLATE.md`, `ISSUE_TEMPLATE/{bug_report.md,config.yml}`.
@@ -594,13 +594,13 @@ Run from the repository root after the skeleton lands. The commands are PowerShe
 Toolchain and tests (PowerShell):
 
 ```powershell
-uv python install 3.15; uv sync; uv run ruff check .; uv run pytest -q
+uv python install 3.15.2; uv sync; uv run ruff check .; uv run pytest -q
 ```
 
 The same in bash (Git Bash):
 
 ```bash
-uv python install 3.15 && uv sync && uv run ruff check . && uv run pytest -q
+uv python install 3.15.2 && uv sync && uv run ruff check . && uv run pytest -q
 ```
 
 Security, packaging and catalog (PowerShell):
