@@ -28,29 +28,9 @@ jobs:
         # install below runs then too and makes zizmor's environment with python3.
         if: ${{ !cancelled() }}
         with: { python-version: "${{ env.PYTHON_VERSION }}" }
-      - run: python -m pip install "uv==${UV_VERSION}"
-      - run: uv sync --frozen --all-packages
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run python scripts/check-catalog.py
-      - run: uv run python scripts/check-docs-governance.py
-      - name: Every place that names the release version agrees (a v* tag can never be corrected)
-        run: uv run python scripts/check-release-version.py
-      - run: bash scripts/check-versions.sh
-      - name: uv.lock matches pyproject.toml and both requirements exports
-        run: bash scripts/check-lockfiles.sh
-      - name: The appliance refuses to start without the azure extra (default set)
-        run: |
-          set +e
-          CA_SCOPES=/subscriptions/00000000-0000-0000-0000-000000000001 uv run python -m cloud_assessor_appliance
-          code=$?
-          set -e
-          test "$code" -eq 3 && echo "refused as expected (exit $code)"
-      - name: No ClientSecretCredential anywhere in the application
-        run: |
-          set -euo pipefail
-          if grep -rn "ClientSecretCredential\|CertificateCredential\|UsernamePasswordCredential" src packages; then echo "::error::a client-secret credential path exists"; exit 1; fi
-          echo "managed identity only"
+      # The uv check and the three linters run first, straight after setting up Python: no
+      # repository code (uv sync builds this project's packages, ruff and the scripts run) has
+      # run yet, so nothing in this pull request can rewrite .github on disk before it is read.
       # UV_VERSION is the one uv version (HCW-HybridCloudWorks#1707). The workflows listed below must name it
       # (the release and security ones literally, as the lab editions' do; dependabot-lockfiles.yml in its own env). Then every
       # workflow and composite action is read for another way of choosing uv: another version, operator, spacing or
@@ -160,6 +140,29 @@ jobs:
           fi
           printf 'linting %s\n' "${files[@]}"
           hadolint --failure-threshold warning --format tty "${files[@]}"
+      - run: python -m pip install "uv==${UV_VERSION}"
+      - run: uv sync --frozen --all-packages
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run python scripts/check-catalog.py
+      - run: uv run python scripts/check-docs-governance.py
+      - name: Every place that names the release version agrees (a v* tag can never be corrected)
+        run: uv run python scripts/check-release-version.py
+      - run: bash scripts/check-versions.sh
+      - name: uv.lock matches pyproject.toml and both requirements exports
+        run: bash scripts/check-lockfiles.sh
+      - name: The appliance refuses to start without the azure extra (default set)
+        run: |
+          set +e
+          CA_SCOPES=/subscriptions/00000000-0000-0000-0000-000000000001 uv run python -m cloud_assessor_appliance
+          code=$?
+          set -e
+          test "$code" -eq 3 && echo "refused as expected (exit $code)"
+      - name: No ClientSecretCredential anywhere in the application
+        run: |
+          set -euo pipefail
+          if grep -rn "ClientSecretCredential\|CertificateCredential\|UsernamePasswordCredential" src packages; then echo "::error::a client-secret credential path exists"; exit 1; fi
+          echo "managed identity only"
 
   test:
     runs-on: ubuntu-26.04
