@@ -367,6 +367,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and in the live ruleset is the owner's step. Repository process only; nothing in the engine, the appliance or the
   image changes.
 
+### Fixed
+
+- **The engine wheel and its source archive now carry the MIT licence text**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). A wheel is the
+  ready-to-install file that a Python package is shipped as, and the sdist is its source archive; both are attached to
+  each release, and the lab edition installs the wheel. Until now their metadata said `License-Expression: MIT`, but
+  neither file held the licence itself, which the MIT licence asks to travel with every copy. The package folder now
+  keeps a copy of the root `LICENSE`, `packages/cloud-assessor-core/pyproject.toml` lists it under `license-files`
+  (the standard way, [PEP 639](https://peps.python.org/pep-0639/)), and the wheel names it in a `License-File` line.
+  `tests/packaging/test_core_wheel.py` now builds the way `publish-core.yml` does and fails if the copy differs from the
+  root `LICENSE` or is missing from either archive. The licence and the version are unchanged; the lab edition gets the
+  file with the next release it adopts.
+
 ### Security
 
 - **The appliance image's lockfile now installs oauthlib 4.0.1, not 4.0.0 (CVE-2026-49272).** Dependabot's #89 moved
