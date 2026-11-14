@@ -178,8 +178,12 @@ RUNNER_DEFAULT_ALLOWED: dict[str, str] = {}
 # 2026-11-13: every other script a workflow step here calls starts no runtime the command check cannot see. The Python
 # scripts (check-catalog.py, check-docs-governance.py, check-release-version.py) are run with `uv run python`, which
 # the check reads, and start only git; scripts/check-versions.sh runs sed and awk only; the composite action
-# .github/actions/self-merging-pr runs gh only.
+# .github/actions/self-merging-pr runs gh only. Of the linters ci.yml's lint job installs (2026-11-14), actionlint and
+# hadolint are single binaries that start no runtime; zizmor is a Python program, listed below.
 INDIRECT_RUNTIME: dict[str, str] = {
+    "ci.yml > lint > zizmor > python": (
+        "zizmor is a Python program, run from the environment the lint-tools step made with python3 (setup-python's)"
+    ),
     "ci.yml > lint > uv.lock matches pyproject.toml and both requirements exports > python": (
         "`bash scripts/check-lockfiles.sh` runs `uv lock --check`, then scripts/export-lockfiles.sh (`uv export`)"
     ),

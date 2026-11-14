@@ -22,6 +22,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **CI now checks the workflow files and the Dockerfile with the same three linters as the lab edition, and checks that
+  every workflow installs the same uv**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707), following
+  [HCW-HybridCloudWorks#1575](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1575)). A linter is a tool
+  that reads a file and reports mistakes without running it. The `lint` job in `ci.yml` (already a required check; no
+  job is added or renamed) gains these steps, copied from the lab edition's `ci.yml` with the same versions and
+  digests:
+  - **actionlint 1.7.12** checks the workflow files for mistakes, and runs shellcheck (a shell script checker) on
+    their scripts. `.github/actionlint.yaml` tells it that `ubuntu-26.04` is a GitHub-hosted runner, which this
+    release does not know yet; the file is the same as the lab edition's.
+  - **zizmor 1.31.1** checks the workflow files for security problems. It reported one: `rehearse-self-merging-pr.yml`
+    runs this repository's own action with `uses: ./...`, where GitHub now offers a safer `uses: $/...` form
+    ([GitHub's announcement](https://github.blog/changelog/2026-07-30-reference-same-repository-actions-with-self-repository-syntax/),
+    [zizmor's explanation](https://docs.zizmor.sh/audits/#self-repository)). The pinned actionlint does not understand
+    `$/` and fails on it, so that one line is ignored in the new `.github/zizmor.yml`, with the reason written there
+    and the step to undo it once actionlint is moved.
+  - **hadolint 2.14.0** checks `infrastructure/docker/Dockerfile`. It found nothing.
+  - Each tool is downloaded at its pinned version and its SHA-256 (a fingerprint of the file) is checked before it
+    runs; the three values were checked again against the publishers' own checksum files and PyPI on 2026-11-14.
+  - **Every workflow uses the uv this workflow uses:** `UV_VERSION` in `ci.yml` is the one uv version. The step fails
+    when `publish-core.yml` or `security.yml` installs another one, when `dependabot-lockfiles.yml`'s own
+    `UV_VERSION` differs, or when any `uv==` anywhere under `.github/workflows` names another version. This is how uv
+    pins drifted apart before.
+
+  To make the linters pass, `setup-python` in the `lint` job now also runs after an earlier failure (the zizmor install
+  needs Python and runs then too, as in the lab edition), and the retry loop in `publish-core.yml` that waits for the
+  GitHub Release names its unused counter `_` instead of `i` (shellcheck warning SC2034; no change in behaviour).
+  `tests/unit/test_workflow_runtime_setup.py` (the test that makes every step that runs Python come after
+  `setup-python`) now lists the zizmor step, because zizmor is a Python program the test cannot see in the step's text.
+  Nothing here reaches the lab edition: it already runs these steps, and no engine, catalog or release asset changed,
+  so its `docs/whats-new-upstream.md` needs no entry. Checked locally with uv 0.13.8: the three linters run exactly as
+  the new steps run them (exit 0 each, with shellcheck 0.11.0 present as it is on the runner); the uv step passes, and
+  fails when `security.yml`, `publish-core.yml` or `dependabot-lockfiles.yml` is changed to uv 0.13.7 or a
+  `uv==0.13.7` line is added to another workflow (each edit reverted); `make setup`, `make lint`, `make test` (1116
+  passed, 1 skipped; 95 percent coverage) and `make test-security` (38 passed).
+
 ### Changed
 
 - **uv 0.13.7 to 0.13.8 in every workflow**
