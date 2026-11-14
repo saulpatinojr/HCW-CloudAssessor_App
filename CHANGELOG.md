@@ -87,6 +87,42 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **The workflow runtime check is refreshed to round three**
+  ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
+  `tests/unit/test_workflow_runtime_setup.py` is the test that fails when a workflow step runs Node.js or Python before
+  its job has set up the version HCW requires (Node.js 26.11.0, Python 3.15.0), so the runner's own older versions
+  cannot slip back in unnoticed. Round three closes the gaps a third review of the check found. Its logic and test cases
+  are taken unchanged from the canonical Python copy in HCW-NetworkEyes_App
+  ([HCW-NetworkEyes_App#399](https://github.com/saulpatinojr/HCW-NetworkEyes_App/pull/399)), which gives the same
+  answers as the website's JavaScript copy
+  ([HCW-HybridCloudWorks#1722](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1722)); only the lists of this
+  repository's own steps are its own, and long lines are rewrapped to this repository's 120 columns (each made-up test
+  workflow, one long line in the canonical copy, is split into pieces that Python joins back into the same text). What
+  it now catches: a command written in quotes (`'node' x.js`) or with a backslash in it, or run through `eval` or
+  `builtin`; a command run with `sudo`, which looks programs up in its own fixed list of folders and so gets the
+  runner's own version (`sudo env "PATH=$PATH" ...` hands it the job's list instead); a step whose `shell:` is `python`
+  or `node {0}`, or that takes it from `defaults.run.shell`. For pipx (a tool that installs and runs Python programs)
+  the setting that chooses its Python is followed through `unset`, `export -n` and `declare +x` (which remove a setting,
+  or keep it from the programs a script starts), the last change in a shell winning; a bare `python3` no longer counts
+  as the set-up Python (only `python3.15` does), and neither does a value over two lines, a path under `/usr/local/bin`,
+  one that climbs out of setup-python's folder with `..`, or a pattern the shell would still expand (`python*`,
+  `~/...`); and `${{ env.X }}` is worked out one level at a time, as GitHub does. The test's small YAML reader (it reads
+  the workflow files without a YAML library) now reads quoted values, comments and block values the way YAML does, reads
+  `3.10` as `3.1` as GitHub hands it to an action, and stops with an error on a form it cannot read (an anchor, alias or
+  tag, or a matrix item continued on the next line) instead of guessing. Nothing new is found here and no workflow
+  changed. The new steps of the `lint` job still pass, because its `setup-python` step runs whenever they do
+  (`if: ${{ !cancelled() }}`); with that `if:` taken out of a scratch copy of `ci.yml`, the check names the linter
+  install step (it makes zizmor's environment with `python3 -m venv`) and the uv pin check
+  (`python scripts/check_uv_pins.py`). The `INDIRECT_RUNTIME` entries (steps that start uv through a script, which the
+  check cannot see in their own `run:` text) all stay, because the check still does not read the runtime in those steps;
+  the note above them now also names `scripts/check_uv_pins.py`, added to the `lint` job after the note was written,
+  which is run with `python` (read by the check) and starts nothing. Checked here with uv 0.13.8: `make setup`,
+  `make lint`, `make test` (1391 passed, 1 skipped; 95 percent coverage, 901 of the tests in this file, 699 before) and
+  `make test-security` (38 passed). The Python syntax tree of this file matches the canonical copy at `9b96396` once the
+  docstrings and this repository's lists are set aside, and the 12,975 round-three cases, the reviewer's 348 and the
+  66,583 earlier ones give 0 disagreements with the canonical copy. The AddOn (HCW-CloudAssessor_AddOn) gets the same
+  change in its own pull request, with its own `docs/whats-new-upstream.md` entry; nothing it adopts from this
+  repository (the engine wheel, the catalog) changes, so this change adds no entry there.
 - **uv 0.13.7 to 0.13.8 in every workflow**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
   installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
