@@ -33,7 +33,7 @@ updates:
     # The Python base image is a pair: infrastructure/docker/versions.env holds the image and its digest, and
     # scripts/check-versions.sh (run by CI and `make lint`) fails unless every FROM matches it. Dependabot edits only the
     # Dockerfile, so each of its Python image pull requests fails that check by design. The project requires
-    # Python >=3.15.0,<3.16 and the image follows the website's python:3.15.2 pin; it is moved by hand, in one change,
+    # Python >=3.15.2,<3.16 and the image follows the website's python:3.15.2 pin; it is moved by hand, in one change,
     # with the digest.
     ignore:
       - dependency-name: "python"

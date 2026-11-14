@@ -80,10 +80,10 @@ note of what reaches it in its `docs/whats-new-upstream.md`.
 
 ## Quick start
 
-Requires Python 3.15 and [`uv`](https://docs.astral.sh/uv/). To let uv download Python 3.15 for you, use uv 0.13.0 or
-newer, which offers the finished 3.15.0; 0.13.6 or newer also offers 3.15.2, the version the image runs. uv releases
-before 0.13.0 offer only 3.15 pre-releases, which `requires-python` refuses. CI and the lockfiles use uv 0.13.8, and CI
-gets its 3.15 from `actions/setup-python`. The commands are PowerShell unless the line above says bash.
+Requires Python 3.15.2 or a later 3.15 release (`requires-python = ">=3.15.2,<3.16"`, owner decision 2026-11-14) and
+[`uv`](https://docs.astral.sh/uv/). To let uv download Python 3.15.2 for you, use uv 0.13.6 or newer, the first to offer
+it; older uv releases offer only earlier 3.15 builds, which `requires-python` refuses. CI and the lockfiles use
+uv 0.13.8, and CI gets its 3.15 from `actions/setup-python`. The commands are PowerShell unless the line above says bash.
 
 Toolchain and tests (PowerShell):
 
@@ -147,8 +147,8 @@ floating tag. The plan refuses an internet-reachable appliance unless `auth_enab
 
 The engine is installable on its own, with no cloud SDK, from the wheel attached to each release (the lab edition
 pins the same file by URL and sha256, because a `git+https` pin cannot be hash-checked). Release 0.3.2 installs on
-Python 3.14.6 or newer, 0.3.0 and earlier on Python 3.14 only (no 0.3.1 was published), and later releases need
-Python 3.15. The command is the same in bash and PowerShell:
+Python 3.14.6 or newer, 0.3.0 and earlier on Python 3.14 only (no 0.3.1 was published), and the next release needs
+Python 3.15.2 or a later 3.15 release. The command is the same in bash and PowerShell:
 
 ```bash
 python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/v0.3.2/cloud_assessor_core-0.3.2-py3-none-any.whl

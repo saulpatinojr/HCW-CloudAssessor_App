@@ -87,6 +87,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Python 3.15.2 is now the minimum.** The owner decided on 2026-11-14 that every Hybrid Cloud Works Python
+  repository requires the latest stable release of Python 3.15, which is 3.15.2 (released 2026-10-25). What moved:
+  - `requires-python` in both packages, the appliance and the engine `cloud-assessor-core`, from `>=3.15.0,<3.16` to
+    `>=3.15.2,<3.16`. `tests/packaging/test_core_wheel.py` now expects the new range in the built wheel.
+  - `uv.lock` re-locked with `make lock` and uv 0.13.8, the version CI uses. Only the lock's own Python range changed:
+    no package version moved, and both `requirements*.lock.txt` exports came out exactly as they were.
+  - The Python wording in `README.md`, `.github/CONTRIBUTING.md`, `REFACTOR_APP.md` and the Dependabot comment. Letting
+    uv download 3.15.2 needs uv 0.13.6 or newer.
+  - `make setup` now runs `uv python pin --no-project 3.15`. `.python-version` still names the line only, `3.15`, but
+    uv 0.13.8 refuses to pin that line against the new range (the line also covers 3.15.0 and 3.15.1), so `make setup`
+    stopped with "The requested Python version `3.15` is incompatible". `--no-project` skips only that check;
+    `uv sync` still picks an interpreter inside `>=3.15.2,<3.16`.
+  - **This reaches the lab edition at the next release.** The engine wheel published from the next `v*` tag will
+    declare `Requires-Python: <3.16,>=3.15.2`, so it will not install on 3.15.0 or 3.15.1. The AddOn moves its own
+    floor to 3.15.2 in a matching change and its image already runs 3.15.2, so `core-update.yml` adopts that release
+    as usual; the wheel the AddOn pins today (`v0.3.2`) is not affected. The container image already ran
+    `python:3.15.2-slim-trixie`, so it does not change.
+
 - **uv 0.13.7 to 0.13.8 in every workflow**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)). uv is the tool that
   installs this repository's Python packages, keeps `uv.lock` (the file that records the exact versions installed) and
