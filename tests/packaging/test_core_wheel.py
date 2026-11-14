@@ -1,8 +1,10 @@
-"""The built cloud-assessor-core wheel carries the catalog, imports nothing under azure and names no Azure endpoint."""
+"""The built cloud-assessor-core wheel carries the catalog and the licence text, imports nothing under azure and names
+no Azure endpoint."""
 
 import re
 import shutil
 import subprocess
+import tarfile
 import zipfile
 
 import pytest
@@ -13,21 +15,34 @@ ENDPOINTS = ("management.azure.com", "login.microsoftonline.com", "graph.microso
 
 
 @pytest.fixture(scope="module")
-def wheel(tmp_path_factory):
+def dist(tmp_path_factory):
+    """Build as publish-core.yml does: the sdist first, then the wheel from that sdist."""
     if shutil.which("uv") is None:
         pytest.skip("uv not on PATH")
     out = tmp_path_factory.mktemp("dist")
     proc = subprocess.run(
-        ["uv", "build", "--package", "cloud-assessor-core", "--wheel", "--out-dir", str(out)],
+        ["uv", "build", "--no-create-gitignore", "--package", "cloud-assessor-core", "--out-dir", str(out)],
         cwd=ROOT,
         capture_output=True,
         text=True,
         timeout=600,
     )
     assert proc.returncode == 0, proc.stderr
-    wheels = list(out.glob("cloud_assessor_core-*.whl"))
+    return out
+
+
+@pytest.fixture(scope="module")
+def wheel(dist):
+    wheels = list(dist.glob("cloud_assessor_core-*.whl"))
     assert len(wheels) == 1
     return wheels[0]
+
+
+@pytest.fixture(scope="module")
+def sdist(dist):
+    sdists = list(dist.glob("cloud_assessor_core-*.tar.gz"))
+    assert len(sdists) == 1
+    return sdists[0]
 
 
 def test_wheel_name_version_and_catalog(wheel):
@@ -63,3 +78,34 @@ def test_wheel_requires_python_315(wheel):
     line = re.search(r"^Requires-Python: (.+)$", z.read(metadata).decode("utf-8"), re.MULTILINE)
     assert line is not None, "the wheel declares no Requires-Python"
     assert {part.strip() for part in line.group(1).split(",")} == {">=3.15.2", "<3.16"}
+
+
+def test_package_licence_is_a_copy_of_the_root_licence():
+    """license-files cannot point outside the package folder, so the package keeps a copy of the root LICENSE."""
+    assert (ROOT / "packages/cloud-assessor-core/LICENSE").read_bytes() == (ROOT / "LICENSE").read_bytes()
+
+
+def test_wheel_ships_the_licence_text(wheel):
+    """MIT asks that the copyright and permission notice travel with every copy. Up to 0.3.2 the wheel declared
+    License-Expression: MIT but carried no LICENSE, so the AddOn image installed the engine without the text. PEP 639
+    puts it under .dist-info/licenses/ and names it in a License-File line of METADATA."""
+    z = zipfile.ZipFile(wheel)
+    names = z.namelist()
+    dist_info = next(n.split("/", 1)[0] for n in names if n.endswith(".dist-info/METADATA"))
+    metadata = z.read(f"{dist_info}/METADATA").decode("utf-8").splitlines()
+    assert "License-Expression: MIT" in metadata
+    assert "License-File: LICENSE" in metadata
+    assert f"{dist_info}/licenses/LICENSE," in z.read(f"{dist_info}/RECORD").decode("utf-8")
+    assert z.read(f"{dist_info}/licenses/LICENSE") == (ROOT / "LICENSE").read_bytes()
+
+
+def test_sdist_ships_the_licence_text(sdist):
+    """The release attaches the sdist beside the wheel (publish-core.yml), so it carries LICENSE too, named in
+    PKG-INFO."""
+    with tarfile.open(sdist) as tf:
+        top = tf.getnames()[0].split("/", 1)[0]
+        pkg_info = tf.extractfile(f"{top}/PKG-INFO").read().decode("utf-8").splitlines()
+        shipped = tf.extractfile(f"{top}/LICENSE").read()
+    assert "License-Expression: MIT" in pkg_info
+    assert "License-File: LICENSE" in pkg_info
+    assert shipped == (ROOT / "LICENSE").read_bytes()
