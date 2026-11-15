@@ -102,10 +102,18 @@ def test_wheel_ships_the_licence_text(wheel):
 def test_sdist_ships_the_licence_text(sdist):
     """The release attaches the sdist beside the wheel (publish-core.yml), so it carries LICENSE too, named in
     PKG-INFO."""
+    top = sdist.name.removesuffix(".tar.gz")  # PEP 625: the one top folder is the file name without .tar.gz
     with tarfile.open(sdist) as tf:
-        top = tf.getnames()[0].split("/", 1)[0]
-        pkg_info = tf.extractfile(f"{top}/PKG-INFO").read().decode("utf-8").splitlines()
-        shipped = tf.extractfile(f"{top}/LICENSE").read()
+        names = tf.getnames()
+        assert all((n == top or n.startswith(f"{top}/")) and ".." not in n.split("/") for n in names), (
+            f"{sdist.name} has entries outside {top}/"
+        )
+        assert len(names) == len(set(names)), f"{sdist.name} has duplicate entries"
+        pkg_info_member, licence_member = tf.getmember(f"{top}/PKG-INFO"), tf.getmember(f"{top}/LICENSE")
+        # extractfile follows a link, so require plain files, as publish-core.yml does.
+        assert pkg_info_member.isfile() and licence_member.isfile(), "PKG-INFO and LICENSE must be plain files"
+        pkg_info = tf.extractfile(pkg_info_member).read().decode("utf-8").splitlines()
+        shipped = tf.extractfile(licence_member).read()
     assert "License-Expression: MIT" in pkg_info
     assert "License-File: LICENSE" in pkg_info
     assert shipped == (ROOT / "LICENSE").read_bytes()

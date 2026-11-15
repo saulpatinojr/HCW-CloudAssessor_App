@@ -409,8 +409,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   `tests/packaging/test_core_wheel.py` now builds the way `publish-core.yml` does and fails if the copy differs from the
   root `LICENSE` or is missing from either archive, and the release itself (`publish-core.yml`) now refuses a wheel
   without the licence file, its `License-File` and `License-Expression: MIT` lines, or with a copy that differs from the
-  root `LICENSE`. The licence and the version are unchanged; the lab edition gets the file with the next release it
-  adopts.
+  root `LICENSE`. A second step in the release does the same for the sdist it attaches (its `PKG-INFO` file, which holds
+  the package's details, must name the licence the same way), because the tests check an sdist they build themselves,
+  not the one that is published. The licence and the version are unchanged; the lab edition gets the file with the next
+  release it adopts.
 
 ### Security
 
