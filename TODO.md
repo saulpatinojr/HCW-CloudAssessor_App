@@ -645,6 +645,10 @@ Proposed by `REFACTOR_APP.md` (sections 13 and 18) at execution on 2026-10-10.
 - **Recommended Action:** When that release exists, move the `pyyaml` pin in the `dev` group to it, delete the
   `build-constraint-dependencies` line and its comment, run `make lock`, and check that `uv.lock` lists a `cp315` wheel for
   PyYAML and no longer carries `build-constraints`.
-- **Status:** Not started
+- **Status:** Done 2026-11-23: PyYAML 6.0.4 (on PyPI since 2026-11-20) ships `cp315` wheels (ready-built packages for
+  CPython 3.15), so the `dev` group now pins `pyyaml==6.0.4`, the `build-constraint-dependencies` line and its comment are
+  gone from `pyproject.toml`, and `uv.lock`, re-locked with uv 0.13.8, lists the PyYAML wheels by sha256 and no longer
+  has a `build-constraints` block. Both `requirements*.lock.txt` files came out of `make lock` unchanged.
 - **Notes for Future Engineers:** Neither image installs PyYAML (it is not in either `requirements*.lock.txt`), so this
-  changes nothing that is deployed.
+  changes nothing that is deployed. The engine wheel does not depend on it either. If a later Python line arrives before
+  PyYAML has a wheel for it, the pins this ticket removed are in the git history of `pyproject.toml`.

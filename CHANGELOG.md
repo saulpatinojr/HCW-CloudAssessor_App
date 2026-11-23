@@ -87,6 +87,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **PyYAML, which only the tests use, now installs from a ready-built package, so the two build-tool pins are gone**
+  (`TODO.md` T-035). PyYAML is the library the tests read YAML files with. Until now its newest release, 6.0.3, had no
+  wheel (a ready-built package) for Python 3.15
+  ([yaml/pyyaml#951](https://github.com/yaml/pyyaml/issues/951)), so every `uv sync` compiled it from its source
+  archive, and `pyproject.toml` pinned the two tools that did the compiling (`setuptools==84.2.1`, `cython==3.3.1`).
+  [PyYAML 6.0.4](https://pypi.org/project/PyYAML/6.0.4/), published 2026-11-20, has Python 3.15 wheels. So the `dev`
+  group now pins `pyyaml==6.0.4`, the `[tool.uv] build-constraint-dependencies` line and its comment are removed, and
+  `uv.lock` (re-locked with uv 0.13.8) lists the PyYAML wheels by sha256 and no longer has a `build-constraints`
+  block. Nothing that ships changes: PyYAML is in neither container image and is not a dependency of the engine wheel,
+  and `make lock` left both `requirements*.lock.txt` files exactly as they were. Nothing else in the repository
+  (Dockerfile, workflows, scripts, tests) carried a workaround for the source build.
+
 - **The workflow runtime check is brought up to round five, the last planned round: a step whose `shell:` is written but
   empty now uses the job's or the workflow's default shell**
   ([HCW-HybridCloudWorks#1707](https://github.com/saulpatinojr/HCW-HybridCloudWorks/issues/1707)).
