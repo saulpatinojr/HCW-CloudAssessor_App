@@ -85,7 +85,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   test` (1189 passed, 1 skipped; 95 percent coverage, 73 of the tests in `tests/unit/test_check_uv_pins.py`) and
   `make test-security` (38 passed).
 
+- **The next release also attaches the proof of where the engine wheel was built, as a file** (owner decision
+  2026-11-23, "apps: files"; the reasoning for all the App repositories is the website's proposed decision record 0044,
+  [HCW-HybridCloudWorks#1799](https://github.com/saulpatinojr/HCW-HybridCloudWorks/pull/1799)). `publish-core.yml`
+  already attests each release build: the workflow run signs a statement (its provenance) naming the wheel, the sdist,
+  their SHA256 and the workflow and commit that built them, with the run's own short-lived identity. Until now that
+  proof was kept only in GitHub's attestation store, so a release page showed two files and nothing to check them
+  with, and [OpenSSF Scorecard](https://github.com/ossf/scorecard/blob/v5.7.0/docs/checks.md#signed-releases) (a tool
+  that grades a repository's security habits; its Signed-Releases check reads only the names of the files on the last
+  five releases) gives such a release 0. From the next `v*` tag the release carries a third file,
+  `cloud_assessor_core-X.Y.Z.intoto.jsonl`: the same signed bundle the attest step wrote, one JSON object per line.
+  - **What changed in the workflow.** The attest step has an `id`, and a new step after the wheel and the sdist are
+    attached writes the step's `bundle-path` output with `jq -c` into `provenance/` (outside `dist/`, so the PyPI step
+    and the workflow artifact still hold two files), checks that every line is a signed bundle, runs
+    `gh attestation verify --bundle` on the wheel and on the sdist against that file and this workflow, and only then
+    attaches it. The wheel is attached first on purpose: a problem with the new file leaves the job red and the wheel
+    in place. Nothing is added to the job's permissions (`contents: write`, `id-token: write`, `attestations: write`,
+    as before), no key is stored and no secret is added.
+  - **How to check a download** is in `README.md`, under "Checking where a wheel was built".
+  - **What was checked, and what was not.** The new step's own script was run locally against the real 0.3.2 wheel and
+    sdist and the bundle GitHub stores for them (read with `gh api`): both verified, a changed file was refused, and
+    the wrong repository was refused (`gh` 2.89.0). The step has never run in a workflow: a manual run (the dry run)
+    attests nothing, by design, so the first release after this is the real test. If the step fails there, the wheel
+    is already attached; read the step's log and re-run the failed job.
+  - **The lab edition is not affected.** It downloads the wheel by its exact address and SHA256, and neither changes;
+    `test_workflows.py` pins the step's shape. A short note goes in its `docs/whats-new-upstream.md` because the
+    release gains a file.
+
 ### Changed
+
+- **PyYAML, which only the tests use, now installs from a ready-built package, so the two build-tool pins are gone**
+  (`TODO.md` T-035). PyYAML is the library the tests read YAML files with. Until now its newest release, 6.0.3, had no
+  wheel (a ready-built package) for Python 3.15
+  ([yaml/pyyaml#951](https://github.com/yaml/pyyaml/issues/951)), so every `uv sync` compiled it from its source
+  archive, and `pyproject.toml` pinned the two tools that did the compiling (`setuptools==84.2.1`, `cython==3.3.1`).
+  [PyYAML 6.0.4](https://pypi.org/project/PyYAML/6.0.4/), published 2026-11-20, has Python 3.15 wheels. So the `dev`
+  group now pins `pyyaml==6.0.4`, the `[tool.uv] build-constraint-dependencies` line and its comment are removed, and
+  `uv.lock` (re-locked with uv 0.13.8) lists the PyYAML wheels by sha256 and no longer has a `build-constraints`
+  block. Nothing that ships changes: PyYAML is in neither container image and is not a dependency of the engine wheel,
+  and `make lock` left both `requirements*.lock.txt` files exactly as they were. Nothing else in the repository
+  (Dockerfile, workflows, scripts, tests) carried a workaround for the source build.
 
 - **The workflow runtime check is brought up to round five, the last planned round: a step whose `shell:` is written but
   empty now uses the job's or the workflow's default shell**

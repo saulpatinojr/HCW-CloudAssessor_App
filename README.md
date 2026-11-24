@@ -157,6 +157,31 @@ python -m pip install https://github.com/saulpatinojr/HCW-CloudAssessor_App/rele
 Replace `v0.3.2` and `0.3.2` together to install another release; the list is on the
 [releases page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases).
 
+**Checking where a wheel was built.** Every release build is attested: the workflow run signs a statement (its
+provenance) that names the wheel, the sdist (the source archive beside it), their SHA256 and the workflow and commit
+that built them. The signature comes from the run's own short-lived identity through
+[Sigstore](https://docs.sigstore.dev/about/overview/), so there is no key to keep or leak. GitHub stores that proof
+for every release so far, and the first command below reads it from there. Releases after 0.3.2 also attach it to the
+release page as a third file, `cloud_assessor_core-X.Y.Z.intoto.jsonl` (one signed bundle per line), so the second
+command can check a download without asking GitHub for the proof. Both need the
+[GitHub CLI](https://cli.github.com/) (`gh`) and are the same in bash and PowerShell; run them in the folder that holds
+the downloaded files:
+
+```bash
+gh attestation verify cloud_assessor_core-0.3.2-py3-none-any.whl --repo saulpatinojr/HCW-CloudAssessor_App
+```
+
+```bash
+gh attestation verify cloud_assessor_core-X.Y.Z-py3-none-any.whl --repo saulpatinojr/HCW-CloudAssessor_App --bundle cloud_assessor_core-X.Y.Z.intoto.jsonl
+```
+
+In the second command, put the release's number in place of `X.Y.Z` in both file names (no release carries the file
+yet, so there is no real number to write here). When the file is genuine the command ends without an error (exit code
+0), and at a terminal it prints a line that starts `Loaded digest sha256:` and a line with `Verification succeeded!`.
+Anything else, for example `Error: verifying with issuer "sigstore.dev"`, means the file is not the one that workflow
+built: do not install it. The same commands work for the `.tar.gz`. GitHub explains the command in
+[Verifying attestations offline](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/verify-attestations-offline).
+
 ## Releasing and versioning
 
 **The policy (ticket [#33](https://github.com/saulpatinojr/HCW-CloudAssessor_App/issues/33); owner decision, recorded 2026-10-25).**
@@ -184,7 +209,8 @@ to check rather than something to derive. A build of `main` therefore reports th
 attaches or pushes anything. With a tag it also fails unless the tag is exactly `v` + that version, `CHANGELOG.md` has a
 dated, non-empty `## [X.Y.Z] - YYYY-MM-DD` section, nothing is left under `## [Unreleased]`, and the tagged commit is
 on `main`; `publish-core.yml` also checks that the build produced exactly the wheel and the sdist for the version and
-that the wheel's own `__version__` matches its file name. A tag cannot be moved or deleted once pushed (ruleset
+that the wheel's own `__version__` matches its file name, and, after it has attached those two, checks each of them
+against the provenance file (see "Checking where a wheel was built" above) before it attaches that file too. A tag cannot be moved or deleted once pushed (ruleset
 "Protect release tags"), so these checks are the only chance to stop a wrong one. A manual run of `publish-core.yml`
 or `publish-images.yml` (the dry run) passes `--rehearse` instead of a tag: the script takes the tag to be `v` plus
 the package version and runs every one of those checks, and also fails if that tag already exists. So a green dry
@@ -222,7 +248,9 @@ the engine starts to be released on its own schedule.
    check, nothing was built or published: the message names the file that disagrees, and the version must move on,
    because the tag stays.
 6. Confirm the result: the [release page](https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases) lists the
-   release with the wheel and the sdist, and `GET /api/health` of a deployed appliance reports `X.Y.Z` in `version`.
+   release with the wheel, the sdist and the provenance file `cloud_assessor_core-X.Y.Z.intoto.jsonl` (if that third
+   file is missing, the wheel is still good to use: open the `publish-core` run, read the step "Attach the provenance
+   of the wheel and sdist", and re-run the failed job), and `GET /api/health` of a deployed appliance reports `X.Y.Z` in `version`.
 
 ## Contributing and reporting
 

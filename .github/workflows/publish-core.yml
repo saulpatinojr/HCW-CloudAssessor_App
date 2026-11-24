@@ -6,7 +6,14 @@
 # the v0.3.1 tag was refused for exactly that after a green dry run that never read the changelog), then build the
 # cloud-assessor-core wheel and sdist, verify the wheel carries the catalog and the MIT licence text (byte for byte the
 # root LICENSE) and no cloud SDK and no Azure endpoint, verify the sdist carries the same licence text, attest
-# provenance, and attach both to the GitHub Release (release.yml creates it). PyPI trusted publishing is gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
+# provenance, and attach both to the GitHub Release (release.yml creates it). The provenance (a signed statement of
+# which workflow run built the two files) is then also attached to the release as
+# cloud_assessor_core-X.Y.Z.intoto.jsonl, so a person can check a downloaded wheel without asking GitHub for the proof
+# (README.md, "Releasing and versioning", has the command). It is the file the attest step wrote, one JSON object per
+# line; it is signed with this run's own short-lived identity (no stored key, no secret), and the step checks both
+# files against it before it attaches it. It is attached in its own step AFTER the wheel, so a problem with it leaves
+# the wheel the AddOn pins in place and the job red; a manual run (the dry run) attests nothing, so that step is first
+# proven by the first release that follows it. PyPI trusted publishing is gated on the repository variable PYPI_ENABLED == 'true' [REVIEW REQUIRED]: `uv publish --trusted-publishing always`
 # exchanges the job's OIDC token with PyPI; no registry token exists anywhere (docs: REFACTOR_APP.md 7.13, 11).
 # The AddOn pins the wheel this job attaches to the release, by URL and sha256
 # (https://github.com/saulpatinojr/HCW-CloudAssessor_App/releases/download/vX.Y.Z/cloud_assessor_core-X.Y.Z-py3-none-any.whl,
@@ -99,9 +106,10 @@ jobs:
           print("sdist verified:", sdist)
           PY
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        id: attest
         if: startsWith(github.ref, 'refs/tags/v')
         with: { subject-path: "dist/*" }
-      - name: Attach the wheel and sdist to the GitHub Release
+      - name: Attach the wheel and sdist to the GitHub Release (the provenance file follows in the next step)
         if: startsWith(github.ref, 'refs/tags/v')
         env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
         run: |
@@ -109,6 +117,27 @@ jobs:
           tag="${GITHUB_REF#refs/tags/}"
           for _ in 1 2 3 4 5 6; do gh release view "$tag" >/dev/null 2>&1 && break; sleep 10; done
           gh release upload "$tag" dist/* --clobber
+      - name: Attach the provenance of the wheel and sdist to the GitHub Release (checked first)
+        if: startsWith(github.ref, 'refs/tags/v')
+        env: { GH_TOKEN: "${{ secrets.GITHUB_TOKEN }}", BUNDLE: "${{ steps.attest.outputs.bundle-path }}" }
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF#refs/tags/}"
+          # Kept outside dist/, so the PyPI step and the workflow artifact below still hold the wheel and sdist only.
+          mkdir provenance
+          provenance="provenance/cloud_assessor_core-${tag#v}.intoto.jsonl"
+          # The attest step writes one Sigstore bundle (the signed statement, its certificate and its entry in the
+          # public log) that names both files; jq -c writes every bundle it finds as one line, whatever the layout.
+          jq -c . "$BUNDLE" > "$provenance"
+          jq -e -s 'length >= 1 and all(.[]; has("dsseEnvelope") and has("verificationMaterial"))' "$provenance" >/dev/null
+          # The same check a person makes after downloading: each file against the provenance file, nothing fetched
+          # from GitHub's attestation store, signed by this workflow in this repository.
+          for file in dist/*; do
+            gh attestation verify "$file" --repo "$GITHUB_REPOSITORY" --bundle "$provenance" \
+              --signer-workflow "$GITHUB_REPOSITORY/.github/workflows/publish-core.yml" >/dev/null
+            echo "provenance verified: $file"
+          done
+          gh release upload "$tag" "$provenance" --clobber
       - name: PyPI trusted publishing (repository variable PYPI_ENABLED) [REVIEW REQUIRED]
         if: startsWith(github.ref, 'refs/tags/v') && vars.PYPI_ENABLED == 'true'
         run: uv publish --trusted-publishing always dist/*
