@@ -27,7 +27,7 @@ azure = [
 dev = [
   "pytest==9.2.0",
   "pytest-cov==7.1.0",
-  "ruff==0.17.5",
+  "ruff==0.17.6",
   "httpx==0.28.1",
   "pip-audit==2.10.1",
   # Only the tests read YAML (test_workflows.py, test_community_files.py and
