@@ -9,7 +9,7 @@ dependencies = [
   "cloud-assessor-core",
   "fastapi==0.165.0",
   "uvicorn==0.54.0",
-  "pydantic==2.14.3",
+  "pydantic==2.14.4",
 ]
 
 [project.optional-dependencies]
