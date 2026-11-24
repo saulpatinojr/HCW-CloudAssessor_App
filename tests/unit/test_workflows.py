@@ -125,6 +125,59 @@ def test_the_release_version_guard_runs_before_anything_is_built_or_published():
     assert "uv run python " + guard in (ROOT / "Makefile").read_text(encoding="utf-8")
 
 
+def test_the_engine_release_attaches_its_provenance_as_a_file_and_needs_no_key_and_no_new_permission():
+    """Owner decision 2026-11-23: the proof of where the wheel was built is attached to the release as an
+    `.intoto.jsonl` file (one signed bundle per line), so it can be checked from the download alone. It is the file the
+    attest step wrote, signed with the run's own identity: no stored key, no secret, no permission the job lacked."""
+    doc = yaml.safe_load((ROOT / ".github" / "workflows" / "publish-core.yml").read_text(encoding="utf-8"))
+    assert doc["permissions"] == {"contents": "read"}
+    (job,) = doc["jobs"].values()
+    assert job["permissions"] == {"contents": "write", "id-token": "write", "attestations": "write"}
+    steps = job["steps"]
+    on_a_tag = "startsWith(github.ref, 'refs/tags/v')"
+
+    def index(found) -> int:
+        (n,) = [n for n, step in enumerate(steps) if found(step)]
+        return n
+
+    attest = index(lambda step: "actions/attest-build-provenance@" in step.get("uses", ""))
+    wheel = index(lambda step: 'gh release upload "$tag" dist/* --clobber' in step.get("run", ""))
+    provenance = index(lambda step: ".intoto.jsonl" in step.get("run", ""))
+    pypi = index(lambda step: "uv publish" in step.get("run", ""))
+    # The wheel the lab edition pins is attached first, so a problem with the provenance file cannot hold it back.
+    assert attest < wheel < provenance < pypi
+    assert steps[attest]["id"] == "attest" and steps[attest]["with"] == {"subject-path": "dist/*"}
+    step = steps[provenance]
+    # Only on a tag, like the attest step it reads from: a manual run (the dry run) attests and attaches nothing.
+    assert steps[attest]["if"] == on_a_tag and steps[wheel]["if"] == on_a_tag and step["if"] == on_a_tag
+    assert step["env"] == {
+        "GH_TOKEN": "${{ secrets.GITHUB_TOKEN }}",
+        "BUNDLE": "${{ steps.attest.outputs.bundle-path }}",
+    }
+    run = step["run"]
+    assert "${{" not in run, "the step's values arrive through env, never pasted into the script"
+    assert 'provenance="provenance/cloud_assessor_core-${tag#v}.intoto.jsonl"' in run
+    # One JSON object per line whatever the attest step wrote, and it is a signed bundle, not an empty file.
+    assert 'jq -c . "$BUNDLE" > "$provenance"' in run
+    assert 'has("dsseEnvelope")' in run
+    # Checked against both built files, offline (--bundle) and against this workflow, before it is attached.
+    verify, upload = run.index("gh attestation verify"), run.index('gh release upload "$tag" "$provenance" --clobber')
+    assert run.index('jq -c . "$BUNDLE"') < verify < upload
+    assert "for file in dist/*; do" in run and '--bundle "$provenance"' in run
+    assert '--signer-workflow "$GITHUB_REPOSITORY/.github/workflows/publish-core.yml"' in run
+    # Nothing is written into dist/: the build check, the PyPI step and the artifact see the wheel and the sdist only.
+    assert "> dist/" not in run and '"dist/' not in run
+    # Keyless: the only secret the workflow names is the run's own token, and no signing tool with a key is called.
+    text = (ROOT / ".github" / "workflows" / "publish-core.yml").read_text(encoding="utf-8")
+    assert set(re.findall(r"secrets\.(\w+)", text)) == {"GITHUB_TOKEN"}
+    code = "\n".join(line.split("#", 1)[0] for line in text.splitlines())
+    for keyed in ("gpg", "cosign", "minisign", "--key", "private"):
+        assert keyed not in code.lower(), keyed
+    # The command a person runs is written where the wheel's download is described.
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "gh attestation verify cloud_assessor_core-" in readme and ".intoto.jsonl" in readme
+
+
 def test_release_creation_needs_the_check_job_and_only_it_holds_write_permission():
     doc = yaml.safe_load((ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8"))
     assert doc["jobs"]["create"]["needs"] == "check"
